@@ -347,14 +347,17 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
     const s = readEmployeeSession();
     if (!s) throw new Error("Unauthorized");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const patch: Record<string, unknown> = {
-      status: data.status,
-      updated_at: new Date().toISOString(),
-      assigned_employee_id: s.sub,
-    };
-    if (data.status === "confirmed") patch.confirmed_at = new Date().toISOString();
-    if (data.status === "completed") patch.completed_at = new Date().toISOString();
-    const { error } = await supabaseAdmin.from("orders").update(patch).eq("id", data.orderId);
+    const now = new Date().toISOString();
+    const { error } = await supabaseAdmin
+      .from("orders")
+      .update({
+        status: data.status,
+        updated_at: now,
+        assigned_employee_id: s.sub,
+        confirmed_at: data.status === "confirmed" ? now : undefined,
+        completed_at: data.status === "completed" ? now : undefined,
+      })
+      .eq("id", data.orderId);
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });
