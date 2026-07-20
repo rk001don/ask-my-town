@@ -21,7 +21,7 @@ export const Route = createFileRoute("/")({
       { title: "MyTown — Need Anything? MyTown!" },
       { name: "description", content: `Assisted local commerce for ${TOWN_NAME}. Food, groceries, tickets, rentals, local help — just tell us what you need.` },
       { property: "og:title", content: "MyTown — Need Anything? MyTown!" },
-      { property: "og:description", content: "Tell us what you need. MyTown handles the rest." },
+      { property: "og:description", content: "Hyperlocal assisted commerce for Karimangalam. Just tell us what you need — food, groceries, tickets, rentals, local help — MyTown handles the rest." },
     ],
   }),
   component: Home,
