@@ -1,0 +1,63 @@
+import type { LucideIcon } from "lucide-react";
+import {
+  Utensils, ShoppingBasket, Sparkles, Plane, Home, Wrench, KeyRound,
+  ChefHat, Coffee, UtensilsCrossed, Cookie, Store, GlassWater,
+  ShoppingCart, Apple, Milk, Pill, SprayCan, Pencil,
+  Scissors, Droplet, Wind, Palette, User,
+  Bus, Train, Car, Film, Ticket,
+  Bed, Sparkle, HeartHandshake, PawPrint,
+  Droplets, Zap, Hammer, Snowflake, Shirt, Package,
+  Bike, CarFront, PartyPopper, Camera,
+  HelpCircle,
+} from "lucide-react";
+
+const map: Record<string, LucideIcon> = {
+  utensils: Utensils,
+  "shopping-basket": ShoppingBasket,
+  sparkles: Sparkles,
+  plane: Plane,
+  home: Home,
+  wrench: Wrench,
+  "key-round": KeyRound,
+  "chef-hat": ChefHat,
+  coffee: Coffee,
+  "utensils-crossed": UtensilsCrossed,
+  cookie: Cookie,
+  store: Store,
+  "glass-water": GlassWater,
+  "shopping-cart": ShoppingCart,
+  apple: Apple,
+  milk: Milk,
+  pill: Pill,
+  "spray-can": SprayCan,
+  pencil: Pencil,
+  scissors: Scissors,
+  droplet: Droplet,
+  wind: Wind,
+  palette: Palette,
+  user: User,
+  bus: Bus,
+  train: Train,
+  car: Car,
+  film: Film,
+  ticket: Ticket,
+  bed: Bed,
+  sparkle: Sparkle,
+  "heart-handshake": HeartHandshake,
+  "paw-print": PawPrint,
+  droplets: Droplets,
+  zap: Zap,
+  hammer: Hammer,
+  snowflake: Snowflake,
+  shirt: Shirt,
+  package: Package,
+  bike: Bike,
+  "car-front": CarFront,
+  "party-popper": PartyPopper,
+  camera: Camera,
+};
+
+export function iconFor(key?: string | null): LucideIcon {
+  if (!key) return HelpCircle;
+  return map[key] ?? HelpCircle;
+}
