@@ -14,16 +14,222 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string
+          icon_key: string | null
+          id: string
+          name: string
+          parent_id: string | null
+          slug: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          icon_key?: string | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          slug: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          icon_key?: string | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          slug?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          address: string
+          created_at: string
+          id: string
+          landmark: string | null
+          name: string
+          phone: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          id?: string
+          landmark?: string | null
+          name: string
+          phone: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          id?: string
+          landmark?: string | null
+          name?: string
+          phone?: string
+        }
+        Relationships: []
+      }
+      employees: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          pin_hash: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          pin_hash: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          pin_hash?: string
+        }
+        Relationships: []
+      }
+      order_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          is_freeform: boolean
+          item_name: string
+          notes: string | null
+          order_id: string
+          quantity: number
+          subcategory: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_freeform?: boolean
+          item_name: string
+          notes?: string | null
+          order_id: string
+          quantity?: number
+          subcategory?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          is_freeform?: boolean
+          item_name?: string
+          notes?: string | null
+          order_id?: string
+          quantity?: number
+          subcategory?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          assigned_employee_id: string | null
+          completed_at: string | null
+          confirmed_at: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["order_status"]
+          updated_at: string
+        }
+        Insert: {
+          assigned_employee_id?: string | null
+          completed_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          customer_id: string
+          id: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+        }
+        Update: {
+          assigned_employee_id?: string | null
+          completed_at?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      search_analytics: {
+        Row: {
+          created_at: string
+          id: string
+          normalized_term: string
+          result_count: number
+          term: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          normalized_term: string
+          result_count?: number
+          term: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          normalized_term?: string
+          result_count?: number
+          term?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      mytown_new_order_id: { Args: never; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      order_status:
+        | "received"
+        | "confirmed"
+        | "arranging"
+        | "on_the_way"
+        | "completed"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +356,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      order_status: [
+        "received",
+        "confirmed",
+        "arranging",
+        "on_the_way",
+        "completed",
+        "cancelled",
+      ],
+    },
   },
 } as const
