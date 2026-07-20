@@ -221,6 +221,13 @@ export type Database = {
     }
     Functions: {
       mytown_new_order_id: { Args: never; Returns: string }
+      mytown_verify_employee_pin: {
+        Args: { p_pin: string }
+        Returns: {
+          id: string
+          name: string
+        }[]
+      }
     }
     Enums: {
       order_status:
