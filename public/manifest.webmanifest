@@ -1,0 +1,15 @@
+{
+  "name": "MyTown — Need Anything? MyTown!",
+  "short_name": "MyTown",
+  "description": "Hyperlocal assisted commerce for Karimangalam. Just tell us what you need.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1a1f",
+  "theme_color": "#1a1a1f",
+  "categories": ["shopping", "lifestyle", "utilities"],
+  "icons": [
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
