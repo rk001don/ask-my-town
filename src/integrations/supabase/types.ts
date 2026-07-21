@@ -60,6 +60,7 @@ export type Database = {
           landmark: string | null
           name: string
           phone: string
+          user_id: string | null
         }
         Insert: {
           address: string
@@ -68,6 +69,7 @@ export type Database = {
           landmark?: string | null
           name: string
           phone: string
+          user_id?: string | null
         }
         Update: {
           address?: string
@@ -76,6 +78,7 @@ export type Database = {
           landmark?: string | null
           name?: string
           phone?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -112,6 +115,7 @@ export type Database = {
           item_name: string
           notes: string | null
           order_id: string
+          product_id: string | null
           quantity: number
           subcategory: string | null
         }
@@ -123,6 +127,7 @@ export type Database = {
           item_name: string
           notes?: string | null
           order_id: string
+          product_id?: string | null
           quantity?: number
           subcategory?: string | null
         }
@@ -134,6 +139,7 @@ export type Database = {
           item_name?: string
           notes?: string | null
           order_id?: string
+          product_id?: string | null
           quantity?: number
           subcategory?: string | null
         }
@@ -145,6 +151,45 @@ export type Database = {
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_attachments: {
+        Row: {
+          created_at: string
+          file_path: string
+          file_type: string
+          id: string
+          order_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          file_type: string
+          id?: string
+          order_item_id: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          file_type?: string
+          id?: string
+          order_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_attachments_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
         ]
       }
       orders: {
@@ -154,8 +199,13 @@ export type Database = {
           confirmed_at: string | null
           created_at: string
           customer_id: string
+          delivery_batch_id: string | null
+          group_order_id: string | null
           id: string
+          location_id: string | null
           notes: string | null
+          requested_date: string
+          requested_window: string | null
           status: Database["public"]["Enums"]["order_status"]
           updated_at: string
         }
@@ -165,8 +215,13 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           customer_id: string
+          delivery_batch_id?: string | null
+          group_order_id?: string | null
           id: string
+          location_id?: string | null
           notes?: string | null
+          requested_date?: string
+          requested_window?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
         }
@@ -176,8 +231,13 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           customer_id?: string
+          delivery_batch_id?: string | null
+          group_order_id?: string | null
           id?: string
+          location_id?: string | null
           notes?: string | null
+          requested_date?: string
+          requested_window?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
         }
@@ -189,7 +249,323 @@ export type Database = {
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "orders_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_delivery_batch_id_fkey"
+            columns: ["delivery_batch_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_batches"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      locations: {
+        Row: {
+          active: boolean
+          config: Json
+          created_at: string
+          default_language: string
+          id: string
+          name: string
+          slug: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          config?: Json
+          created_at?: string
+          default_language?: string
+          id?: string
+          name: string
+          slug: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          config?: Json
+          created_at?: string
+          default_language?: string
+          id?: string
+          name?: string
+          slug?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category_id: string
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_available: boolean
+          is_service: boolean
+          is_veg: boolean | null
+          location_id: string | null
+          name: string
+          payment_mode: string
+          price: number | null
+          schedulable: boolean
+          show_price: boolean
+          sort_order: number
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean
+          is_service?: boolean
+          is_veg?: boolean | null
+          location_id?: string | null
+          name: string
+          payment_mode?: string
+          price?: number | null
+          schedulable?: boolean
+          show_price?: boolean
+          sort_order?: number
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean
+          is_service?: boolean
+          is_veg?: boolean | null
+          location_id?: string | null
+          name?: string
+          payment_mode?: string
+          price?: number | null
+          schedulable?: boolean
+          show_price?: boolean
+          sort_order?: number
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_batches: {
+        Row: {
+          batch_date: string
+          created_at: string
+          id: string
+          location_id: string
+          rider_id: string | null
+          scheduled_at: string
+          status: string
+          window_label: string
+        }
+        Insert: {
+          batch_date: string
+          created_at?: string
+          id?: string
+          location_id: string
+          rider_id?: string | null
+          scheduled_at: string
+          status?: string
+          window_label: string
+        }
+        Update: {
+          batch_date?: string
+          created_at?: string
+          id?: string
+          location_id?: string
+          rider_id?: string | null
+          scheduled_at?: string
+          status?: string
+          window_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_batches_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      riders: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          id_proof_url: string | null
+          location_id: string
+          name: string
+          phone: string
+          photo_url: string | null
+          verified: boolean
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          id_proof_url?: string | null
+          location_id: string
+          name: string
+          phone: string
+          photo_url?: string | null
+          verified?: boolean
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          id_proof_url?: string | null
+          location_id?: string
+          name?: string
+          phone?: string
+          photo_url?: string | null
+          verified?: boolean
+        }
+        Relationships: []
+      }
+      staff: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          location_id: string | null
+          name: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          name: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          name?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      app_config: {
+        Row: {
+          description: string | null
+          key: string
+          scope: string
+          scope_id: string | null
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          scope?: string
+          scope_id?: string | null
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          scope?: string
+          scope_id?: string | null
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      audit_log: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          metadata: Json | null
+          staff_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          staff_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          staff_id?: string | null
+        }
+        Relationships: []
+      }
+      group_orders: {
+        Row: {
+          created_at: string
+          id: string
+          initiator_customer_id: string
+          location_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          initiator_customer_id: string
+          location_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          initiator_customer_id?: string
+          location_id?: string
+          status?: string
+        }
+        Relationships: []
       }
       search_analytics: {
         Row: {
@@ -220,6 +596,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      mytown_get_or_create_batch: {
+        Args: { p_location_id: string; p_window_label: string; p_batch_date: string }
+        Returns: string
+      }
       mytown_new_order_id: { Args: never; Returns: string }
       mytown_verify_employee_pin: {
         Args: { p_pin: string }

@@ -1,12 +1,39 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
 import { EmptyState } from "@/components/States";
 import { clearCart, useCart } from "@/lib/cart-store";
-import { createOrder } from "@/lib/api.functions";
-import { useState } from "react";
+import { createOrder, getLocations } from "@/lib/api.functions";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+
+type DeliveryWindow = { label: string; start: string; end: string; cutoff?: string };
+
+/** Next 3 calendar days (today, tomorrow, day-after) — matches the 2-day-ahead schedule limit. */
+function nextThreeDays() {
+  return Array.from({ length: 3 }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    return {
+      value: d.toISOString().slice(0, 10),
+      label:
+        i === 0
+          ? "Today"
+          : i === 1
+            ? "Tomorrow"
+            : d.toLocaleDateString("en-IN", { weekday: "short" }),
+      dateLabel: d.toLocaleDateString("en-IN", { day: "numeric", month: "short" }),
+    };
+  });
+}
+
+function windowIsClosedToday(win: DeliveryWindow, dateValue: string, todayValue: string) {
+  if (dateValue !== todayValue || !win.cutoff) return false;
+  const nowTime = new Date().toTimeString().slice(0, 5);
+  return nowTime >= win.cutoff;
+}
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({ meta: [{ title: "Your details — MyTown" }] }),
@@ -21,7 +48,8 @@ function Checkout() {
   const submit = useServerFn(createOrder);
 
   const initial = (() => {
-    if (typeof window === "undefined") return { name: "", phone: "", address: "", landmark: "", notes: "" };
+    if (typeof window === "undefined")
+      return { name: "", phone: "", address: "", landmark: "", notes: "" };
     try {
       const raw = localStorage.getItem(RECENT_KEY);
       if (raw) return { notes: "", ...JSON.parse(raw) };
@@ -32,6 +60,19 @@ function Checkout() {
   const [form, setForm] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // ----- Schedule Order (optional, collapsed by default — "ASAP" is untouched behavior) -----
+  const [scheduleMode, setScheduleMode] = useState<"asap" | "schedule">("asap");
+  const days = useMemo(() => nextThreeDays(), []);
+  const todayValue = days[0].value;
+  const [scheduleDate, setScheduleDate] = useState<string | null>(todayValue);
+  const [scheduleWindow, setScheduleWindow] = useState<string | null>(null);
+
+  const { data: locations } = useQuery({ queryKey: ["locations"], queryFn: () => getLocations() });
+  const activeLocation = locations?.[0];
+  const windows: DeliveryWindow[] =
+    (activeLocation?.config as { delivery_windows?: DeliveryWindow[] } | undefined)
+      ?.delivery_windows ?? [];
 
   if (items.length === 0) {
     return (
@@ -76,13 +117,23 @@ function Checkout() {
             isFreeform: i.isFreeform,
           })),
           notes: form.notes?.trim() || undefined,
+          locationId: activeLocation?.id,
+          // Untouched "Deliver ASAP" path sends neither field — server behaves exactly as before.
+          ...(scheduleMode === "schedule" && scheduleDate
+            ? { requestedDate: scheduleDate, requestedWindow: scheduleWindow ?? undefined }
+            : {}),
         },
       });
       try {
-        localStorage.setItem(RECENT_KEY, JSON.stringify({
-          name: form.name.trim(), phone: form.phone.trim(),
-          address: form.address.trim(), landmark: form.landmark?.trim() ?? "",
-        }));
+        localStorage.setItem(
+          RECENT_KEY,
+          JSON.stringify({
+            name: form.name.trim(),
+            phone: form.phone.trim(),
+            address: form.address.trim(),
+            landmark: form.landmark?.trim() ?? "",
+          }),
+        );
       } catch {}
       clearCart();
       navigate({ to: "/order/$orderId", params: { orderId: res.orderId } });
@@ -103,6 +154,92 @@ function Checkout() {
           <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
             We'll confirm on WhatsApp before doing anything.
           </p>
+        </div>
+
+        {/* Deliver ASAP / Schedule — collapsed by default, zero extra steps unless opted into */}
+        <div>
+          <div className="grid grid-cols-2 gap-1 rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] p-1">
+            {(["asap", "schedule"] as const).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => setScheduleMode(mode)}
+                className="tap-scale rounded-full py-2 text-sm font-semibold transition-colors"
+                style={
+                  scheduleMode === mode
+                    ? {
+                        background:
+                          "linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))",
+                      }
+                    : { color: "var(--text-secondary)" }
+                }
+              >
+                {mode === "asap" ? "Deliver ASAP" : "Schedule"}
+              </button>
+            ))}
+          </div>
+
+          {scheduleMode === "schedule" && (
+            <div className="rise mt-3 space-y-3">
+              <div>
+                <div className="mb-1.5 text-sm font-semibold">Choose a day</div>
+                <div className="flex gap-2">
+                  {days.map((d) => (
+                    <button
+                      key={d.value}
+                      type="button"
+                      onClick={() => setScheduleDate(d.value)}
+                      className="tap-scale flex-1 rounded-2xl border py-2 text-center text-xs font-semibold"
+                      style={{
+                        borderColor:
+                          scheduleDate === d.value
+                            ? "var(--accent-primary)"
+                            : "var(--border-strong)",
+                        background:
+                          scheduleDate === d.value ? "var(--bg-elevated-2)" : "transparent",
+                      }}
+                    >
+                      <div>{d.label}</div>
+                      <div className="text-[10px] font-normal text-[color:var(--text-muted)]">
+                        {d.dateLabel}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {windows.length > 0 && (
+                <div>
+                  <div className="mb-1.5 text-sm font-semibold">Choose a window</div>
+                  <div className="flex flex-wrap gap-2">
+                    {windows.map((w) => {
+                      const closed = scheduleDate
+                        ? windowIsClosedToday(w, scheduleDate, todayValue)
+                        : false;
+                      return (
+                        <button
+                          key={w.label}
+                          type="button"
+                          disabled={closed}
+                          onClick={() => setScheduleWindow(w.label)}
+                          className="tap-scale rounded-full border px-4 py-2 text-xs font-semibold capitalize disabled:opacity-40"
+                          style={{
+                            borderColor:
+                              scheduleWindow === w.label
+                                ? "var(--accent-primary)"
+                                : "var(--border-strong)",
+                          }}
+                        >
+                          {w.label}
+                          {closed && <span className="ml-1 font-normal">· closed</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <Field label="Your name" error={errors.name}>
@@ -190,8 +327,16 @@ function Checkout() {
 }
 
 function Field({
-  label, hint, error, children,
-}: { label: string; hint?: string; error?: string; children: React.ReactNode }) {
+  label,
+  hint,
+  error,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <label className="block">
       <div className="mb-1.5 flex items-baseline justify-between">
