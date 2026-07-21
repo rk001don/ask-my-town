@@ -32,6 +32,52 @@ const OrderItemSchema = z.object({
 });
 
 // =============================================================================
+// Locations
+// =============================================================================
+export const getLocations = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("locations")
+    .select("id, name, slug, default_language, timezone, config")
+    .eq("active", true)
+    .order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+});
+
+// =============================================================================
+// Products
+// =============================================================================
+export const getProducts = createServerFn({ method: "GET" })
+  .inputValidator((data: { categorySlug?: string; locationId?: string }) =>
+    z.object({
+      categorySlug: z.string().max(80).optional(),
+      locationId: z.string().uuid().optional(),
+    }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let query = supabaseAdmin
+      .from("products")
+      .select("id, category_id, name, description, image_url, price, currency, show_price, payment_mode, is_service, is_available, schedulable, sort_order, tags")
+      .eq("is_available", true)
+      .order("sort_order", { ascending: true });
+
+    if (data.categorySlug) {
+      const { data: cat } = await supabaseAdmin
+        .from("categories").select("id").eq("slug", data.categorySlug).is("parent_id", null).maybeSingle();
+      if (!cat) return [];
+      query = query.eq("category_id", cat.id);
+    }
+    if (data.locationId) {
+      query = query.or(`location_id.is.null,location_id.eq.${data.locationId}`);
+    }
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+// =============================================================================
 // Categories
 // =============================================================================
 export const getCategories = createServerFn({ method: "GET" }).handler(async () => {
@@ -66,6 +112,7 @@ export const getSubcategories = createServerFn({ method: "GET" })
     if (cErr) throw new Error(cErr.message);
     return { parent, items: items ?? [] };
   });
+
 
 // =============================================================================
 // Search
