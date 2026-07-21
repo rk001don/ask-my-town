@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
 import { EmptyState } from "@/components/States";
 import { clearCart, useCart } from "@/lib/cart-store";
-import { createOrder } from "@/lib/api.functions";
-import { useState } from "react";
+import { createOrder, getLocations } from "@/lib/api.functions";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -15,10 +16,48 @@ export const Route = createFileRoute("/checkout")({
 
 const RECENT_KEY = "mytown.customer.v1";
 
+type DeliveryWindow = { label: string; start: string; end: string; cutoff: string };
+
+function nowInTz(tz: string) {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(new Date()).map((p) => [p.type, p.value]));
+  return {
+    dateStr: `${parts.year}-${parts.month}-${parts.day}`,
+    h: parseInt(parts.hour, 10) % 24,
+    m: parseInt(parts.minute, 10),
+  };
+}
+function addDaysISO(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split("-").map((n) => parseInt(n, 10));
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+function prettyDate(iso: string, tz: string): string {
+  const [y, m, d] = iso.split("-").map((n) => parseInt(n, 10));
+  const dt = new Date(Date.UTC(y, m - 1, d, 12));
+  return dt.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", timeZone: tz });
+}
+
 function Checkout() {
   const { items } = useCart();
   const navigate = useNavigate();
   const submit = useServerFn(createOrder);
+  const fetchLocations = useServerFn(getLocations);
+
+  const { data: locations } = useQuery({
+    queryKey: ["locations"],
+    queryFn: () => fetchLocations(),
+    staleTime: 5 * 60 * 1000,
+  });
+  const location = locations?.[0];
+  const tz = location?.timezone || "Asia/Kolkata";
+  const windows: DeliveryWindow[] =
+    ((location?.config as { delivery_windows?: DeliveryWindow[] } | undefined)?.delivery_windows) ?? [];
 
   const initial = (() => {
     if (typeof window === "undefined") return { name: "", phone: "", address: "", landmark: "", notes: "" };
@@ -32,6 +71,29 @@ function Checkout() {
   const [form, setForm] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Scheduling state
+  const [mode, setMode] = useState<"asap" | "schedule">("asap");
+  const nowTz = useMemo(() => nowInTz(tz), [tz]);
+  const dateOptions = useMemo(() => {
+    const today = nowTz.dateStr;
+    return [
+      { iso: today, label: `Today, ${prettyDate(today, tz)}` },
+      { iso: addDaysISO(today, 1), label: `Tomorrow, ${prettyDate(addDaysISO(today, 1), tz)}` },
+      { iso: addDaysISO(today, 2), label: prettyDate(addDaysISO(today, 2), tz) },
+    ];
+  }, [nowTz.dateStr, tz]);
+  const [dateIso, setDateIso] = useState<string>(dateOptions[0].iso);
+  const [windowLabel, setWindowLabel] = useState<string | null>(null);
+
+  const isToday = dateIso === nowTz.dateStr;
+
+  function windowClosedToday(w: DeliveryWindow): boolean {
+    if (!isToday) return false;
+    const [h, m] = w.cutoff.split(":").map((n) => parseInt(n, 10));
+    const cutMin = h * 60 + (m || 0);
+    return nowTz.h * 60 + nowTz.m >= cutMin;
+  }
 
   if (items.length === 0) {
     return (
@@ -50,6 +112,7 @@ function Checkout() {
     if (form.name.trim().length < 2) errs.name = "Please enter your name";
     if (!/^[+]?[0-9\s-]{7,15}$/.test(form.phone.trim())) errs.phone = "Enter a valid phone number";
     if (form.address.trim().length < 6) errs.address = "Please add a delivery address";
+    if (mode === "schedule" && !windowLabel) errs.window = "Pick a delivery window";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -76,6 +139,10 @@ function Checkout() {
             isFreeform: i.isFreeform,
           })),
           notes: form.notes?.trim() || undefined,
+          locationId: location?.id,
+          ...(mode === "schedule"
+            ? { requestedDate: dateIso, requestedWindow: windowLabel ?? undefined }
+            : {}),
         },
       });
       try {
@@ -87,7 +154,8 @@ function Checkout() {
       clearCart();
       navigate({ to: "/order/$orderId", params: { orderId: res.orderId } });
     } catch (err) {
-      toast.error("Couldn't send your ask. Please try again.");
+      const msg = err instanceof Error ? err.message : "Couldn't send your ask. Please try again.";
+      toast.error(msg);
       console.error(err);
     } finally {
       setBusy(false);
@@ -103,6 +171,98 @@ function Checkout() {
           <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
             We'll confirm on WhatsApp before doing anything.
           </p>
+        </div>
+
+        {/* Schedule toggle */}
+        <div>
+          <div className="mb-1.5 text-sm font-semibold">When to deliver</div>
+          <div
+            role="tablist"
+            aria-label="Delivery timing"
+            className="inline-flex w-full rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] p-1"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === "asap"}
+              onClick={() => { setMode("asap"); setWindowLabel(null); setDateIso(dateOptions[0].iso); }}
+              className={`flex-1 rounded-full py-2 text-sm font-semibold transition-colors ${
+                mode === "asap" ? "accent-gradient text-black" : "text-[color:var(--text-secondary)]"
+              }`}
+            >
+              Deliver ASAP
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={mode === "schedule"}
+              onClick={() => setMode("schedule")}
+              className={`flex-1 rounded-full py-2 text-sm font-semibold transition-colors ${
+                mode === "schedule" ? "accent-gradient text-black" : "text-[color:var(--text-secondary)]"
+              }`}
+            >
+              Schedule
+            </button>
+          </div>
+
+          {mode === "schedule" && (
+            <div className="mt-3 space-y-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated-1)] p-3">
+              <div>
+                <div className="mb-1.5 text-xs font-semibold text-[color:var(--text-secondary)]">Choose a day</div>
+                <div className="flex flex-wrap gap-2">
+                  {dateOptions.map((d) => (
+                    <button
+                      key={d.iso}
+                      type="button"
+                      onClick={() => setDateIso(d.iso)}
+                      className={`rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
+                        dateIso === d.iso
+                          ? "accent-gradient text-black border-transparent"
+                          : "border-[color:var(--border-strong)] text-[color:var(--text-primary)] bg-[color:var(--bg-elevated-2)]"
+                      }`}
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-1.5 text-xs font-semibold text-[color:var(--text-secondary)]">Choose a window</div>
+                <div className="flex flex-wrap gap-2">
+                  {windows.length === 0 && (
+                    <span className="text-xs text-[color:var(--text-muted)]">Loading windows…</span>
+                  )}
+                  {windows.map((w) => {
+                    const closed = windowClosedToday(w);
+                    const active = windowLabel === w.label;
+                    return (
+                      <button
+                        key={w.label}
+                        type="button"
+                        disabled={closed}
+                        onClick={() => setWindowLabel(w.label)}
+                        className={`rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
+                          active
+                            ? "accent-gradient text-black border-transparent"
+                            : closed
+                            ? "border-[color:var(--border-subtle)] bg-transparent text-[color:var(--text-muted)] opacity-60 cursor-not-allowed"
+                            : "border-[color:var(--border-strong)] text-[color:var(--text-primary)] bg-[color:var(--bg-elevated-2)]"
+                        }`}
+                        title={closed ? "Closed for today" : `${w.start}–${w.end}`}
+                      >
+                        {w.label}
+                        <span className="ml-1.5 text-xs opacity-70">
+                          {closed ? "closed" : `${w.start}–${w.end}`}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {errors.window && <div className="mt-1 text-xs text-[color:var(--danger)]">{errors.window}</div>}
+              </div>
+            </div>
+          )}
         </div>
 
         <Field label="Your name" error={errors.name}>
