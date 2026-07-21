@@ -23,6 +23,7 @@ const CustomerSchema = z.object({
 });
 
 const OrderItemSchema = z.object({
+  productId: z.string().uuid().optional(),
   itemName: z.string().trim().min(1).max(160),
   category: z.string().trim().max(80).optional(),
   subcategory: z.string().trim().max(80).optional(),
@@ -30,6 +31,7 @@ const OrderItemSchema = z.object({
   notes: z.string().trim().max(280).optional(),
   isFreeform: z.boolean(),
 });
+
 
 // =============================================================================
 // Locations
