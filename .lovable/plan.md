@@ -1,84 +1,105 @@
+## MyTown v2 — Phase 1 Build Plan
 
-## What ships
+Scope: everything from the HLD/LLD **except** wallets, payments (Razorpay), subscriptions, and their jobs. Plus the new **Schedule Order** feature on checkout.
 
-The complete "I need something → MyTown confirmed my order" loop, end-to-end against Lovable Cloud, mobile-first from 390px, PWA-installable, every screen with skeleton/empty/error/populated states.
+---
 
-## Stack decisions (locked from your answers)
+### 1. Database migration (single migration)
 
-- Backend: **Lovable Cloud** (Postgres + auth + server functions). No Google Sheets.
-- Town: **Karimangalam**. Header quick-contact opens WhatsApp deep link to **+91 80722 83367**, pre-filled with the same "Ask MyTown" text as the FAB.
-- Brand: spec default — CRED-leaning dark base, glass surfaces, warm amber accent, confident display font + legible body.
-- Employee PIN: I'll generate a secure PIN and show it to you once after build (stored hashed with bcrypt server-side; you can rotate anytime).
+**New tables** (all with GRANTs + RLS in the same migration):
+- `locations` — one seed row for Karimangalam (`slug='karimangalam'`, `default_language='ta'`, `config` with `delivery_windows: [{label:'Morning',start,end,cutoff},{label:'Evening',...},{label:'Night',...}]`).
+- `products` — real catalog with `price`, `show_price`, `payment_mode`, `is_service`, `is_subscription_eligible` (column kept, unused), `is_available`, `tags[]`, plus new `schedulable BOOLEAN DEFAULT true`.
+- `delivery_batches` — keyed on `(location_id, window_label, scheduled_at::date)`.
+- `riders` — service-role only; customer-facing reads via server fn that strips `id_proof_url`.
+- `staff` — replaces the shared employee PIN with per-user rows tied to `auth.users`, with `role IN ('admin','ops','warden_viewer')` and optional `location_id` scope.
+- `app_config` — key/scope/scope_id/value JSONB.
+- `audit_log` — staff actions.
+- `order_attachments` — links to Storage bucket.
+- `group_orders` — floor/room shared cart.
 
-## Data model (Postgres, replaces the Sheets tables)
+**Alter existing tables:**
+- `customers`: add `user_id UUID REFERENCES auth.users(id)`.
+- `orders`: add `location_id`, `delivery_batch_id`, `group_order_id`, `payment_status` (default `'unpaid'`, kept for future), `subscription_id` (nullable, kept for future), `requested_date DATE DEFAULT CURRENT_DATE` with CHECK `BETWEEN CURRENT_DATE AND CURRENT_DATE + 2`, `requested_window TEXT`. Add owner-read RLS via `customers.user_id`.
+- `order_items`: add `product_id UUID REFERENCES products(id)`.
 
-- `customers` (id, name, phone, address, landmark, created_at)
-- `orders` (id human-readable `MT-XXXXXX`, customer_id, status enum, notes, assigned_employee_id, timestamps)
-- `order_items` (id, order_id, item_name, category, subcategory, quantity, notes, is_freeform)
-- `employees` (id, name, pin_hash, active) — seeded with one row
-- `categories` (id, name, parent_id, icon_key, sort_order) — seeded with §6 taxonomy
-- `search_analytics` (id, term, normalized_term, result_count, created_at)
-- Status enum: `received | confirmed | arranging | on_the_way | completed`
-- RLS: `customers`/`orders`/`order_items` insert-open to anon for order creation, select-by-phone-or-order-id via server function only. `employees` locked (server-only). `categories` public read. Grants written per stack rules.
+**Skipped (Phase 2):** `wallets`, `wallet_transactions`, `payments`, `subscriptions`. `payment_mode`/`show_price` columns remain on `products` for forward-compat but no branching UI is built.
 
-## Server functions (replace the Apps Script API contract)
+**Storage buckets:** `ask-attachments` (INSERT anon/auth, SELECT service_role), `rider-photos` (service_role only).
 
-- `searchItems({ q })` — fuzzy + synonym match over categories/items, logs to `search_analytics`, returns matches + suggestion list
-- `getCategories()` / `getSubcategories({ categoryId })`
-- `createOrder({ customer, items, notes })` → `{ orderId }`
-- `trackOrder({ phone?, orderId? })` → order + items + status history
-- `employeeLogin({ pin })` → issues short-lived signed session cookie
-- `listEmployeeOrders()` / `updateOrderStatus({ orderId, status })` — PIN-session gated
+**Seed data (same migration):** one location, ~15-25 products across the existing 7 categories with sensible `price`, `show_price`, `is_service`, `schedulable` flags; a default `app_config` row for `languages_enabled`.
 
-## Routes (TanStack Start file-based)
+---
 
+### 2. Server functions (extend `src/lib/api.functions.ts`)
+
+New / updated:
+- `getLocations()`, `getProducts({ categoryId, locationId })`.
+- `createOrder(...)` — extend with `locationId`, optional `requestedDate`, `requestedWindow`, optional `attachmentPath` per item, optional `groupOrderId`. Validation:
+  - `requestedDate` within `[today, today+2]` (server-recomputed).
+  - If `requestedDate == today`, verify the chosen window's cutoff hasn't passed for the location (read from `locations.config.delivery_windows`).
+  - Reject if any item's product has `schedulable = false` and date != today.
+  - After insert, resolve/create the correct `delivery_batches` row for `(location, window, requested_date)` and set `orders.delivery_batch_id`.
+- Rider display fn (strips `id_proof_url`), attachment upload signer, group-order create/join, staff-action helpers (write to `audit_log`).
+- Migrate `employeeLogin`/`updateOrderStatus` to use the new `staff` table (kept PIN flow working via `mytown_verify_employee_pin` as a bridge, or swap to Supabase Auth email/password — see Technical Notes).
+
+---
+
+### 3. Checkout UI — Schedule Order
+
+Edit `src/routes/checkout.tsx` only. Above the existing name/phone/address fields:
+
+```text
+[ Deliver ASAP ] [ Schedule ]        (segmented, ASAP selected by default)
+
+  (expands inline when Schedule is tapped — no modal, no route)
+  Choose a day
+  [ Today, 21 Jul ]  [ Tomorrow, 22 Jul ]  [ Wed, 23 Jul ]
+
+  Choose a window
+  [ Morning ]  [ Evening ]  [ Night ]      (greyed + "closed" if cutoff passed)
+
+  — existing form fields unchanged —
+  [ Send my ask (n) ]                       (unchanged position + copy)
 ```
-/                       Home (brand header, hero, popular picks, categories grid, how it works)
-/explore                Explore (all categories, reference-style header)
-/c/$categoryId          Category → item grid (2-col cards, inline +/- stepper)
-/search                 Search page (recent/trending, live suggestions, no-results → Ask sheet)
-/cart                   Review (item rows, notes, "X items added", Continue)
-/checkout               Customer details form
-/order/$orderId         Confirmation (order id, summary, timeline, CTAs)
-/activity               Tracking (by phone or order id, status stepper, past orders)
-/employee               PIN gate → Kanban board (New / Assigned / Confirmed / Completed)
-```
 
-Bottom nav: Home · Explore · Activity. Ask MyTown = global FAB → bottom sheet, reachable on every customer route. Cart icon lives in header with live badge (Zustand store, persisted to localStorage).
+Rules:
+- ASAP path sends the same payload as today (no `requestedDate`).
+- Windows are read from the selected location's `config.delivery_windows`; cutoff comparison uses the user's local time but is re-validated server-side.
+- Disabled pills are visibly greyed with a "closed" label, not hidden.
+- Toggling back to "Deliver ASAP" clears the scheduling state.
 
-## Design system
+---
 
-- Tokens in `src/styles.css` `@theme`: `--bg-base/elevated/glass`, `--accent-primary` (warm amber) / `--accent-secondary`, semantic text + status colors, all in oklch.
-- Fonts loaded via `<link>` in `__root.tsx`: display = **Sora**, body = **Inter Tight** (both from Google Fonts).
-- Card radius 20px, pill CTAs, two-layer soft shadows, backdrop-blur glass on sticky headers/sheets.
-- Motion: framer-motion for card stagger, sheet spring, cart badge bounce, stepper press; skeleton shimmer via CSS; `prefers-reduced-motion` respected.
-- shadcn primitives customized via variants — no ad-hoc `text-white`/`bg-[#...]` in components.
+### 4. Admin/staff console updates
 
-## State coverage
+- Staff Kanban already exists; extend it to show `requested_date` + `requested_window` chips on each card and to group future-dated batches separately from today's board (a small day-tab or section header — "Today · Morning / Evening / Night", "Tomorrow · …").
+- Admin catalog editor for `products` (toggle `is_available`, `schedulable`, `show_price`, edit `price`, `tags`) — minimal table view, ops-only.
 
-Every data screen gets a shaped skeleton, an empty state with next action (empty cart → Explore + Ask), a retryable error state, and the populated state. Ask FAB is auto-opened (pre-filled) from search no-results and category empty states.
+---
 
-## PWA
+### 5. Acceptance checks (must pass before we call it done)
 
-Manifest-only installability (spec doesn't ask for offline). Icons, theme color, `display: standalone`, apple-touch-icon in `__root.tsx` head. Meta/OG per route.
+- Submitting checkout without touching the toggle produces the identical request as today.
+- "Schedule" expands inline; no navigation occurs.
+- A cutoff-passed window renders disabled, not missing, not tappable.
+- Server rejects `today+3`, rejects scheduled non-`schedulable` items, rejects past-cutoff today windows — with clear messages, not raw Postgres errors.
+- A scheduled order for tomorrow evening appears in the staff view under tomorrow's Evening batch, not today's.
+- Existing anon checkout still works (no auth required for placing an order).
 
-## Out of scope (deferred to v2, matches §5)
+---
 
-Admin analytics, category management UI, wishlist, filter/sort, employee stats, ratings, chat, push, i18n, desktop redesign, Account tab.
+### Technical notes
 
-## Build order
+- **Staff auth migration is a real decision.** The current app uses a shared PIN cookie. The spec's `staff` table assumes Supabase Auth users. Options: (a) keep PIN gate now, add `staff` table empty for Phase 2; (b) switch staff console to Supabase Auth email/password this phase. Recommend (a) to keep this build focused — flag in the plan for your call.
+- **RLS for owner reads** uses `customers.user_id = auth.uid()`. Anonymous orders (no `user_id`) remain readable via the existing phone/orderId `trackOrder` server fn path — unchanged.
+- **Batch assignment** runs inline inside `createOrder` for now (upsert the batch row). The separate lock/dispatch cron job from the HLD is out of scope this phase.
+- **Cutoff times** are stored per window in `locations.config.delivery_windows[i].cutoff` (e.g., `"10:30"` for Morning). Server compares against `now() AT TIME ZONE locations.timezone`.
+- **No new dependencies** required. No Razorpay SDK, no wallet UI, no cron setup.
 
-1. Enable Lovable Cloud + migrations (schema, RLS, grants, seed categories + employee row).
-2. Design system (`styles.css`, fonts, tokens, shadcn variants).
-3. Layout shell: `__root.tsx` head/PWA/meta, bottom nav, header with cart badge, Ask FAB + sheet, cart store.
-4. Server functions + Zod validators.
-5. Home → Explore → Category → Search (with all 4 states each).
-6. Cart Review → Checkout → Confirmation.
-7. Activity tracking.
-8. Employee PIN gate + Kanban.
-9. Polish pass: motion, skeletons, empty states, WhatsApp deep link, verify 390px, sitemap/robots, head metadata per route.
-10. Smoke-test the full loop end-to-end via Playwright.
+---
 
-## Definition of done
+### Open questions before I build
 
-Full loop works against live Cloud backend, every screen passes the 4-state check, PWA installs, employee board updates status live, Ask FAB reachable everywhere and feeds the same cart, nothing from the OUT list snuck in, no prices/discounts/totals anywhere.
+1. Staff auth: keep PIN gate for this phase, or migrate staff console to Supabase Auth email/password now?
+2. Delivery-window cutoffs for Karimangalam — do you have real times (e.g. Morning cutoff 09:00, Evening 15:00, Night 19:00), or should I seed reasonable defaults you can edit later via `app_config`?
+3. Product catalog seed — should I invent ~20 sensible products across the 7 categories (with prices), or leave the table empty and let you add via the admin editor?
