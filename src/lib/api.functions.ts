@@ -23,6 +23,7 @@ const CustomerSchema = z.object({
 });
 
 const OrderItemSchema = z.object({
+  productId: z.string().uuid().optional(),
   itemName: z.string().trim().min(1).max(160),
   category: z.string().trim().max(80).optional(),
   subcategory: z.string().trim().max(80).optional(),
@@ -30,6 +31,53 @@ const OrderItemSchema = z.object({
   notes: z.string().trim().max(280).optional(),
   isFreeform: z.boolean(),
 });
+
+
+// =============================================================================
+// Locations
+// =============================================================================
+export const getLocations = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("locations")
+    .select("id, name, slug, default_language, timezone, config")
+    .eq("active", true)
+    .order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+});
+
+// =============================================================================
+// Products
+// =============================================================================
+export const getProducts = createServerFn({ method: "GET" })
+  .inputValidator((data: { categorySlug?: string; locationId?: string }) =>
+    z.object({
+      categorySlug: z.string().max(80).optional(),
+      locationId: z.string().uuid().optional(),
+    }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let query = supabaseAdmin
+      .from("products")
+      .select("id, category_id, name, description, image_url, price, currency, show_price, payment_mode, is_service, is_available, schedulable, sort_order, tags")
+      .eq("is_available", true)
+      .order("sort_order", { ascending: true });
+
+    if (data.categorySlug) {
+      const { data: cat } = await supabaseAdmin
+        .from("categories").select("id").eq("slug", data.categorySlug).is("parent_id", null).maybeSingle();
+      if (!cat) return [];
+      query = query.eq("category_id", cat.id);
+    }
+    if (data.locationId) {
+      query = query.or(`location_id.is.null,location_id.eq.${data.locationId}`);
+    }
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
 
 // =============================================================================
 // Categories
@@ -66,6 +114,7 @@ export const getSubcategories = createServerFn({ method: "GET" })
     if (cErr) throw new Error(cErr.message);
     return { parent, items: items ?? [] };
   });
+
 
 // =============================================================================
 // Search
@@ -163,32 +212,117 @@ export const searchItems = createServerFn({ method: "GET" })
   });
 
 // =============================================================================
-// Create order
+// Create order (with optional scheduling)
 // =============================================================================
+type DeliveryWindow = { label: string; start: string; end: string; cutoff: string };
+
+function parseHM(hm: string): { h: number; m: number } {
+  const [h, m] = hm.split(":").map((n) => parseInt(n, 10));
+  return { h, m: m || 0 };
+}
+
+// Compute "now" in a given IANA timezone as { date: YYYY-MM-DD, h, m }
+function nowInTz(tz: string): { dateStr: string; h: number; m: number } {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: tz,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  });
+  const parts = Object.fromEntries(fmt.formatToParts(new Date()).map((p) => [p.type, p.value]));
+  return {
+    dateStr: `${parts.year}-${parts.month}-${parts.day}`,
+    h: parseInt(parts.hour, 10) % 24,
+    m: parseInt(parts.minute, 10),
+  };
+}
+
+function addDaysISO(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split("-").map((n) => parseInt(n, 10));
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
 export const createOrder = createServerFn({ method: "POST" })
   .inputValidator((data: {
     customer: z.infer<typeof CustomerSchema>;
     items: z.infer<typeof OrderItemSchema>[];
     notes?: string;
+    locationId?: string;
+    requestedDate?: string;
+    requestedWindow?: string;
   }) =>
     z
       .object({
         customer: CustomerSchema,
         items: z.array(OrderItemSchema).min(1, "Add at least one item"),
         notes: z.string().trim().max(500).optional(),
+        locationId: z.string().uuid().optional(),
+        requestedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        requestedWindow: z.string().trim().min(1).max(40).optional(),
       })
       .parse(data),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // upsert-like: find existing by phone or create new
+    // Resolve location: caller-supplied or fallback to first active
+    let locationId = data.locationId;
+    let locTz = "Asia/Kolkata";
+    let windows: DeliveryWindow[] = [];
+    {
+      const { data: loc, error: locErr } = locationId
+        ? await supabaseAdmin.from("locations").select("id, timezone, config").eq("id", locationId).maybeSingle()
+        : await supabaseAdmin.from("locations").select("id, timezone, config").eq("active", true).order("name").limit(1).maybeSingle();
+      if (locErr) throw new Error(locErr.message);
+      if (!loc) throw new Error("No active location configured");
+      locationId = loc.id;
+      locTz = loc.timezone || "Asia/Kolkata";
+      const cfg = (loc.config ?? {}) as { delivery_windows?: DeliveryWindow[] };
+      windows = cfg.delivery_windows ?? [];
+    }
+
+    // Validate scheduling against server clock, not client
+    const nowTz = nowInTz(locTz);
+    const today = nowTz.dateStr;
+    const tomorrow = addDaysISO(today, 1);
+    const dayAfter = addDaysISO(today, 2);
+    const requestedDate = data.requestedDate ?? today;
+    if (![today, tomorrow, dayAfter].includes(requestedDate)) {
+      throw new Error("Delivery date must be today, tomorrow, or the day after.");
+    }
+
+    let requestedWindow: string | null = data.requestedWindow ?? null;
+    if (requestedWindow) {
+      const win = windows.find((w) => w.label.toLowerCase() === requestedWindow!.toLowerCase());
+      if (!win) throw new Error(`Unknown delivery window: ${requestedWindow}`);
+      requestedWindow = win.label;
+      if (requestedDate === today) {
+        const { h, m } = parseHM(win.cutoff);
+        const nowMin = nowTz.h * 60 + nowTz.m;
+        const cutMin = h * 60 + m;
+        if (nowMin >= cutMin) {
+          throw new Error(`Sorry, the ${win.label} window has closed for today. Please pick a later window.`);
+        }
+      }
+    }
+
+    // Enforce schedulable flag per product for future-dated orders
+    if (requestedDate !== today) {
+      const productIds = data.items.map((i) => i.productId).filter(Boolean) as string[];
+      if (productIds.length) {
+        const { data: prods, error: pErr } = await supabaseAdmin
+          .from("products").select("id, name, schedulable").in("id", productIds);
+        if (pErr) throw new Error(pErr.message);
+        const blocked = (prods ?? []).find((p) => !p.schedulable);
+        if (blocked) throw new Error(`"${blocked.name}" can't be scheduled ahead. Please choose "Deliver ASAP" or remove it.`);
+      }
+    }
+
+    // Upsert customer by phone
     const phone = data.customer.phone.replace(/\s|-/g, "");
     const { data: existing } = await supabaseAdmin
-      .from("customers")
-      .select("id")
-      .eq("phone", phone)
-      .maybeSingle();
+      .from("customers").select("id").eq("phone", phone).maybeSingle();
 
     let customerId = existing?.id;
     if (!customerId) {
@@ -200,12 +334,10 @@ export const createOrder = createServerFn({ method: "POST" })
           address: data.customer.address,
           landmark: data.customer.landmark || null,
         })
-        .select("id")
-        .single();
+        .select("id").single();
       if (error) throw new Error(error.message);
       customerId = inserted!.id;
     } else {
-      // refresh address/landmark to latest
       await supabaseAdmin
         .from("customers")
         .update({
@@ -216,21 +348,28 @@ export const createOrder = createServerFn({ method: "POST" })
         .eq("id", customerId);
     }
 
+    // Generate order id
     const { data: orderIdRow, error: idErr } = await supabaseAdmin.rpc("mytown_new_order_id");
     if (idErr) throw new Error(idErr.message);
     const orderId = orderIdRow as unknown as string;
 
+    // Insert order (client-facing insert policy forbids delivery_batch_id; write it as a separate update below via service role — but service role bypasses RLS so the initial insert can include location/date fields)
     const { error: orderErr } = await supabaseAdmin.from("orders").insert({
       id: orderId,
       customer_id: customerId,
       status: "received",
       notes: data.notes || null,
+      location_id: locationId,
+      requested_date: requestedDate,
+      requested_window: requestedWindow,
     });
     if (orderErr) throw new Error(orderErr.message);
 
+    // Insert items
     const { error: itemsErr } = await supabaseAdmin.from("order_items").insert(
       data.items.map((i) => ({
         order_id: orderId,
+        product_id: i.productId || null,
         item_name: i.itemName,
         category: i.category || null,
         subcategory: i.subcategory || null,
@@ -241,8 +380,32 @@ export const createOrder = createServerFn({ method: "POST" })
     );
     if (itemsErr) throw new Error(itemsErr.message);
 
+    // Resolve/create delivery batch and attach
+    if (requestedWindow) {
+      const win = windows.find((w) => w.label === requestedWindow)!;
+      const scheduledAt = new Date(`${requestedDate}T${win.start}:00`).toISOString();
+      const { data: batch, error: bErr } = await supabaseAdmin
+        .from("delivery_batches")
+        .upsert(
+          {
+            location_id: locationId,
+            window_label: requestedWindow,
+            scheduled_date: requestedDate,
+            scheduled_at: scheduledAt,
+            status: "open",
+          },
+          { onConflict: "location_id,window_label,scheduled_date", ignoreDuplicates: false },
+        )
+        .select("id")
+        .single();
+      if (!bErr && batch) {
+        await supabaseAdmin.from("orders").update({ delivery_batch_id: batch.id }).eq("id", orderId);
+      }
+    }
+
     return { orderId };
   });
+
 
 // =============================================================================
 // Track order
