@@ -90,9 +90,13 @@ export function addCatalogItem(item: {
   category?: string;
   subcategory?: string;
   iconKey?: string;
+  productId?: string;
+  unitPrice?: number | null;
+  showPrice?: boolean;
+  isService?: boolean;
 }) {
   ensureLoaded();
-  const key = catalogKey(item.itemName, item.subcategory);
+  const key = item.productId ? `prod:${item.productId}` : catalogKey(item.itemName, item.subcategory);
   const existing = state.items.find((i) => i.key === key);
   if (existing) {
     existing.quantity += 1;
@@ -109,6 +113,10 @@ export function addCatalogItem(item: {
           quantity: 1,
           isFreeform: false,
           iconKey: item.iconKey,
+          productId: item.productId,
+          unitPrice: item.unitPrice ?? null,
+          showPrice: item.showPrice ?? true,
+          isService: item.isService ?? false,
         },
       ],
     };
