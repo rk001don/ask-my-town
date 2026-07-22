@@ -9,6 +9,10 @@ export type CartItem = {
   notes?: string;
   isFreeform: boolean;
   iconKey?: string;
+  productId?: string;
+  unitPrice?: number | null;
+  showPrice?: boolean;
+  isService?: boolean;
 };
 
 const STORAGE_KEY = "mytown.cart.v1";
@@ -86,9 +90,13 @@ export function addCatalogItem(item: {
   category?: string;
   subcategory?: string;
   iconKey?: string;
+  productId?: string;
+  unitPrice?: number | null;
+  showPrice?: boolean;
+  isService?: boolean;
 }) {
   ensureLoaded();
-  const key = catalogKey(item.itemName, item.subcategory);
+  const key = item.productId ? `prod:${item.productId}` : catalogKey(item.itemName, item.subcategory);
   const existing = state.items.find((i) => i.key === key);
   if (existing) {
     existing.quantity += 1;
@@ -105,6 +113,10 @@ export function addCatalogItem(item: {
           quantity: 1,
           isFreeform: false,
           iconKey: item.iconKey,
+          productId: item.productId,
+          unitPrice: item.unitPrice ?? null,
+          showPrice: item.showPrice ?? true,
+          isService: item.isService ?? false,
         },
       ],
     };
@@ -187,4 +199,14 @@ export function useItemQuantity(itemName: string, subcategory?: string) {
 
 export function itemKeyFor(itemName: string, subcategory?: string) {
   return catalogKey(itemName, subcategory);
+}
+
+export function productKeyFor(productId: string) {
+  return `prod:${productId}`;
+}
+
+export function useProductQuantity(productId: string) {
+  const { items } = useCart();
+  const key = productKeyFor(productId);
+  return items.find((i) => i.key === key)?.quantity ?? 0;
 }
