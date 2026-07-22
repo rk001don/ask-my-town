@@ -131,6 +131,7 @@ function Checkout() {
             landmark: form.landmark?.trim() || undefined,
           },
           items: items.map((i) => ({
+            productId: i.productId,
             itemName: i.itemName,
             category: i.category,
             subcategory: i.subcategory,
