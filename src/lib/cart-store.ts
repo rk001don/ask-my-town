@@ -9,6 +9,10 @@ export type CartItem = {
   notes?: string;
   isFreeform: boolean;
   iconKey?: string;
+  productId?: string;
+  unitPrice?: number | null;
+  showPrice?: boolean;
+  isService?: boolean;
 };
 
 const STORAGE_KEY = "mytown.cart.v1";
