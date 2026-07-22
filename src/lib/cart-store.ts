@@ -200,3 +200,13 @@ export function useItemQuantity(itemName: string, subcategory?: string) {
 export function itemKeyFor(itemName: string, subcategory?: string) {
   return catalogKey(itemName, subcategory);
 }
+
+export function productKeyFor(productId: string) {
+  return `prod:${productId}`;
+}
+
+export function useProductQuantity(productId: string) {
+  const { items } = useCart();
+  const key = productKeyFor(productId);
+  return items.find((i) => i.key === key)?.quantity ?? 0;
+}
