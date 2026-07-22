@@ -61,7 +61,7 @@ export const getProducts = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let query = supabaseAdmin
       .from("products")
-      .select("id, category_id, name, description, image_url, price, currency, show_price, payment_mode, is_service, is_available, schedulable, sort_order, tags")
+      .select("id, category_id, name, description, image_url, price, currency, show_price, payment_mode, is_veg, is_service, is_available, schedulable, sort_order, tags")
       .eq("is_available", true)
       .order("sort_order", { ascending: true });
 
