@@ -155,6 +155,12 @@ function Checkout() {
         }));
       } catch {}
       clearCart();
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        if (sess.session) {
+          await linkCustomerToMe({ data: { phone: form.phone.trim() } });
+        }
+      } catch { /* non-fatal */ }
       navigate({ to: "/order/$orderId", params: { orderId: res.orderId } });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Couldn't send your ask. Please try again.";
