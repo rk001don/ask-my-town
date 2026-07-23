@@ -76,7 +76,7 @@ function MyOrdersPage() {
         <div className="space-y-3">
           {(data ?? []).map((o) => {
             const status = (o.status ?? "received") as OrderStatus;
-            const copy = STATUS_COPY[status] ?? { label: status, tone: "neutral" };
+            const copy = STATUS_COPY[status] ?? { label: status, blurb: "" };
             return (
               <Link
                 to="/order/$orderId"
