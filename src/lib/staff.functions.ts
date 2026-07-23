@@ -56,7 +56,12 @@ export const updateStaffOrderStatus = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertStaff(context.supabase as never, context.userId, true);
     const now = new Date().toISOString();
-    const patch: Record<string, unknown> = { status: data.status, updated_at: now };
+    const patch: {
+      status: typeof data.status;
+      updated_at: string;
+      confirmed_at?: string;
+      completed_at?: string;
+    } = { status: data.status, updated_at: now };
     if (data.status === "confirmed") patch.confirmed_at = now;
     if (data.status === "completed") patch.completed_at = now;
     const { error } = await context.supabase
@@ -67,11 +72,11 @@ export const updateStaffOrderStatus = createServerFn({ method: "POST" })
     // Fire-and-forget audit
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("audit_log").insert({
-      actor_user_id: context.userId,
+      staff_id: context.userId,
       action: "order.status_update",
-      target_type: "order",
-      target_id: data.orderId,
-      details: { status: data.status },
+      entity_type: "order",
+      entity_id: data.orderId,
+      metadata: { status: data.status },
     });
     return { ok: true as const };
   });
