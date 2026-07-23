@@ -210,8 +210,8 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
               </div>
               <div className="space-y-2">
                 {list.map((o) => {
-                  const idx = ORDER_STATUS_STEPS.indexOf(s);
-                  const nextStep = ORDER_STATUS_STEPS[idx + 1] as OrderStatus | undefined;
+                  const idx = ORDER_STATUS_STEPS.findIndex((st) => st.key === s);
+                  const nextStep = ORDER_STATUS_STEPS[idx + 1]?.key as OrderStatus | undefined;
                   return (
                     <div key={o.id} className="glass rounded-2xl p-3">
                       <div className="flex items-center justify-between">

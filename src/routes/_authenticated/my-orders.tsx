@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { getMyOrders } from "@/lib/auth.functions";
 import { AppHeader } from "@/components/AppHeader";
-import { EmptyState, SkeletonList, ErrorState } from "@/components/States";
+import { EmptyState, CardSkeleton, ErrorState } from "@/components/States";
 import { STATUS_COPY, type OrderStatus } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
 import { LogOut } from "lucide-react";
@@ -56,14 +56,20 @@ function MyOrdersPage() {
           </button>
         </div>
 
-        {isLoading && <SkeletonList count={3} />}
+        {isLoading && <CardSkeleton count={3} />}
         {error && <ErrorState onRetry={() => refetch()} />}
         {!isLoading && !error && (data?.length ?? 0) === 0 && (
           <EmptyState
             title="No orders yet"
-            body="Place your first order and it'll show up here."
-            actionLabel="Browse"
-            onAction={() => nav({ to: "/explore" })}
+            message="Place your first order and it'll show up here."
+            action={
+              <button
+                onClick={() => nav({ to: "/explore" })}
+                className="tap-scale rounded-full accent-gradient px-5 py-2.5 font-semibold text-[color:var(--on-accent)]"
+              >
+                Browse
+              </button>
+            }
           />
         )}
 
