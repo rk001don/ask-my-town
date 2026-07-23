@@ -5,6 +5,8 @@ import { AppHeader } from "@/components/AppHeader";
 import { EmptyState } from "@/components/States";
 import { clearCart, useCart } from "@/lib/cart-store";
 import { createOrder, getLocations } from "@/lib/api.functions";
+import { linkCustomerToMe } from "@/lib/auth.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
