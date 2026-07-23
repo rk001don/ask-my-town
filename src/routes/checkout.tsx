@@ -5,6 +5,8 @@ import { AppHeader } from "@/components/AppHeader";
 import { EmptyState } from "@/components/States";
 import { clearCart, useCart } from "@/lib/cart-store";
 import { createOrder, getLocations } from "@/lib/api.functions";
+import { linkCustomerToMe } from "@/lib/auth.functions";
+import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -153,6 +155,12 @@ function Checkout() {
         }));
       } catch {}
       clearCart();
+      try {
+        const { data: sess } = await supabase.auth.getSession();
+        if (sess.session) {
+          await linkCustomerToMe({ data: { phone: form.phone.trim() } });
+        }
+      } catch { /* non-fatal */ }
       navigate({ to: "/order/$orderId", params: { orderId: res.orderId } });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Couldn't send your ask. Please try again.";

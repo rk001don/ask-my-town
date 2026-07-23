@@ -1,7 +1,8 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Search as SearchIcon, ShoppingBag } from "lucide-react";
+import { ArrowLeft, Search as SearchIcon, ShoppingBag, User } from "lucide-react";
 import { useCartCount } from "@/lib/cart-store";
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 type Props = {
   title?: string;
@@ -21,12 +22,18 @@ export function AppHeader({
   const cartCount = useCartCount();
   const navigate = useNavigate();
   const [bump, setBump] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
   useEffect(() => {
     if (cartCount === 0) return;
     setBump(true);
     const t = setTimeout(() => setBump(false), 450);
     return () => clearTimeout(t);
   }, [cartCount]);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSignedIn(!!s));
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   return (
     <header
@@ -56,6 +63,13 @@ export function AppHeader({
             <SearchIcon className="h-5 w-5" />
           </Link>
         )}
+        <Link
+          to={signedIn ? "/my-orders" : "/auth"}
+          aria-label={signedIn ? "My orders" : "Sign in"}
+          className="tap-scale rounded-full p-2 hover:bg-white/5"
+        >
+          <User className="h-5 w-5" />
+        </Link>
         {showCart && (
           <Link
             to="/cart"
