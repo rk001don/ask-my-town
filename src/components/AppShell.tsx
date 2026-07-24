@@ -61,10 +61,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="relative flex min-h-[100dvh] w-full flex-1 flex-col md:max-w-4xl md:mx-auto md:[transform:translateZ(0)]">
         <main className="flex-1 pb-28 md:pb-10">{children}</main>
         <AskFAB />
-        {/* Bottom nav only below md — sidebar replaces it above */}
-        <div className="md:hidden">
-          <BottomNav pathname={loc.pathname} />
-        </div>
+        {/* Bottom nav only below md — sidebar replaces it above. Hidden on cart/checkout/order to prevent overlap with sticky CTAs. */}
+        {!hideBottomNav && (
+          <div className="md:hidden">
+            <BottomNav pathname={loc.pathname} />
+          </div>
+        )}
       </div>
     </div>
   );
