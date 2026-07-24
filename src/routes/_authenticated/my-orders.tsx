@@ -15,7 +15,10 @@ export const Route = createFileRoute("/_authenticated/my-orders")({
   head: () => ({
     meta: [
       { title: "My orders — MyTown" },
-      { name: "description", content: "Your recent MyTown orders, live status, and reorder history." },
+      {
+        name: "description",
+        content: "Your recent MyTown orders, live status, and reorder history.",
+      },
       { property: "og:title", content: "My orders — MyTown" },
       { property: "og:description", content: "Your recent MyTown orders and live status." },
       { name: "robots", content: "noindex" },
@@ -93,10 +96,23 @@ function MyOrdersPage() {
                 <div className="mt-2 text-sm text-[color:var(--text-secondary)] line-clamp-2">
                   {(o.items ?? []).map((i) => `${i.quantity}× ${i.item_name}`).join(", ") || "—"}
                 </div>
-                {o.requested_date && (
+                {(() => {
+                  const priced = (o.items ?? []).filter((i) => i.unit_price != null);
+                  if (priced.length === 0) return null;
+                  const total = priced.reduce((n, i) => n + (i.unit_price ?? 0) * i.quantity, 0);
+                  return (
+                    <div className="mt-1 text-xs font-semibold text-[color:var(--accent-primary)]">
+                      ₹{total}
+                    </div>
+                  );
+                })()}
+                {/* requested_date defaults to today for EVERY order (including plain ASAP
+                    ones), so it's not a reliable "this was scheduled" signal on its own.
+                    requested_window is only ever set when the customer explicitly used
+                    the Schedule toggle (see createOrder) -- that's the real signal. */}
+                {o.requested_window && (
                   <div className="mt-2 text-xs text-[color:var(--text-tertiary)]">
-                    Scheduled: {o.requested_date}
-                    {o.requested_window ? ` · ${o.requested_window}` : ""}
+                    Scheduled: {o.requested_date} · {o.requested_window}
                   </div>
                 )}
               </Link>

@@ -263,6 +263,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                   quantity: number;
                   notes: string | null;
                   is_freeform: boolean;
+                  unit_price?: number | null;
                 }[];
               }>) ?? [];
             return (
@@ -277,14 +278,21 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                   {list.map((o) => {
                     const idx = ORDER_STATUS_STEPS.findIndex((st) => st.key === s);
                     const nextStep = ORDER_STATUS_STEPS[idx + 1]?.key as OrderStatus | undefined;
+                    const priced = o.items.filter((it) => it.unit_price != null);
+                    const orderTotal = priced.reduce(
+                      (n, it) => n + (it.unit_price ?? 0) * it.quantity,
+                      0,
+                    );
                     return (
                       <div key={o.id} className="glass rounded-2xl p-3">
                         <div className="flex items-center justify-between">
                           <div className="font-mono text-xs font-semibold">{o.id}</div>
-                          {(o.requested_date || o.requested_window) && (
+                          {/* requested_window is only ever set when the customer explicitly
+                              scheduled ahead -- requested_date alone defaults to today for
+                              every order, so it's not shown here on its own to avoid noise. */}
+                          {o.requested_window && (
                             <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px]">
-                              {o.requested_date}
-                              {o.requested_window ? ` · ${o.requested_window}` : ""}
+                              {o.requested_date} · {o.requested_window}
                             </span>
                           )}
                         </div>
@@ -302,6 +310,11 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                             {o.customer?.landmark ? ` · ${o.customer.landmark}` : ""}
                           </span>
                         </div>
+                        {priced.length > 0 && (
+                          <div className="mt-1 text-xs font-bold text-[color:var(--accent-primary)]">
+                            ₹{orderTotal}
+                          </div>
+                        )}
                         <ul className="mt-2 space-y-0.5 text-xs">
                           {o.items.map((it, i) => (
                             <li key={i} className="text-[color:var(--text-primary)]">
