@@ -3,8 +3,10 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { getProducts, getSubcategories } from "@/lib/api.functions";
 import { AppHeader } from "@/components/AppHeader";
 import { ItemCard } from "@/components/ItemCard";
+import { openAskSheet } from "@/components/AskFAB";
 import { ProductCard, type ProductRow } from "@/components/ProductCard";
 import { EmptyState, ErrorState, CardSkeleton } from "@/components/States";
+import { Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 const subOpts = (slug: string) =>
@@ -86,45 +88,80 @@ function Category() {
 
   if (!sub.parent) return null;
 
+  const hasProducts = products.length > 0;
+  const hasSubcategories = sub.items.length > 0;
+  const hasNothing = !hasProducts && !hasSubcategories;
+
   return (
     <div>
       <AppHeader title={sub.parent.name} />
       {!mounted ? (
         <CardSkeleton />
-      ) : products.length > 0 ? (
-        <div className="space-y-6 p-4 pb-24">
-          {groups.map(([groupKey, items]) => (
-            <section key={groupKey}>
-              {groups.length > 1 && (
-                <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wider text-[color:var(--text-secondary)]">
-                  {GROUP_LABELS[groupKey] ?? titleize(groupKey)}
-                </h2>
-              )}
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {items.map((p) => (
-                  <ProductCard key={p.id} product={p} categoryName={sub.parent!.name} />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      ) : sub.items.length === 0 ? (
+      ) : hasNothing ? (
         <EmptyState
           title="Nothing here yet"
           message={`We don't have curated ${sub.parent.name} items yet. Tell us what you're looking for.`}
           askPrefill={`I need ${sub.parent.name.toLowerCase()}: `}
         />
       ) : (
-        <div className="grid grid-cols-2 gap-3 p-4 md:grid-cols-3 lg:grid-cols-4">
-          {sub.items.map((it) => (
-            <ItemCard
-              key={it.id}
-              itemName={it.name}
-              category={sub.parent!.name}
-              subcategory={it.slug}
-              iconKey={it.icon_key}
-            />
-          ))}
+        <div className="space-y-6 p-4 pb-24">
+          {/* Priced catalog — the primary content, always shown first when it exists */}
+          {hasProducts &&
+            groups.map(([groupKey, items]) => (
+              <section key={groupKey}>
+                {groups.length > 1 && (
+                  <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wider text-[color:var(--text-secondary)]">
+                    {GROUP_LABELS[groupKey] ?? titleize(groupKey)}
+                  </h2>
+                )}
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {items.map((p) => (
+                    <ProductCard key={p.id} product={p} categoryName={sub.parent!.name} />
+                  ))}
+                </div>
+              </section>
+            ))}
+
+          {/* Subcategory browsing — secondary to the catalog, shown after it */}
+          {hasSubcategories && (
+            <section>
+              {hasProducts && (
+                <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wider text-[color:var(--text-secondary)]">
+                  More in {sub.parent.name}
+                </h2>
+              )}
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+                {sub.items.map((it) => (
+                  <ItemCard
+                    key={it.id}
+                    itemName={it.name}
+                    category={sub.parent!.name}
+                    subcategory={it.slug}
+                    iconKey={it.icon_key}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Always-present, clearly secondary fallback — never competes with the
+              catalog above it, just quietly available for anything not listed. */}
+          <button
+            onClick={() => openAskSheet(`I need ${sub.parent!.name.toLowerCase()}: `)}
+            className="tap-scale flex w-full items-center gap-3 rounded-2xl border border-dashed border-[color:var(--border-strong)] p-4 text-left"
+          >
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[color:var(--accent-primary)]/10">
+              <Sparkles className="h-4 w-4 text-[color:var(--accent-primary)]" />
+            </span>
+            <span>
+              <span className="block text-sm font-semibold">
+                Didn't find what you're looking for?
+              </span>
+              <span className="block text-xs text-[color:var(--text-secondary)]">
+                Ask MyTown and we'll arrange it for you
+              </span>
+            </span>
+          </button>
         </div>
       )}
     </div>

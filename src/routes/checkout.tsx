@@ -197,7 +197,7 @@ function Checkout() {
         <div>
           <h2 className="text-display text-xl font-semibold">Where do we bring it?</h2>
           <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
-            We'll confirm on WhatsApp before doing anything.
+            We'll call or WhatsApp you to confirm before doing anything.
           </p>
         </div>
 

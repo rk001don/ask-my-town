@@ -77,8 +77,8 @@ function Cart() {
           <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--accent-primary)]" />
           <p className="text-sm text-[color:var(--text-secondary)]">
             {hasUnpricedItems
-              ? "Some items are priced on request — we'll confirm those on WhatsApp before doing anything. Pay on delivery."
-              : "This is what you'll pay on delivery. We'll confirm availability on WhatsApp before doing anything."}
+              ? "Some items are priced on request — we'll call or WhatsApp you to confirm those before doing anything. Pay on delivery."
+              : "This is what you'll pay on delivery. We'll call or WhatsApp you to confirm availability before doing anything."}
           </p>
         </div>
       </div>
