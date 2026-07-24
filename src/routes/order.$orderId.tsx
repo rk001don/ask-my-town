@@ -60,7 +60,7 @@ function Confirmation() {
             <div>
               <div className="text-display text-xl font-semibold">MyTown got it</div>
               <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
-                Our team will confirm on WhatsApp shortly.
+                Our team will call or WhatsApp you to confirm shortly.
               </div>
               <div className="mt-3 inline-flex items-center rounded-full border border-[color:var(--border-strong)] bg-black/25 px-3 py-1.5 text-[13px] font-mono font-semibold tracking-wide">
                 {orderId}

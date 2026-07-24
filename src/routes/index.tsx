@@ -1,12 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
-import {
-  Sparkles,
-  MessageCircle,
-  Search as SearchIcon,
-  ArrowRight,
-  ShoppingBag,
-} from "lucide-react";
+import { MessageCircle, Search as SearchIcon, ArrowRight, ShoppingBag } from "lucide-react";
 import { getCategories } from "@/lib/api.functions";
 import { CategoryTile } from "@/components/CategoryTile";
 import { ItemCard } from "@/components/ItemCard";
@@ -109,42 +103,47 @@ function Home() {
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="px-4 pt-6">
-        <div className="gradient-hero card-surface relative overflow-hidden p-6">
+      {/* Hero — compact, same content, but the dead decorative space is now
+          an actual interactive quick-jump row instead of two oversized blurs */}
+      <section className="px-4 pt-4">
+        <div className="gradient-hero card-surface relative overflow-hidden p-4">
           <div
-            className="absolute -right-16 -top-16 h-56 w-56 rounded-full"
+            className="absolute -right-10 -top-10 h-32 w-32 rounded-full"
             style={{
-              background: "radial-gradient(circle, oklch(0.82 0.16 70 / 0.35), transparent 65%)",
-            }}
-          />
-          <div
-            className="absolute -bottom-20 -left-10 h-48 w-48 rounded-full"
-            style={{
-              background: "radial-gradient(circle, oklch(0.72 0.19 30 / 0.28), transparent 65%)",
+              background: "radial-gradient(circle, oklch(0.82 0.16 70 / 0.3), transparent 65%)",
             }}
           />
           <div className="relative">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] bg-black/20 px-3 py-1 text-[11px] font-medium text-[color:var(--accent-primary)]">
-              <Sparkles className="h-3.5 w-3.5" />
-              Assisted by real humans
-            </div>
-            <h1 className="text-display mt-3 text-[28px] leading-[1.1] font-bold">{APP_TAGLINE}</h1>
-            <p className="mt-2 max-w-xs text-sm text-[color:var(--text-secondary)]">
-              {APP_SUBTEXT}
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
+            <h1 className="text-display text-[20px] leading-[1.15] font-bold">{APP_TAGLINE}</h1>
+            <p className="mt-1 text-[13px] text-[color:var(--text-secondary)]">{APP_SUBTEXT}</p>
+
+            {categories.length > 0 && (
+              <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-0.5">
+                {categories.slice(0, 6).map((c) => (
+                  <Link
+                    key={c.id}
+                    to="/c/$slug"
+                    params={{ slug: c.slug }}
+                    className="tap-scale flex-shrink-0 rounded-full border border-[color:var(--border-strong)] bg-black/20 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap"
+                  >
+                    {c.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-3 flex gap-2">
               <Link
                 to="/explore"
-                className="tap-scale inline-flex items-center gap-1.5 rounded-full accent-gradient px-5 py-2.5 text-sm font-semibold"
+                className="tap-scale inline-flex items-center gap-1.5 rounded-full accent-gradient px-4 py-2 text-[13px] font-semibold"
               >
-                Browse categories <ArrowRight className="h-4 w-4" />
+                Browse all <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               <Link
                 to="/search"
-                className="tap-scale inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] bg-black/20 px-5 py-2.5 text-sm font-semibold"
+                className="tap-scale inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] bg-black/20 px-4 py-2 text-[13px] font-semibold"
               >
-                <SearchIcon className="h-4 w-4" /> Search
+                <SearchIcon className="h-3.5 w-3.5" /> Search
               </Link>
             </div>
           </div>
@@ -202,8 +201,8 @@ function Home() {
             { n: 1, t: "Tell us what you need", d: "Browse or just ask — one line is enough." },
             {
               n: 2,
-              t: "We confirm on WhatsApp",
-              d: "Our team checks price & availability, then confirms.",
+              t: "We call or WhatsApp you",
+              d: "Our team checks price & availability, then confirms — by a quick call or on WhatsApp, whichever's easier to reach you.",
             },
             { n: 3, t: "Delivered to your door", d: "Track status live. Pay on delivery." },
           ].map((s) => (

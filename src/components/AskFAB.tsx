@@ -104,11 +104,29 @@ export function AskFAB() {
         <button
           onClick={() => setOpen(true)}
           aria-label="Ask MyTown"
-          className="fixed z-40 tap-scale accent-gradient shadow-[var(--shadow-glow)] rounded-full flex items-center gap-2 px-5 py-3 font-semibold"
+          className="fixed z-40 tap-scale accent-gradient shadow-[var(--shadow-glow)] grid h-14 w-14 place-items-center rounded-full md:hidden"
           style={{
-            right: "1rem",
+            // Matches the bottom nav's actual right edge exactly: the nav is
+            // w-[min(92vw,480px)] centered via left-1/2 -translate-x-1/2, so its
+            // right edge sits at max(4vw, 50vw-240px) from the viewport's right
+            // edge -- a plain "right: 1rem" only happened to look close on some
+            // widths and drifted on others, which is what read as "misaligned."
+            right: "max(4vw, calc(50vw - 240px))",
             bottom: "calc(5.5rem + env(safe-area-inset-bottom))",
           }}
+        >
+          <Sparkles className="h-5 w-5" />
+        </button>
+      )}
+      {/* Desktop (md+): bottom nav is hidden (sidebar replaces it), so the FAB
+          becomes a normal corner FAB again -- simple right/bottom inset within
+          the content column (made a containing block for this in AppShell). */}
+      {!open && (
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Ask MyTown"
+          className="fixed z-40 tap-scale accent-gradient shadow-[var(--shadow-glow)] hidden items-center gap-2 rounded-full px-5 py-3 font-semibold md:flex"
+          style={{ right: "1.5rem", bottom: "1.5rem" }}
         >
           <Sparkles className="h-4 w-4" />
           Ask MyTown
