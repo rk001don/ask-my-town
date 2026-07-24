@@ -1,6 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { Home, Compass, ClipboardList, Store } from "lucide-react";
-import { useCartCount } from "@/lib/cart-store";
 import { AskFAB } from "@/components/AskFAB";
 import type { ReactNode } from "react";
 
@@ -73,7 +72,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 }
 
 function BottomNav({ pathname }: { pathname: string }) {
-  const cartCount = useCartCount();
   return (
     <nav
       className="glass fixed bottom-3 left-1/2 z-40 w-[min(92vw,480px)] -translate-x-1/2 rounded-full px-2 py-2"
@@ -110,9 +108,6 @@ function BottomNav({ pathname }: { pathname: string }) {
           );
         })}
       </ul>
-      {cartCount > 0 && (
-        <div className="pointer-events-none absolute -top-3 right-4 h-2 w-2 rounded-full bg-[color:var(--accent-primary)]" />
-      )}
     </nav>
   );
 }

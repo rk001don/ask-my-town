@@ -11,14 +11,24 @@ export const Route = createFileRoute("/search")({
   head: () => ({
     meta: [
       { title: "Search — MyTown" },
-      { name: "description", content: "Search for anything you need. If we don't list it, just ask." },
+      {
+        name: "description",
+        content: "Search for anything you need. If we don't list it, just ask.",
+      },
     ],
   }),
   component: SearchPage,
   errorComponent: ({ reset }) => <ErrorState onRetry={reset} />,
 });
 
-const TRENDING = ["Home-cooked meals", "Medicines", "Groceries", "Bus tickets", "Plumber", "AC service"];
+const TRENDING = [
+  "Home-cooked meals",
+  "Medicines",
+  "Groceries",
+  "Bus tickets",
+  "Plumber",
+  "AC service",
+];
 const RECENTS_KEY = "mytown.search.recent.v1";
 
 function SearchPage() {
@@ -26,6 +36,9 @@ function SearchPage() {
   const [q, setQ] = useState("");
   const [debounced, setDebounced] = useState("");
   const [results, setResults] = useState<Awaited<ReturnType<typeof search>>["results"]>([]);
+  const [productResults, setProductResults] = useState<
+    NonNullable<Awaited<ReturnType<typeof search>>["productResults"]>
+  >([]);
   const [state, setState] = useState<"idle" | "loading" | "loaded" | "error">("idle");
   const [recents, setRecents] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -46,6 +59,7 @@ function SearchPage() {
   useEffect(() => {
     if (debounced.trim().length < 2) {
       setResults([]);
+      setProductResults([]);
       setState("idle");
       return;
     }
@@ -55,19 +69,28 @@ function SearchPage() {
       .then((r) => {
         if (cancelled) return;
         setResults(r.results);
+        setProductResults(r.productResults ?? []);
         setState("loaded");
       })
       .catch(() => !cancelled && setState("error"));
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [debounced, search]);
 
   function saveRecent(term: string) {
     const next = [term, ...recents.filter((r) => r !== term)].slice(0, 6);
     setRecents(next);
-    try { localStorage.setItem(RECENTS_KEY, JSON.stringify(next)); } catch {}
+    try {
+      localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
+    } catch {}
   }
 
-  const showEmpty = state === "loaded" && results.length === 0 && debounced.trim().length >= 2;
+  const showEmpty =
+    state === "loaded" &&
+    results.length === 0 &&
+    productResults.length === 0 &&
+    debounced.trim().length >= 2;
 
   return (
     <div>
@@ -79,7 +102,9 @@ function SearchPage() {
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && q.trim()) saveRecent(q.trim()); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && q.trim()) saveRecent(q.trim());
+            }}
             placeholder="Search groceries, tickets, services…"
             className="w-full rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] py-3 pl-9 pr-9 text-[15px] placeholder:text-[color:var(--text-muted)] focus:border-[color:var(--accent-primary)] focus:outline-none"
           />
@@ -99,7 +124,9 @@ function SearchPage() {
         <div className="p-4">
           {recents.length > 0 && (
             <>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">Recent</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
+                Recent
+              </h3>
               <div className="mt-2 flex flex-wrap gap-2">
                 {recents.map((r) => (
                   <button
@@ -113,7 +140,9 @@ function SearchPage() {
               </div>
             </>
           )}
-          <h3 className="mt-6 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">Trending</h3>
+          <h3 className="mt-6 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
+            Trending
+          </h3>
           <div className="mt-2 flex flex-wrap gap-2">
             {TRENDING.map((t) => (
               <button
@@ -138,6 +167,28 @@ function SearchPage() {
 
       {state === "error" && <ErrorState onRetry={() => setDebounced((v) => v + " ")} />}
 
+      {state === "loaded" && productResults.length > 0 && (
+        <ul className="space-y-2 p-4 pb-0">
+          <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
+            Dishes & items
+          </h3>
+          {productResults.map((p) => (
+            <li key={p.id}>
+              <Link
+                to="/c/$slug"
+                params={{ slug: p.category_slug ?? "" }}
+                className="tap-scale flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3"
+              >
+                <span className="text-sm font-semibold">{p.name}</span>
+                <span className="text-sm font-bold text-[color:var(--accent-primary)]">
+                  {p.show_price && p.price != null ? `₹${p.price}` : "Price on request"}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {state === "loaded" && results.length > 0 && (
         <ul className="space-y-2 p-4">
           {results.map((r) => {
@@ -153,14 +204,19 @@ function SearchPage() {
                 >
                   <div
                     className="grid h-11 w-11 place-items-center rounded-2xl"
-                    style={{ background: "linear-gradient(140deg, oklch(0.82 0.16 70 / 0.18), oklch(0.72 0.19 30 / 0.16))" }}
+                    style={{
+                      background:
+                        "linear-gradient(140deg, oklch(0.82 0.16 70 / 0.18), oklch(0.72 0.19 30 / 0.16))",
+                    }}
                   >
                     <Icon className="h-5 w-5 text-[color:var(--accent-primary)]" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-[15px] font-semibold">{r.name}</div>
                     {isSub && r.parent_name && (
-                      <div className="truncate text-xs text-[color:var(--text-muted)]">{r.parent_name}</div>
+                      <div className="truncate text-xs text-[color:var(--text-muted)]">
+                        {r.parent_name}
+                      </div>
                     )}
                   </div>
                 </Link>
