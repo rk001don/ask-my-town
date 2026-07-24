@@ -13,6 +13,7 @@ export type CartItem = {
   unitPrice?: number | null;
   showPrice?: boolean;
   isService?: boolean;
+  attachmentPath?: string;
 };
 
 const STORAGE_KEY = "mytown.cart.v1";
@@ -96,7 +97,9 @@ export function addCatalogItem(item: {
   isService?: boolean;
 }) {
   ensureLoaded();
-  const key = item.productId ? `prod:${item.productId}` : catalogKey(item.itemName, item.subcategory);
+  const key = item.productId
+    ? `prod:${item.productId}`
+    : catalogKey(item.itemName, item.subcategory);
   const existing = state.items.find((i) => i.key === key);
   if (existing) {
     existing.quantity += 1;
@@ -159,7 +162,7 @@ export function removeItem(key: string) {
   emit();
 }
 
-export function addFreeformAsk(text: string, photoNote?: string) {
+export function addFreeformAsk(text: string, photoNote?: string, attachmentPath?: string) {
   ensureLoaded();
   const trimmed = text.trim();
   if (!trimmed) return;
@@ -173,6 +176,7 @@ export function addFreeformAsk(text: string, photoNote?: string) {
         quantity: 1,
         notes: photoNote,
         isFreeform: true,
+        attachmentPath,
       },
     ],
   };

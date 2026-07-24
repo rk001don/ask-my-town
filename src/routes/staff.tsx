@@ -12,15 +12,18 @@ import { Loader2, LogOut, RefreshCw, Phone, MapPin, ShieldAlert } from "lucide-r
 
 export const Route = createFileRoute("/staff")({
   head: () => ({
-    meta: [
-      { title: "Staff console — MyTown" },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: "Staff console — MyTown" }, { name: "robots", content: "noindex" }],
   }),
   component: StaffPage,
 });
 
-const BOARD_STATUSES: OrderStatus[] = ["received", "confirmed", "arranging", "on_the_way", "completed"];
+const BOARD_STATUSES: OrderStatus[] = [
+  "received",
+  "confirmed",
+  "arranging",
+  "on_the_way",
+  "completed",
+];
 
 function StaffPage() {
   const nav = useNavigate();
@@ -38,14 +41,24 @@ function StaffPage() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  if (checking) return <div className="p-6"><div className="skeleton h-40 rounded-2xl" /></div>;
+  if (checking)
+    return (
+      <div className="p-6">
+        <div className="skeleton h-40 rounded-2xl" />
+      </div>
+    );
   if (!session) return <StaffSignIn onDone={() => {}} />;
 
-  return <StaffBoard email={session.email} onSignOut={async () => {
-    await supabase.auth.signOut();
-    toast.success("Signed out");
-    nav({ to: "/staff" });
-  }} />;
+  return (
+    <StaffBoard
+      email={session.email}
+      onSignOut={async () => {
+        await supabase.auth.signOut();
+        toast.success("Signed out");
+        nav({ to: "/staff" });
+      }}
+    />
+  );
 }
 
 function StaffSignIn(_: { onDone: () => void }) {
@@ -120,9 +133,16 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
 
   const grouped = useMemo(() => {
     const g: Record<OrderStatus, typeof ordersQ.data extends { orders: infer T } ? T : never> = {
-      received: [], confirmed: [], arranging: [], on_the_way: [], completed: [], cancelled: [],
+      received: [],
+      confirmed: [],
+      arranging: [],
+      on_the_way: [],
+      completed: [],
+      cancelled: [],
     } as never;
-    (ordersQ.data?.orders ?? []).forEach((o) => {
+    const data = ordersQ.data;
+    if (!data || data.aggregateOnly) return g;
+    (data.orders ?? []).forEach((o) => {
       const s = (o.status ?? "received") as OrderStatus;
       (g[s] as unknown as unknown[])?.push(o);
     });
@@ -140,7 +160,11 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
   }
 
   if (rolesQ.isLoading) {
-    return <div className="p-6"><div className="skeleton h-40 rounded-2xl" /></div>;
+    return (
+      <div className="p-6">
+        <div className="skeleton h-40 rounded-2xl" />
+      </div>
+    );
   }
   if (!rolesQ.data?.isStaff) {
     return (
@@ -191,75 +215,123 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
         </div>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto px-3 py-4">
-        {BOARD_STATUSES.map((s) => {
-          const list = (grouped[s] as unknown as Array<{
-            id: string;
-            requested_date?: string | null;
-            requested_window?: string | null;
-            customer: { name: string; phone: string; address: string; landmark: string | null } | null;
-            items: { item_name: string; quantity: number; notes: string | null; is_freeform: boolean }[];
-          }>) ?? [];
-          return (
-            <div key={s} className="min-w-[260px] flex-shrink-0">
-              <div className="mb-2 flex items-center justify-between px-1">
-                <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--text-secondary)]">
-                  {STATUS_COPY[s]?.label ?? s}
+      {ordersQ.data?.aggregateOnly ? (
+        <div className="mx-auto max-w-2xl px-4 py-6">
+          <div className="glass rounded-2xl p-4">
+            <div className="text-sm font-semibold">Daily delivery counts</div>
+            <p className="mt-1 text-xs text-[color:var(--text-secondary)]">
+              You have viewer access — this shows totals only, not individual order details.
+            </p>
+            <div className="mt-4 space-y-2">
+              {(ordersQ.data.dailyCounts ?? []).map(
+                (d: { delivery_date: string; total_orders: number; completed_orders: number }) => (
+                  <div
+                    key={d.delivery_date}
+                    className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2 text-sm"
+                  >
+                    <span>{d.delivery_date}</span>
+                    <span className="text-[color:var(--text-secondary)]">
+                      {d.completed_orders}/{d.total_orders} completed
+                    </span>
+                  </div>
+                ),
+              )}
+              {(ordersQ.data.dailyCounts ?? []).length === 0 && (
+                <div className="text-sm text-[color:var(--text-tertiary)]">
+                  No orders in the last 30 days.
                 </div>
-                <div className="text-xs text-[color:var(--text-tertiary)]">{list.length}</div>
-              </div>
-              <div className="space-y-2">
-                {list.map((o) => {
-                  const idx = ORDER_STATUS_STEPS.findIndex((st) => st.key === s);
-                  const nextStep = ORDER_STATUS_STEPS[idx + 1]?.key as OrderStatus | undefined;
-                  return (
-                    <div key={o.id} className="glass rounded-2xl p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="font-mono text-xs font-semibold">{o.id}</div>
-                        {(o.requested_date || o.requested_window) && (
-                          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px]">
-                            {o.requested_date}{o.requested_window ? ` · ${o.requested_window}` : ""}
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="flex gap-3 overflow-x-auto px-3 py-4 md:px-6">
+          {BOARD_STATUSES.map((s) => {
+            const list =
+              (grouped[s] as unknown as Array<{
+                id: string;
+                requested_date?: string | null;
+                requested_window?: string | null;
+                customer: {
+                  name: string;
+                  phone: string;
+                  address: string;
+                  landmark: string | null;
+                } | null;
+                items: {
+                  item_name: string;
+                  quantity: number;
+                  notes: string | null;
+                  is_freeform: boolean;
+                }[];
+              }>) ?? [];
+            return (
+              <div key={s} className="min-w-[260px] flex-shrink-0">
+                <div className="mb-2 flex items-center justify-between px-1">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--text-secondary)]">
+                    {STATUS_COPY[s]?.label ?? s}
+                  </div>
+                  <div className="text-xs text-[color:var(--text-tertiary)]">{list.length}</div>
+                </div>
+                <div className="space-y-2">
+                  {list.map((o) => {
+                    const idx = ORDER_STATUS_STEPS.findIndex((st) => st.key === s);
+                    const nextStep = ORDER_STATUS_STEPS[idx + 1]?.key as OrderStatus | undefined;
+                    return (
+                      <div key={o.id} className="glass rounded-2xl p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="font-mono text-xs font-semibold">{o.id}</div>
+                          {(o.requested_date || o.requested_window) && (
+                            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px]">
+                              {o.requested_date}
+                              {o.requested_window ? ` · ${o.requested_window}` : ""}
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-1 text-sm font-semibold">{o.customer?.name}</div>
+                        <a
+                          href={`tel:${o.customer?.phone ?? ""}`}
+                          className="mt-0.5 flex items-center gap-1 text-xs text-[color:var(--text-secondary)]"
+                        >
+                          <Phone className="h-3 w-3" /> {o.customer?.phone}
+                        </a>
+                        <div className="mt-1 flex items-start gap-1 text-xs text-[color:var(--text-secondary)]">
+                          <MapPin className="mt-0.5 h-3 w-3 flex-shrink-0" />
+                          <span className="line-clamp-2">
+                            {o.customer?.address}
+                            {o.customer?.landmark ? ` · ${o.customer.landmark}` : ""}
                           </span>
+                        </div>
+                        <ul className="mt-2 space-y-0.5 text-xs">
+                          {o.items.map((it, i) => (
+                            <li key={i} className="text-[color:var(--text-primary)]">
+                              {it.quantity}× {it.item_name}
+                              {it.notes ? (
+                                <span className="text-[color:var(--text-tertiary)]">
+                                  {" "}
+                                  — {it.notes}
+                                </span>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                        {nextStep && (
+                          <button
+                            onClick={() => setStatus(o.id, nextStep)}
+                            className="tap-scale mt-2 w-full rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold text-[color:var(--on-accent)]"
+                          >
+                            Mark {STATUS_COPY[nextStep]?.label ?? nextStep}
+                          </button>
                         )}
                       </div>
-                      <div className="mt-1 text-sm font-semibold">{o.customer?.name}</div>
-                      <a
-                        href={`tel:${o.customer?.phone ?? ""}`}
-                        className="mt-0.5 flex items-center gap-1 text-xs text-[color:var(--text-secondary)]"
-                      >
-                        <Phone className="h-3 w-3" /> {o.customer?.phone}
-                      </a>
-                      <div className="mt-1 flex items-start gap-1 text-xs text-[color:var(--text-secondary)]">
-                        <MapPin className="mt-0.5 h-3 w-3 flex-shrink-0" />
-                        <span className="line-clamp-2">
-                          {o.customer?.address}
-                          {o.customer?.landmark ? ` · ${o.customer.landmark}` : ""}
-                        </span>
-                      </div>
-                      <ul className="mt-2 space-y-0.5 text-xs">
-                        {o.items.map((it, i) => (
-                          <li key={i} className="text-[color:var(--text-primary)]">
-                            {it.quantity}× {it.item_name}
-                            {it.notes ? <span className="text-[color:var(--text-tertiary)]"> — {it.notes}</span> : null}
-                          </li>
-                        ))}
-                      </ul>
-                      {nextStep && (
-                        <button
-                          onClick={() => setStatus(o.id, nextStep)}
-                          className="tap-scale mt-2 w-full rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold text-[color:var(--on-accent)]"
-                        >
-                          Mark {STATUS_COPY[nextStep]?.label ?? nextStep}
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

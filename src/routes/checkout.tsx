@@ -23,8 +23,12 @@ type DeliveryWindow = { label: string; start: string; end: string; cutoff: strin
 function nowInTz(tz: string) {
   const fmt = new Intl.DateTimeFormat("en-CA", {
     timeZone: tz,
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
   });
   const parts = Object.fromEntries(fmt.formatToParts(new Date()).map((p) => [p.type, p.value]));
   return {
@@ -42,7 +46,12 @@ function addDaysISO(dateStr: string, days: number): string {
 function prettyDate(iso: string, tz: string): string {
   const [y, m, d] = iso.split("-").map((n) => parseInt(n, 10));
   const dt = new Date(Date.UTC(y, m - 1, d, 12));
-  return dt.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", timeZone: tz });
+  return dt.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+    timeZone: tz,
+  });
 }
 
 function Checkout() {
@@ -59,10 +68,12 @@ function Checkout() {
   const location = locations?.[0];
   const tz = location?.timezone || "Asia/Kolkata";
   const windows: DeliveryWindow[] =
-    ((location?.config as { delivery_windows?: DeliveryWindow[] } | undefined)?.delivery_windows) ?? [];
+    (location?.config as { delivery_windows?: DeliveryWindow[] } | undefined)?.delivery_windows ??
+    [];
 
   const initial = (() => {
-    if (typeof window === "undefined") return { name: "", phone: "", address: "", landmark: "", notes: "" };
+    if (typeof window === "undefined")
+      return { name: "", phone: "", address: "", landmark: "", notes: "" };
     try {
       const raw = localStorage.getItem(RECENT_KEY);
       if (raw) return { notes: "", ...JSON.parse(raw) };
@@ -140,6 +151,7 @@ function Checkout() {
             quantity: i.quantity,
             notes: i.notes || undefined,
             isFreeform: i.isFreeform,
+            attachmentPath: i.attachmentPath,
           })),
           notes: form.notes?.trim() || undefined,
           locationId: location?.id,
@@ -149,18 +161,25 @@ function Checkout() {
         },
       });
       try {
-        localStorage.setItem(RECENT_KEY, JSON.stringify({
-          name: form.name.trim(), phone: form.phone.trim(),
-          address: form.address.trim(), landmark: form.landmark?.trim() ?? "",
-        }));
+        localStorage.setItem(
+          RECENT_KEY,
+          JSON.stringify({
+            name: form.name.trim(),
+            phone: form.phone.trim(),
+            address: form.address.trim(),
+            landmark: form.landmark?.trim() ?? "",
+          }),
+        );
       } catch {}
       clearCart();
       try {
         const { data: sess } = await supabase.auth.getSession();
         if (sess.session) {
-          await linkCustomerToMe({ data: { phone: form.phone.trim() } });
+          await linkCustomerToMe({ data: { orderId: res.orderId } });
         }
-      } catch { /* non-fatal */ }
+      } catch {
+        /* non-fatal */
+      }
       navigate({ to: "/order/$orderId", params: { orderId: res.orderId } });
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Couldn't send your ask. Please try again.";
@@ -194,9 +213,15 @@ function Checkout() {
               type="button"
               role="tab"
               aria-selected={mode === "asap"}
-              onClick={() => { setMode("asap"); setWindowLabel(null); setDateIso(dateOptions[0].iso); }}
+              onClick={() => {
+                setMode("asap");
+                setWindowLabel(null);
+                setDateIso(dateOptions[0].iso);
+              }}
               className={`flex-1 rounded-full py-2 text-sm font-semibold transition-colors ${
-                mode === "asap" ? "accent-gradient text-black" : "text-[color:var(--text-secondary)]"
+                mode === "asap"
+                  ? "accent-gradient text-black"
+                  : "text-[color:var(--text-secondary)]"
               }`}
             >
               Deliver ASAP
@@ -207,7 +232,9 @@ function Checkout() {
               aria-selected={mode === "schedule"}
               onClick={() => setMode("schedule")}
               className={`flex-1 rounded-full py-2 text-sm font-semibold transition-colors ${
-                mode === "schedule" ? "accent-gradient text-black" : "text-[color:var(--text-secondary)]"
+                mode === "schedule"
+                  ? "accent-gradient text-black"
+                  : "text-[color:var(--text-secondary)]"
               }`}
             >
               Schedule
@@ -217,7 +244,9 @@ function Checkout() {
           {mode === "schedule" && (
             <div className="mt-3 space-y-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated-1)] p-3">
               <div>
-                <div className="mb-1.5 text-xs font-semibold text-[color:var(--text-secondary)]">Choose a day</div>
+                <div className="mb-1.5 text-xs font-semibold text-[color:var(--text-secondary)]">
+                  Choose a day
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {dateOptions.map((d) => (
                     <button
@@ -237,7 +266,9 @@ function Checkout() {
               </div>
 
               <div>
-                <div className="mb-1.5 text-xs font-semibold text-[color:var(--text-secondary)]">Choose a window</div>
+                <div className="mb-1.5 text-xs font-semibold text-[color:var(--text-secondary)]">
+                  Choose a window
+                </div>
                 <div className="flex flex-wrap gap-2">
                   {windows.length === 0 && (
                     <span className="text-xs text-[color:var(--text-muted)]">Loading windows…</span>
@@ -255,8 +286,8 @@ function Checkout() {
                           active
                             ? "accent-gradient text-black border-transparent"
                             : closed
-                            ? "border-[color:var(--border-subtle)] bg-transparent text-[color:var(--text-muted)] opacity-60 cursor-not-allowed"
-                            : "border-[color:var(--border-strong)] text-[color:var(--text-primary)] bg-[color:var(--bg-elevated-2)]"
+                              ? "border-[color:var(--border-subtle)] bg-transparent text-[color:var(--text-muted)] opacity-60 cursor-not-allowed"
+                              : "border-[color:var(--border-strong)] text-[color:var(--text-primary)] bg-[color:var(--bg-elevated-2)]"
                         }`}
                         title={closed ? "Closed for today" : `${w.start}–${w.end}`}
                       >
@@ -268,7 +299,9 @@ function Checkout() {
                     );
                   })}
                 </div>
-                {errors.window && <div className="mt-1 text-xs text-[color:var(--danger)]">{errors.window}</div>}
+                {errors.window && (
+                  <div className="mt-1 text-xs text-[color:var(--danger)]">{errors.window}</div>
+                )}
               </div>
             </div>
           )}
@@ -341,7 +374,7 @@ function Checkout() {
         `}</style>
 
         <div
-          className="glass fixed bottom-0 left-1/2 z-30 w-full max-w-[520px] -translate-x-1/2 border-t border-[color:var(--border-subtle)] p-4"
+          className="glass fixed bottom-0 left-1/2 z-30 w-full max-w-[520px] -translate-x-1/2 md:max-w-2xl border-t border-[color:var(--border-subtle)] p-4"
           style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
         >
           <button
@@ -359,8 +392,16 @@ function Checkout() {
 }
 
 function Field({
-  label, hint, error, children,
-}: { label: string; hint?: string; error?: string; children: React.ReactNode }) {
+  label,
+  hint,
+  error,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <label className="block">
       <div className="mb-1.5 flex items-baseline justify-between">

@@ -30,7 +30,10 @@ export const Route = createFileRoute("/c/$slug")({
   head: ({ params }) => ({
     meta: [
       { title: `${titleize(params.slug)} — MyTown` },
-      { name: "description", content: `Browse ${titleize(params.slug)} on MyTown, or just tell us what you need.` },
+      {
+        name: "description",
+        content: `Browse ${titleize(params.slug)} on MyTown, or just tell us what you need.`,
+      },
     ],
   }),
   component: Category,
@@ -44,7 +47,10 @@ export const Route = createFileRoute("/c/$slug")({
 });
 
 function titleize(slug: string) {
-  return slug.split("-").map((w) => w[0]?.toUpperCase() + w.slice(1)).join(" ");
+  return slug
+    .split("-")
+    .map((w) => w[0]?.toUpperCase() + w.slice(1))
+    .join(" ");
 }
 
 const GROUP_LABELS: Record<string, string> = {
@@ -109,7 +115,7 @@ function Category() {
           askPrefill={`I need ${sub.parent.name.toLowerCase()}: `}
         />
       ) : (
-        <div className="grid grid-cols-2 gap-3 p-4">
+        <div className="grid grid-cols-2 gap-3 p-4 md:grid-cols-3 lg:grid-cols-4">
           {sub.items.map((it) => (
             <ItemCard
               key={it.id}

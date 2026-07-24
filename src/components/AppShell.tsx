@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, Compass, ClipboardList } from "lucide-react";
+import { Home, Compass, ClipboardList, Store } from "lucide-react";
 import { useCartCount } from "@/lib/cart-store";
 import { AskFAB } from "@/components/AskFAB";
 import type { ReactNode } from "react";
@@ -12,18 +12,56 @@ const TABS = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const loc = useLocation();
-  // Hide bottom nav on employee board (different context)
-  const hideNav = loc.pathname.startsWith("/employee");
+  // Staff/admin consoles render their own chrome — no customer nav there.
+  const hideNav =
+    loc.pathname.startsWith("/employee") ||
+    loc.pathname.startsWith("/staff") ||
+    loc.pathname.startsWith("/admin");
+
+  if (hideNav) {
+    return <div className="min-h-[100dvh] w-full">{children}</div>;
+  }
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] w-full max-w-[520px] flex-col">
-      <main className={hideNav ? "flex-1" : "flex-1 pb-28"}>{children}</main>
-      {!hideNav && (
-        <>
-          <AskFAB />
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-[520px] flex-col md:max-w-none md:flex-row">
+      {/* Desktop sidebar (md+) — mobile keeps the bottom nav below */}
+      <aside className="sticky top-0 hidden h-[100dvh] w-56 flex-shrink-0 border-r border-[color:var(--border-subtle)] px-3 py-6 md:flex md:flex-col">
+        <div className="px-2 text-display text-lg font-semibold">MyTown</div>
+        <nav className="mt-8 flex flex-col gap-1" aria-label="Primary">
+          {TABS.map((t) => {
+            const active = t.to === "/" ? loc.pathname === "/" : loc.pathname.startsWith(t.to);
+            const Icon = t.icon;
+            return (
+              <Link
+                key={t.to}
+                to={t.to}
+                className="tap-scale flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold"
+                style={{
+                  color: active ? "var(--on-accent)" : "var(--text-secondary)",
+                  background: active
+                    ? "linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))"
+                    : "transparent",
+                }}
+              >
+                <Icon className="h-5 w-5" strokeWidth={2.2} />
+                {t.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="mt-auto px-2 text-xs text-[color:var(--text-tertiary)]">
+          <Store className="mb-1 h-4 w-4" /> Karimangalam
+        </div>
+      </aside>
+
+      <div className="flex min-h-[100dvh] w-full flex-1 flex-col md:max-w-4xl md:mx-auto">
+        <main className="flex-1 pb-28 md:pb-10">{children}</main>
+        <AskFAB />
+        {/* Bottom nav only below md — sidebar replaces it above */}
+        <div className="md:hidden">
           <BottomNav pathname={loc.pathname} />
-        </>
-      )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -38,8 +76,7 @@ function BottomNav({ pathname }: { pathname: string }) {
     >
       <ul className="flex items-center justify-around gap-1">
         {TABS.map((t) => {
-          const active =
-            t.to === "/" ? pathname === "/" : pathname.startsWith(t.to);
+          const active = t.to === "/" ? pathname === "/" : pathname.startsWith(t.to);
           const Icon = t.icon;
           const badge = t.to === "/activity" ? 0 : 0; // placeholder for future
           return (

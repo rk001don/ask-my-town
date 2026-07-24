@@ -12,17 +12,29 @@ const OrderStatus = z.enum([
   "cancelled",
 ]);
 
-async function assertStaff(supabase: {
-  rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
-}, userId: string, requireOps = false) {
+async function assertStaff(
+  supabase: {
+    rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+  },
+  userId: string,
+  requireOps = false,
+) {
   // Query user_roles directly (RLS allows own-row read); avoids relying on has_role RPC grants.
-  const { data, error } = await (supabase as unknown as {
-    from: (t: string) => {
-      select: (c: string) => {
-        eq: (c: string, v: string) => Promise<{ data: { role: string }[] | null; error: unknown }>;
+  const { data, error } = await (
+    supabase as unknown as {
+      from: (t: string) => {
+        select: (c: string) => {
+          eq: (
+            c: string,
+            v: string,
+          ) => Promise<{ data: { role: string }[] | null; error: unknown }>;
+        };
       };
-    };
-  }).from("user_roles").select("role").eq("user_id", userId);
+    }
+  )
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
   if (error) throw new Error("Failed to verify staff role");
   const roles = (data ?? []).map((r) => r.role);
   const staff = roles.some((r) => r === "admin" || r === "ops" || r === "warden_viewer");
@@ -36,7 +48,20 @@ async function assertStaff(supabase: {
 export const listStaffOrders = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertStaff(context.supabase as never, context.userId);
+    const roles = await assertStaff(context.supabase as never, context.userId);
+    const isAdminOrOps = roles.some((r) => r === "admin" || r === "ops");
+
+    if (!isAdminOrOps) {
+      // warden_viewer (or any non-admin/ops staff role): aggregate counts only,
+      // via a SECURITY DEFINER RPC. This account has no RLS grant to read
+      // customers/orders directly, so there is no path to individual PII here.
+      const { data, error } = await context.supabase.rpc("mytown_warden_daily_counts", {
+        p_location_id: null,
+      });
+      if (error) throw new Error(error.message);
+      return { aggregateOnly: true as const, dailyCounts: data ?? [] };
+    }
+
     const { data, error } = await context.supabase
       .from("orders")
       .select(
@@ -45,7 +70,7 @@ export const listStaffOrders = createServerFn({ method: "GET" })
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);
-    return { orders: data ?? [] };
+    return { aggregateOnly: false as const, orders: data ?? [] };
   });
 
 export const updateStaffOrderStatus = createServerFn({ method: "POST" })
@@ -64,10 +89,7 @@ export const updateStaffOrderStatus = createServerFn({ method: "POST" })
     } = { status: data.status, updated_at: now };
     if (data.status === "confirmed") patch.confirmed_at = now;
     if (data.status === "completed") patch.completed_at = now;
-    const { error } = await context.supabase
-      .from("orders")
-      .update(patch)
-      .eq("id", data.orderId);
+    const { error } = await context.supabase.from("orders").update(patch).eq("id", data.orderId);
     if (error) throw new Error(error.message);
     // Fire-and-forget audit
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

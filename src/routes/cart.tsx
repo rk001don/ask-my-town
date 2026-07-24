@@ -1,13 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppHeader } from "@/components/AppHeader";
 import { EmptyState } from "@/components/States";
-import {
-  useCart,
-  decrementItem,
-  incrementItem,
-  removeItem,
-  setItemNotes,
-} from "@/lib/cart-store";
+import { useCart, decrementItem, incrementItem, removeItem, setItemNotes } from "@/lib/cart-store";
 import { Minus, Plus, Sparkles, StickyNote, Trash2 } from "lucide-react";
 import { iconFor } from "@/components/icon-map";
 import { useState } from "react";
@@ -16,7 +10,10 @@ export const Route = createFileRoute("/cart")({
   head: () => ({
     meta: [
       { title: "Review your ask — MyTown" },
-      { name: "description", content: "Review what you're asking MyTown for. Add notes, tweak quantity, then continue." },
+      {
+        name: "description",
+        content: "Review what you're asking MyTown for. Add notes, tweak quantity, then continue.",
+      },
     ],
   }),
   component: Cart,
@@ -73,7 +70,7 @@ function Cart() {
       </div>
 
       <div
-        className="glass fixed bottom-0 left-1/2 z-30 w-full max-w-[520px] -translate-x-1/2 border-t border-[color:var(--border-subtle)] p-4"
+        className="glass fixed bottom-0 left-1/2 z-30 w-full max-w-[520px] -translate-x-1/2 md:max-w-2xl border-t border-[color:var(--border-subtle)] p-4"
         style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
       >
         <button
@@ -143,11 +140,19 @@ function CartRow({ it }: { it: ReturnType<typeof useCart>["items"][number] }) {
               {notes ? "Edit note" : "Add note"}
             </button>
             <div className="flex items-center gap-2 rounded-full border border-[color:var(--border-strong)] px-1">
-              <button onClick={() => decrementItem(it.key)} aria-label="Decrease" className="tap-scale grid h-8 w-8 place-items-center">
+              <button
+                onClick={() => decrementItem(it.key)}
+                aria-label="Decrease"
+                className="tap-scale grid h-8 w-8 place-items-center"
+              >
                 <Minus className="h-4 w-4" />
               </button>
               <span className="min-w-[1.5rem] text-center text-sm font-bold">{it.quantity}</span>
-              <button onClick={() => incrementItem(it.key)} aria-label="Increase" className="tap-scale grid h-8 w-8 place-items-center">
+              <button
+                onClick={() => incrementItem(it.key)}
+                aria-label="Increase"
+                className="tap-scale grid h-8 w-8 place-items-center"
+              >
                 <Plus className="h-4 w-4" />
               </button>
             </div>

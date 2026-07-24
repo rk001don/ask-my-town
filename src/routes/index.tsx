@@ -1,6 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
-import { Sparkles, MessageCircle, Search as SearchIcon, ArrowRight, ShoppingBag } from "lucide-react";
+import {
+  Sparkles,
+  MessageCircle,
+  Search as SearchIcon,
+  ArrowRight,
+  ShoppingBag,
+} from "lucide-react";
 import { getCategories } from "@/lib/api.functions";
 import { CategoryTile } from "@/components/CategoryTile";
 import { ItemCard } from "@/components/ItemCard";
@@ -19,9 +25,16 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "MyTown — Need Anything? MyTown!" },
-      { name: "description", content: `Assisted local commerce for ${TOWN_NAME}. Food, groceries, tickets, rentals, local help — just tell us what you need.` },
+      {
+        name: "description",
+        content: `Assisted local commerce for ${TOWN_NAME}. Food, groceries, tickets, rentals, local help — just tell us what you need.`,
+      },
       { property: "og:title", content: "MyTown — Need Anything? MyTown!" },
-      { property: "og:description", content: "Hyperlocal assisted commerce for Karimangalam. Just tell us what you need — food, groceries, tickets, rentals, local help — MyTown handles the rest." },
+      {
+        property: "og:description",
+        content:
+          "Hyperlocal assisted commerce for Karimangalam. Just tell us what you need — food, groceries, tickets, rentals, local help — MyTown handles the rest.",
+      },
     ],
   }),
   component: Home,
@@ -29,7 +42,12 @@ export const Route = createFileRoute("/")({
 });
 
 const POPULAR_PICKS: Array<{ name: string; sub?: string; category?: string; iconKey?: string }> = [
-  { name: "Home-cooked meals", sub: "food-home", category: "Food & Home Meals", iconKey: "chef-hat" },
+  {
+    name: "Home-cooked meals",
+    sub: "food-home",
+    category: "Food & Home Meals",
+    iconKey: "chef-hat",
+  },
   { name: "Groceries", sub: "daily-groceries", category: "Daily Needs", iconKey: "shopping-cart" },
   { name: "Medicines", sub: "daily-medicines", category: "Daily Needs", iconKey: "pill" },
   { name: "Bus tickets", sub: "travel-bus", category: "Travel & Tickets", iconKey: "bus" },
@@ -60,7 +78,11 @@ function Home() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Link to="/search" aria-label="Search" className="tap-scale rounded-full p-2 hover:bg-white/5">
+          <Link
+            to="/search"
+            aria-label="Search"
+            className="tap-scale rounded-full p-2 hover:bg-white/5"
+          >
             <SearchIcon className="h-5 w-5" />
           </Link>
           <a
@@ -72,7 +94,11 @@ function Home() {
           >
             <MessageCircle className="h-5 w-5" />
           </a>
-          <Link to="/cart" aria-label="Cart" className="tap-scale relative rounded-full p-2 hover:bg-white/5">
+          <Link
+            to="/cart"
+            aria-label="Cart"
+            className="tap-scale relative rounded-full p-2 hover:bg-white/5"
+          >
             <ShoppingBag className="h-5 w-5" />
             {cartCount > 0 && (
               <span className="absolute right-0 top-0 min-w-[18px] rounded-full accent-gradient px-1 text-center text-[11px] font-bold">
@@ -86,16 +112,24 @@ function Home() {
       {/* Hero */}
       <section className="px-4 pt-6">
         <div className="gradient-hero card-surface relative overflow-hidden p-6">
-          <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full" style={{ background: "radial-gradient(circle, oklch(0.82 0.16 70 / 0.35), transparent 65%)" }} />
-          <div className="absolute -bottom-20 -left-10 h-48 w-48 rounded-full" style={{ background: "radial-gradient(circle, oklch(0.72 0.19 30 / 0.28), transparent 65%)" }} />
+          <div
+            className="absolute -right-16 -top-16 h-56 w-56 rounded-full"
+            style={{
+              background: "radial-gradient(circle, oklch(0.82 0.16 70 / 0.35), transparent 65%)",
+            }}
+          />
+          <div
+            className="absolute -bottom-20 -left-10 h-48 w-48 rounded-full"
+            style={{
+              background: "radial-gradient(circle, oklch(0.72 0.19 30 / 0.28), transparent 65%)",
+            }}
+          />
           <div className="relative">
             <div className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] bg-black/20 px-3 py-1 text-[11px] font-medium text-[color:var(--accent-primary)]">
               <Sparkles className="h-3.5 w-3.5" />
               Assisted by real humans
             </div>
-            <h1 className="text-display mt-3 text-[28px] leading-[1.1] font-bold">
-              {APP_TAGLINE}
-            </h1>
+            <h1 className="text-display mt-3 text-[28px] leading-[1.1] font-bold">{APP_TAGLINE}</h1>
             <p className="mt-2 max-w-xs text-sm text-[color:var(--text-secondary)]">
               {APP_SUBTEXT}
             </p>
@@ -148,9 +182,11 @@ function Home() {
           </Link>
         </div>
         {!mounted ? (
-          <div className="mt-3"><TileSkeleton /></div>
+          <div className="mt-3">
+            <TileSkeleton />
+          </div>
         ) : (
-          <div className="mt-3 grid grid-cols-4 gap-3 px-4">
+          <div className="mt-3 grid grid-cols-4 gap-3 px-4 md:grid-cols-6 lg:grid-cols-8">
             {categories.map((c) => (
               <CategoryTile key={c.id} slug={c.slug} name={c.name} iconKey={c.icon_key} compact />
             ))}
@@ -164,7 +200,11 @@ function Home() {
         <ol className="mt-3 space-y-2">
           {[
             { n: 1, t: "Tell us what you need", d: "Browse or just ask — one line is enough." },
-            { n: 2, t: "We confirm on WhatsApp", d: "Our team checks price & availability, then confirms." },
+            {
+              n: 2,
+              t: "We confirm on WhatsApp",
+              d: "Our team checks price & availability, then confirms.",
+            },
             { n: 3, t: "Delivered to your door", d: "Track status live. Pay on delivery." },
           ].map((s) => (
             <li key={s.n} className="card-surface flex items-start gap-3 p-4">

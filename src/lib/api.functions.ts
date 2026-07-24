@@ -30,8 +30,8 @@ const OrderItemSchema = z.object({
   quantity: z.number().int().min(1).max(50),
   notes: z.string().trim().max(280).optional(),
   isFreeform: z.boolean(),
+  attachmentPath: z.string().trim().max(500).optional(),
 });
-
 
 // =============================================================================
 // Locations
@@ -52,22 +52,30 @@ export const getLocations = createServerFn({ method: "GET" }).handler(async () =
 // =============================================================================
 export const getProducts = createServerFn({ method: "GET" })
   .inputValidator((data: { categorySlug?: string; locationId?: string }) =>
-    z.object({
-      categorySlug: z.string().max(80).optional(),
-      locationId: z.string().uuid().optional(),
-    }).parse(data),
+    z
+      .object({
+        categorySlug: z.string().max(80).optional(),
+        locationId: z.string().uuid().optional(),
+      })
+      .parse(data),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let query = supabaseAdmin
       .from("products")
-      .select("id, category_id, name, description, image_url, price, currency, show_price, payment_mode, is_veg, is_service, is_available, schedulable, sort_order, tags")
+      .select(
+        "id, category_id, name, description, image_url, price, currency, show_price, payment_mode, is_veg, is_service, is_available, schedulable, sort_order, tags",
+      )
       .eq("is_available", true)
       .order("sort_order", { ascending: true });
 
     if (data.categorySlug) {
       const { data: cat } = await supabaseAdmin
-        .from("categories").select("id").eq("slug", data.categorySlug).is("parent_id", null).maybeSingle();
+        .from("categories")
+        .select("id")
+        .eq("slug", data.categorySlug)
+        .is("parent_id", null)
+        .maybeSingle();
       if (!cat) return [];
       query = query.eq("category_id", cat.id);
     }
@@ -115,12 +123,15 @@ export const getSubcategories = createServerFn({ method: "GET" })
     return { parent, items: items ?? [] };
   });
 
-
 // =============================================================================
 // Search
 // =============================================================================
 function normalize(s: string) {
-  return s.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 // Lightweight synonym map — expandable
@@ -225,8 +236,12 @@ function parseHM(hm: string): { h: number; m: number } {
 function nowInTz(tz: string): { dateStr: string; h: number; m: number } {
   const fmt = new Intl.DateTimeFormat("en-CA", {
     timeZone: tz,
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
   });
   const parts = Object.fromEntries(fmt.formatToParts(new Date()).map((p) => [p.type, p.value]));
   return {
@@ -243,25 +258,79 @@ function addDaysISO(dateStr: string, days: number): string {
   return dt.toISOString().slice(0, 10);
 }
 
+// Convert a local wall-clock time (YYYY-MM-DD + HH:MM) in a given IANA timezone
+// into the correct UTC instant. Needed because `new Date("2026-07-24T07:00:00")`
+// is parsed in the SERVER's local time (UTC on Vercel), not the location's timezone —
+// that bug previously made every delivery_batches.scheduled_at wrong by the IST offset.
+function zonedTimeToUtcISO(dateStr: string, hm: string, tz: string): string {
+  const { h, m } = parseHM(hm);
+  const [y, mo, d] = dateStr.split("-").map((n) => parseInt(n, 10));
+  const guessUtcMs = Date.UTC(y, mo - 1, d, h, m);
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const parts = Object.fromEntries(
+    fmt.formatToParts(new Date(guessUtcMs)).map((p) => [p.type, p.value]),
+  );
+  const hour24 = parts.hour === "24" ? 0 : parseInt(parts.hour, 10);
+  const asIfUtcMs = Date.UTC(
+    parseInt(parts.year, 10),
+    parseInt(parts.month, 10) - 1,
+    parseInt(parts.day, 10),
+    hour24,
+    parseInt(parts.minute, 10),
+    parseInt(parts.second, 10),
+  );
+  const offsetMs = guessUtcMs - asIfUtcMs;
+  return new Date(guessUtcMs + offsetMs).toISOString();
+}
+
+// Given the current time in `tz` and the location's configured windows, find the
+// window that's currently open (or the next one still open today), for the "Deliver
+// ASAP" path — so ASAP orders get batched too, not just explicitly-scheduled ones.
+function currentOrNextWindow(
+  windows: DeliveryWindow[],
+  nowH: number,
+  nowM: number,
+): DeliveryWindow | null {
+  const nowMin = nowH * 60 + nowM;
+  const withCutoff = windows
+    .map((w) => ({ w, cut: parseHM(w.cutoff) }))
+    .map(({ w, cut }) => ({ w, cutMin: cut.h * 60 + cut.m }));
+  const open = withCutoff.find(({ cutMin }) => nowMin < cutMin);
+  return open?.w ?? null;
+}
+
 export const createOrder = createServerFn({ method: "POST" })
-  .inputValidator((data: {
-    customer: z.infer<typeof CustomerSchema>;
-    items: z.infer<typeof OrderItemSchema>[];
-    notes?: string;
-    locationId?: string;
-    requestedDate?: string;
-    requestedWindow?: string;
-  }) =>
-    z
-      .object({
-        customer: CustomerSchema,
-        items: z.array(OrderItemSchema).min(1, "Add at least one item"),
-        notes: z.string().trim().max(500).optional(),
-        locationId: z.string().uuid().optional(),
-        requestedDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-        requestedWindow: z.string().trim().min(1).max(40).optional(),
-      })
-      .parse(data),
+  .inputValidator(
+    (data: {
+      customer: z.infer<typeof CustomerSchema>;
+      items: z.infer<typeof OrderItemSchema>[];
+      notes?: string;
+      locationId?: string;
+      requestedDate?: string;
+      requestedWindow?: string;
+    }) =>
+      z
+        .object({
+          customer: CustomerSchema,
+          items: z.array(OrderItemSchema).min(1, "Add at least one item"),
+          notes: z.string().trim().max(500).optional(),
+          locationId: z.string().uuid().optional(),
+          requestedDate: z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/)
+            .optional(),
+          requestedWindow: z.string().trim().min(1).max(40).optional(),
+        })
+        .parse(data),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -272,8 +341,18 @@ export const createOrder = createServerFn({ method: "POST" })
     let windows: DeliveryWindow[] = [];
     {
       const { data: loc, error: locErr } = locationId
-        ? await supabaseAdmin.from("locations").select("id, timezone, config").eq("id", locationId).maybeSingle()
-        : await supabaseAdmin.from("locations").select("id, timezone, config").eq("active", true).order("name").limit(1).maybeSingle();
+        ? await supabaseAdmin
+            .from("locations")
+            .select("id, timezone, config")
+            .eq("id", locationId)
+            .maybeSingle()
+        : await supabaseAdmin
+            .from("locations")
+            .select("id, timezone, config")
+            .eq("active", true)
+            .order("name")
+            .limit(1)
+            .maybeSingle();
       if (locErr) throw new Error(locErr.message);
       if (!loc) throw new Error("No active location configured");
       locationId = loc.id;
@@ -293,6 +372,7 @@ export const createOrder = createServerFn({ method: "POST" })
     }
 
     let requestedWindow: string | null = data.requestedWindow ?? null;
+    let batchWindow: string | null = null; // window actually used for delivery_batches assignment
     if (requestedWindow) {
       const win = windows.find((w) => w.label.toLowerCase() === requestedWindow!.toLowerCase());
       if (!win) throw new Error(`Unknown delivery window: ${requestedWindow}`);
@@ -302,9 +382,19 @@ export const createOrder = createServerFn({ method: "POST" })
         const nowMin = nowTz.h * 60 + nowTz.m;
         const cutMin = h * 60 + m;
         if (nowMin >= cutMin) {
-          throw new Error(`Sorry, the ${win.label} window has closed for today. Please pick a later window.`);
+          throw new Error(
+            `Sorry, the ${win.label} window has closed for today. Please pick a later window.`,
+          );
         }
       }
+      batchWindow = requestedWindow;
+    } else if (requestedDate === today && windows.length) {
+      // "Deliver ASAP" path: the customer didn't pick a window, so `requested_window`
+      // correctly stays null (don't misrepresent this as a scheduled order in the UI) —
+      // but we still resolve the currently-open window purely to attach this order to a
+      // delivery batch, so batching covers ASAP orders too, not only explicitly-scheduled ones.
+      const auto = currentOrNextWindow(windows, nowTz.h, nowTz.m);
+      batchWindow = auto?.label ?? null;
     }
 
     // Enforce schedulable flag per product for future-dated orders
@@ -312,17 +402,41 @@ export const createOrder = createServerFn({ method: "POST" })
       const productIds = data.items.map((i) => i.productId).filter(Boolean) as string[];
       if (productIds.length) {
         const { data: prods, error: pErr } = await supabaseAdmin
-          .from("products").select("id, name, schedulable").in("id", productIds);
+          .from("products")
+          .select("id, name, schedulable")
+          .in("id", productIds);
         if (pErr) throw new Error(pErr.message);
         const blocked = (prods ?? []).find((p) => !p.schedulable);
-        if (blocked) throw new Error(`"${blocked.name}" can't be scheduled ahead. Please choose "Deliver ASAP" or remove it.`);
+        if (blocked)
+          throw new Error(
+            `"${blocked.name}" can't be scheduled ahead. Please choose "Deliver ASAP" or remove it.`,
+          );
       }
+    }
+
+    // Basic abuse protection: no more than 8 orders per phone number per 10 minutes.
+    // There's no reliable client IP in this handler, so phone is the best available
+    // identifier; this still meaningfully blocks a script hammering createOrder.
+    const rateLimitPhone = data.customer.phone.replace(/\s|-/g, "");
+    const { data: allowed, error: rlErr } = await supabaseAdmin.rpc("mytown_check_rate_limit", {
+      p_bucket: `create_order:${rateLimitPhone}`,
+      p_max_hits: 8,
+      p_window_seconds: 600,
+    });
+    if (rlErr) throw new Error(rlErr.message);
+    if (!allowed) {
+      throw new Error(
+        "Too many orders placed recently from this number. Please wait a few minutes and try again.",
+      );
     }
 
     // Upsert customer by phone
     const phone = data.customer.phone.replace(/\s|-/g, "");
     const { data: existing } = await supabaseAdmin
-      .from("customers").select("id").eq("phone", phone).maybeSingle();
+      .from("customers")
+      .select("id")
+      .eq("phone", phone)
+      .maybeSingle();
 
     let customerId = existing?.id;
     if (!customerId) {
@@ -334,7 +448,8 @@ export const createOrder = createServerFn({ method: "POST" })
           address: data.customer.address,
           landmark: data.customer.landmark || null,
         })
-        .select("id").single();
+        .select("id")
+        .single();
       if (error) throw new Error(error.message);
       customerId = inserted!.id;
     } else {
@@ -366,30 +481,57 @@ export const createOrder = createServerFn({ method: "POST" })
     if (orderErr) throw new Error(orderErr.message);
 
     // Insert items
-    const { error: itemsErr } = await supabaseAdmin.from("order_items").insert(
-      data.items.map((i) => ({
-        order_id: orderId,
-        product_id: i.productId || null,
-        item_name: i.itemName,
-        category: i.category || null,
-        subcategory: i.subcategory || null,
-        quantity: i.quantity,
-        notes: i.notes || null,
-        is_freeform: i.isFreeform,
-      })),
-    );
+    const { data: insertedItems, error: itemsErr } = await supabaseAdmin
+      .from("order_items")
+      .insert(
+        data.items.map((i) => ({
+          order_id: orderId,
+          product_id: i.productId || null,
+          item_name: i.itemName,
+          category: i.category || null,
+          subcategory: i.subcategory || null,
+          quantity: i.quantity,
+          notes: i.notes || null,
+          is_freeform: i.isFreeform,
+        })),
+      )
+      .select("id");
     if (itemsErr) throw new Error(itemsErr.message);
 
-    // Resolve/create delivery batch and attach
-    if (requestedWindow) {
-      const win = windows.find((w) => w.label === requestedWindow)!;
-      const scheduledAt = new Date(`${requestedDate}T${win.start}:00`).toISOString();
+    // Attach any optional photos (Ask MyTown / medicine prescriptions) to their
+    // matching item — insert() preserves input order, so index-align with data.items.
+    const attachmentRows = data.items
+      .map((item, idx) =>
+        item.attachmentPath && insertedItems?.[idx]
+          ? {
+              order_item_id: insertedItems[idx].id,
+              file_path: item.attachmentPath,
+              file_type: "image",
+            }
+          : null,
+      )
+      .filter(
+        (r): r is { order_item_id: string; file_path: string; file_type: string } => r !== null,
+      );
+    if (attachmentRows.length) {
+      const { error: attachErr } = await supabaseAdmin
+        .from("order_attachments")
+        .insert(attachmentRows);
+      if (attachErr) throw new Error(attachErr.message);
+    }
+
+    // Resolve/create delivery batch and attach — uses batchWindow so ASAP orders are
+    // included too (bug #5 fix), and zonedTimeToUtcISO so scheduled_at is correct in
+    // the location's own timezone rather than the server's (bug #4 fix).
+    if (batchWindow) {
+      const win = windows.find((w) => w.label === batchWindow)!;
+      const scheduledAt = zonedTimeToUtcISO(requestedDate, win.start, locTz);
       const { data: batch, error: bErr } = await supabaseAdmin
         .from("delivery_batches")
         .upsert(
           {
             location_id: locationId,
-            window_label: requestedWindow,
+            window_label: batchWindow,
             scheduled_date: requestedDate,
             scheduled_at: scheduledAt,
             status: "open",
@@ -399,13 +541,15 @@ export const createOrder = createServerFn({ method: "POST" })
         .select("id")
         .single();
       if (!bErr && batch) {
-        await supabaseAdmin.from("orders").update({ delivery_batch_id: batch.id }).eq("id", orderId);
+        await supabaseAdmin
+          .from("orders")
+          .update({ delivery_batch_id: batch.id })
+          .eq("id", orderId);
       }
     }
 
     return { orderId };
   });
-
 
 // =============================================================================
 // Track order
@@ -454,7 +598,14 @@ export const trackOrder = createServerFn({ method: "GET" })
 // =============================================================================
 export const employeeLogin = createServerFn({ method: "POST" })
   .inputValidator((data: { pin: string }) =>
-    z.object({ pin: z.string().trim().regex(/^\d{4,8}$/, "PIN must be 4-8 digits") }).parse(data),
+    z
+      .object({
+        pin: z
+          .string()
+          .trim()
+          .regex(/^\d{4,8}$/, "PIN must be 4-8 digits"),
+      })
+      .parse(data),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

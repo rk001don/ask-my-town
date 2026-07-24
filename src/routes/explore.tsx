@@ -13,7 +13,11 @@ export const Route = createFileRoute("/explore")({
   head: () => ({
     meta: [
       { title: "Explore — MyTown" },
-      { name: "description", content: "Browse everything MyTown can arrange for you: food, daily needs, beauty, travel, rentals, local help." },
+      {
+        name: "description",
+        content:
+          "Browse everything MyTown can arrange for you: food, daily needs, beauty, travel, rentals, local help.",
+      },
       { property: "og:title", content: "Explore — MyTown" },
       { property: "og:description", content: "Every category MyTown can arrange for you." },
     ],
@@ -35,8 +39,10 @@ function Explore() {
           Tap a category to see options, or just ask us.
         </p>
       </div>
-      {!mounted ? <TileSkeleton count={12} /> : (
-        <div className="grid grid-cols-2 gap-3 px-4 pb-8">
+      {!mounted ? (
+        <TileSkeleton count={12} />
+      ) : (
+        <div className="grid grid-cols-2 gap-3 px-4 pb-8 md:grid-cols-3 lg:grid-cols-4">
           {data.map((c) => (
             <CategoryTile key={c.id} slug={c.slug} name={c.name} iconKey={c.icon_key} />
           ))}
