@@ -13,6 +13,10 @@ const TABS = [
 export function AppShell({ children }: { children: ReactNode }) {
   const loc = useLocation();
   // Staff/admin consoles render their own chrome — no customer nav there.
+  const hideBottomNav =
+    loc.pathname.startsWith("/cart") ||
+    loc.pathname.startsWith("/checkout") ||
+    loc.pathname.startsWith("/order/");
   const hideNav =
     loc.pathname.startsWith("/employee") ||
     loc.pathname.startsWith("/staff") ||
