@@ -212,14 +212,48 @@ export const searchItems = createServerFn({ method: "GET" })
       });
     }
 
+    // Also search the real priced catalog (products), not just categories --
+    // otherwise searching "biryani" never finds the actual "Chicken Biryani" row.
+    let productResults: Array<{
+      id: string;
+      name: string;
+      price: number | null;
+      show_price: boolean;
+      image_url: string | null;
+      category_id: string;
+      category_slug?: string | null;
+    }> = [];
+    const productOrExpr = terms
+      .filter((t) => t.length >= 2)
+      .map((t) => `name.ilike.%${t}%`)
+      .join(",");
+    if (productOrExpr) {
+      const { data: prodRows, error: prodErr } = await supabaseAdmin
+        .from("products")
+        .select("id, name, price, show_price, image_url, category_id, categories(slug)")
+        .or(productOrExpr)
+        .eq("is_available", true)
+        .limit(20);
+      if (prodErr) throw new Error(prodErr.message);
+      productResults = (prodRows ?? []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        show_price: p.show_price,
+        image_url: p.image_url,
+        category_id: p.category_id,
+        category_slug: (p.categories as { slug: string } | null)?.slug ?? null,
+      }));
+    }
+
     // Log analytics fire-and-forget
     await supabaseAdmin.from("search_analytics").insert({
       term: raw,
       normalized_term: normalize(raw),
-      result_count: results.length,
+      result_count: results.length + productResults.length,
     });
 
-    return { results, term: raw };
+    return { results, productResults, term: raw };
   });
 
 // =============================================================================
