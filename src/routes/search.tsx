@@ -4,8 +4,9 @@ import { searchItems } from "@/lib/api.functions";
 import { AppHeader } from "@/components/AppHeader";
 import { EmptyState, ErrorState } from "@/components/States";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search as SearchIcon, X } from "lucide-react";
+import { Search as SearchIcon, X, Sparkles as SparklesIcon } from "lucide-react";
 import { iconFor } from "@/components/icon-map";
+import { openAskSheet } from "@/components/AskFAB";
 
 export const Route = createFileRoute("/search")({
   head: () => ({
@@ -190,7 +191,10 @@ function SearchPage() {
       )}
 
       {state === "loaded" && results.length > 0 && (
-        <ul className="space-y-2 p-4">
+        <ul className="space-y-2 p-4 pt-2">
+          <h3 className="mb-1 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
+            Categories
+          </h3>
           {results.map((r) => {
             const Icon = iconFor(r.icon_key);
             const isSub = !!r.parent_id;
@@ -224,6 +228,29 @@ function SearchPage() {
             );
           })}
         </ul>
+      )}
+
+      {/* Consistent with the category page: results (if any) are primary and
+          shown above; this fallback is always present once the customer has
+          actually searched for something, never only-shown-if-zero-results --
+          otherwise a partial match silently has no path to "ask for the rest." */}
+      {state === "loaded" && !showEmpty && debounced.trim().length >= 2 && (
+        <div className="px-4 pb-6">
+          <button
+            onClick={() => openAskSheet(`I need ${debounced.trim()}: `)}
+            className="tap-scale flex w-full items-center gap-3 rounded-2xl border border-dashed border-[color:var(--border-strong)] p-4 text-left"
+          >
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[color:var(--accent-primary)]/10">
+              <SparklesIcon className="h-4 w-4 text-[color:var(--accent-primary)]" />
+            </span>
+            <span>
+              <span className="block text-sm font-semibold">Not quite what you wanted?</span>
+              <span className="block text-xs text-[color:var(--text-secondary)]">
+                Ask MyTown for "{debounced.trim()}" directly
+              </span>
+            </span>
+          </button>
+        </div>
       )}
 
       {showEmpty && (
