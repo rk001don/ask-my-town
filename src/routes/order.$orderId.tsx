@@ -15,10 +15,7 @@ const opts = (orderId: string) =>
 export const Route = createFileRoute("/order/$orderId")({
   loader: ({ context, params }) => context.queryClient.ensureQueryData(opts(params.orderId)),
   head: ({ params }) => ({
-    meta: [
-      { title: `Order ${params.orderId} — MyTown` },
-      { name: "robots", content: "noindex" },
-    ],
+    meta: [{ title: `Order ${params.orderId} — MyTown` }, { name: "robots", content: "noindex" }],
   }),
   component: Confirmation,
   errorComponent: ({ reset }) => <ErrorState onRetry={reset} />,
@@ -33,7 +30,10 @@ function Confirmation() {
     return (
       <div>
         <AppHeader title="Order" showCart={false} />
-        <EmptyState title="Order not found" message="We can't find that order. Check the ID and try again." />
+        <EmptyState
+          title="Order not found"
+          message="We can't find that order. Check the ID and try again."
+        />
       </div>
     );
   }
@@ -47,7 +47,12 @@ function Confirmation() {
       <div className="rise space-y-5 p-4">
         {/* Hero confirmation */}
         <div className="card-surface gradient-hero relative overflow-hidden p-5">
-          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full" style={{ background: "radial-gradient(circle, oklch(0.78 0.15 155 / 0.35), transparent 65%)" }} />
+          <div
+            className="absolute -right-10 -top-10 h-40 w-40 rounded-full"
+            style={{
+              background: "radial-gradient(circle, oklch(0.78 0.15 155 / 0.35), transparent 65%)",
+            }}
+          />
           <div className="relative flex items-start gap-3">
             <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[color:var(--success)]/20 border border-[color:var(--success)]/40">
               <Check className="h-6 w-6 text-[color:var(--success)]" strokeWidth={2.5} />
@@ -66,7 +71,9 @@ function Confirmation() {
 
         {/* Timeline */}
         <div className="card-surface p-4">
-          <h3 className="text-display text-sm font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">What happens next</h3>
+          <h3 className="text-display text-sm font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
+            What happens next
+          </h3>
           <ol className="mt-3 space-y-3">
             {ORDER_STATUS_STEPS.map((s, i) => {
               const done = i <= currentIdx;
@@ -79,7 +86,9 @@ function Confirmation() {
                     {done ? <Check className="h-3.5 w-3.5" /> : i + 1}
                   </div>
                   <div>
-                    <div className={`text-sm font-semibold ${active ? "text-[color:var(--accent-primary)]" : done ? "" : "text-[color:var(--text-muted)]"}`}>
+                    <div
+                      className={`text-sm font-semibold ${active ? "text-[color:var(--accent-primary)]" : done ? "" : "text-[color:var(--text-muted)]"}`}
+                    >
                       {s.label}
                     </div>
                     <div className="text-xs text-[color:var(--text-secondary)]">
@@ -94,21 +103,52 @@ function Confirmation() {
 
         {/* Items summary */}
         <div className="card-surface p-4">
-          <h3 className="text-display text-sm font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">You asked for</h3>
+          <h3 className="text-display text-sm font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
+            You asked for
+          </h3>
           <ul className="mt-3 space-y-2">
             {order.items.map((it) => (
-              <li key={it.id} className="flex items-start justify-between gap-3 border-b border-[color:var(--border-subtle)] pb-2 last:border-0 last:pb-0">
+              <li
+                key={it.id}
+                className="flex items-start justify-between gap-3 border-b border-[color:var(--border-subtle)] pb-2 last:border-0 last:pb-0"
+              >
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    {it.is_freeform && <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-primary)]" />}
+                    {it.is_freeform && (
+                      <Sparkles className="h-3.5 w-3.5 text-[color:var(--accent-primary)]" />
+                    )}
                     <div className="text-[14px] font-semibold">{it.item_name}</div>
                   </div>
-                  {it.notes && <div className="text-xs text-[color:var(--text-secondary)]">{it.notes}</div>}
+                  {it.notes && (
+                    <div className="text-xs text-[color:var(--text-secondary)]">{it.notes}</div>
+                  )}
+                  {it.unit_price != null && (
+                    <div className="text-xs text-[color:var(--text-muted)]">
+                      ₹{it.unit_price} each
+                    </div>
+                  )}
                 </div>
-                <div className="text-sm font-bold text-[color:var(--text-secondary)]">×{it.quantity}</div>
+                <div className="text-right">
+                  <div className="text-sm font-bold text-[color:var(--text-secondary)]">
+                    ×{it.quantity}
+                  </div>
+                  {it.unit_price != null && (
+                    <div className="text-xs font-semibold text-[color:var(--accent-primary)]">
+                      ₹{it.unit_price * it.quantity}
+                    </div>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
+          {order.items.some((it) => it.unit_price != null) && (
+            <div className="mt-3 flex items-center justify-between border-t border-[color:var(--border-subtle)] pt-3">
+              <span className="text-sm font-semibold">Total</span>
+              <span className="text-base font-bold">
+                ₹{order.items.reduce((n, it) => n + (it.unit_price ?? 0) * it.quantity, 0)}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Actions */}

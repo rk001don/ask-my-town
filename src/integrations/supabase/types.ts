@@ -332,6 +332,7 @@ export type Database = {
           product_id: string | null;
           quantity: number;
           subcategory: string | null;
+          unit_price: number | null;
         };
         Insert: {
           category?: string | null;
@@ -344,6 +345,7 @@ export type Database = {
           product_id?: string | null;
           quantity?: number;
           subcategory?: string | null;
+          unit_price?: number | null;
         };
         Update: {
           category?: string | null;
@@ -356,6 +358,7 @@ export type Database = {
           product_id?: string | null;
           quantity?: number;
           subcategory?: string | null;
+          unit_price?: number | null;
         };
         Relationships: [
           {

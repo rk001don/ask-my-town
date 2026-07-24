@@ -480,6 +480,21 @@ export const createOrder = createServerFn({ method: "POST" })
     });
     if (orderErr) throw new Error(orderErr.message);
 
+    // Snapshot the price actually charged, resolved server-side from the real
+    // products table — a client-supplied price is never trusted here, since that
+    // would let a tampered request pay ₹1 for a ₹200 item.
+    const priceableProductIds = data.items
+      .map((i) => i.productId)
+      .filter((id): id is string => !!id);
+    const priceByProductId = new Map<string, number | null>();
+    if (priceableProductIds.length) {
+      const { data: priced } = await supabaseAdmin
+        .from("products")
+        .select("id, price")
+        .in("id", priceableProductIds);
+      (priced ?? []).forEach((p) => priceByProductId.set(p.id, p.price));
+    }
+
     // Insert items
     const { data: insertedItems, error: itemsErr } = await supabaseAdmin
       .from("order_items")
@@ -493,6 +508,7 @@ export const createOrder = createServerFn({ method: "POST" })
           quantity: i.quantity,
           notes: i.notes || null,
           is_freeform: i.isFreeform,
+          unit_price: i.productId ? (priceByProductId.get(i.productId) ?? null) : null,
         })),
       )
       .select("id");
@@ -570,7 +586,7 @@ export const trackOrder = createServerFn({ method: "GET" })
     let query = supabaseAdmin
       .from("orders")
       .select(
-        "id, status, notes, created_at, confirmed_at, completed_at, updated_at, customer:customers(id,name,phone,address,landmark), items:order_items(id,item_name,category,subcategory,quantity,notes,is_freeform)",
+        "id, status, notes, created_at, confirmed_at, completed_at, updated_at, customer:customers(id,name,phone,address,landmark), items:order_items(id,item_name,category,subcategory,quantity,notes,is_freeform,unit_price)",
       )
       .order("created_at", { ascending: false })
       .limit(20);

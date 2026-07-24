@@ -43,15 +43,18 @@ function Cart() {
     );
   }
 
-  const total = items.reduce((n, i) => n + i.quantity, 0);
+  const priceableItems = items.filter((i) => i.showPrice && i.unitPrice != null);
+  const subtotal = priceableItems.reduce((n, i) => n + (i.unitPrice ?? 0) * i.quantity, 0);
+  const hasUnpricedItems = items.some((i) => !i.showPrice || i.unitPrice == null);
+  const itemCount = items.reduce((n, i) => n + i.quantity, 0);
 
   return (
     <div>
       <AppHeader title="Your ask" />
       <div className="px-4 pt-2">
         <div className="rise text-sm text-[color:var(--text-secondary)]">
-          <span className="text-[color:var(--accent-primary)] font-semibold">{total}</span>{" "}
-          {total === 1 ? "item" : "items"} added
+          <span className="text-[color:var(--accent-primary)] font-semibold">{itemCount}</span>{" "}
+          {itemCount === 1 ? "item" : "items"} added
         </div>
       </div>
       <ul className="space-y-3 p-4">
@@ -60,11 +63,22 @@ function Cart() {
         ))}
       </ul>
 
+      {priceableItems.length > 0 && (
+        <div className="px-4 pb-2">
+          <div className="card-surface flex items-center justify-between p-4">
+            <span className="text-sm font-semibold">Subtotal</span>
+            <span className="text-lg font-bold">₹{subtotal}</span>
+          </div>
+        </div>
+      )}
+
       <div className="px-4 pb-4">
         <div className="card-surface flex items-start gap-3 p-4">
           <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-[color:var(--accent-primary)]" />
           <p className="text-sm text-[color:var(--text-secondary)]">
-            We'll confirm price & availability on WhatsApp before doing anything. Pay on delivery.
+            {hasUnpricedItems
+              ? "Some items are priced on request — we'll confirm those on WhatsApp before doing anything. Pay on delivery."
+              : "This is what you'll pay on delivery. We'll confirm availability on WhatsApp before doing anything."}
           </p>
         </div>
       </div>
@@ -121,6 +135,11 @@ function CartRow({ it }: { it: ReturnType<typeof useCart>["items"][number] }) {
               {!it.isFreeform && it.category && (
                 <div className="text-[11px] text-[color:var(--text-muted)]">{it.category}</div>
               )}
+              {!it.isFreeform && (
+                <div className="mt-0.5 text-[13px] font-semibold text-[color:var(--accent-primary)]">
+                  {it.showPrice && it.unitPrice != null ? `₹${it.unitPrice}` : "Price on request"}
+                </div>
+              )}
             </div>
             <button
               onClick={() => removeItem(it.key)}
@@ -140,21 +159,31 @@ function CartRow({ it }: { it: ReturnType<typeof useCart>["items"][number] }) {
               {notes ? "Edit note" : "Add note"}
             </button>
             <div className="flex items-center gap-2 rounded-full border border-[color:var(--border-strong)] px-1">
-              <button
-                onClick={() => decrementItem(it.key)}
-                aria-label="Decrease"
-                className="tap-scale grid h-8 w-8 place-items-center"
-              >
-                <Minus className="h-4 w-4" />
-              </button>
-              <span className="min-w-[1.5rem] text-center text-sm font-bold">{it.quantity}</span>
-              <button
-                onClick={() => incrementItem(it.key)}
-                aria-label="Increase"
-                className="tap-scale grid h-8 w-8 place-items-center"
-              >
-                <Plus className="h-4 w-4" />
-              </button>
+              {it.isService ? (
+                <span className="px-2 py-1.5 text-xs font-semibold text-[color:var(--text-secondary)]">
+                  1 booking
+                </span>
+              ) : (
+                <>
+                  <button
+                    onClick={() => decrementItem(it.key)}
+                    aria-label="Decrease"
+                    className="tap-scale grid h-8 w-8 place-items-center"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="min-w-[1.5rem] text-center text-sm font-bold">
+                    {it.quantity}
+                  </span>
+                  <button
+                    onClick={() => incrementItem(it.key)}
+                    aria-label="Increase"
+                    className="tap-scale grid h-8 w-8 place-items-center"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </>
+              )}
             </div>
           </div>
 

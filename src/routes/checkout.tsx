@@ -377,6 +377,20 @@ function Checkout() {
           className="glass fixed bottom-0 left-1/2 z-30 w-full max-w-[520px] -translate-x-1/2 md:max-w-2xl border-t border-[color:var(--border-subtle)] p-4"
           style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
         >
+          {(() => {
+            const priceable = items.filter((i) => i.showPrice && i.unitPrice != null);
+            const subtotal = priceable.reduce((n, i) => n + (i.unitPrice ?? 0) * i.quantity, 0);
+            if (priceable.length === 0) return null;
+            return (
+              <div className="mb-2 flex items-center justify-between text-sm">
+                <span className="text-[color:var(--text-secondary)]">
+                  Subtotal
+                  {priceable.length < items.length ? " (excl. items priced on request)" : ""}
+                </span>
+                <span className="font-bold">₹{subtotal}</span>
+              </div>
+            );
+          })()}
           <button
             type="submit"
             disabled={busy}
