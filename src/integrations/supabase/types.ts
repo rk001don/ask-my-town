@@ -338,6 +338,7 @@ export type Database = {
           product_id: string | null
           quantity: number
           subcategory: string | null
+          unit_price: number | null
         }
         Insert: {
           category?: string | null
@@ -350,6 +351,7 @@ export type Database = {
           product_id?: string | null
           quantity?: number
           subcategory?: string | null
+          unit_price?: number | null
         }
         Update: {
           category?: string | null
@@ -362,6 +364,7 @@ export type Database = {
           product_id?: string | null
           quantity?: number
           subcategory?: string | null
+          unit_price?: number | null
         }
         Relationships: [
           {
@@ -550,6 +553,21 @@ export type Database = {
           },
         ]
       }
+      rate_limit_hits: {
+        Row: {
+          bucket: string
+          hit_at: string
+        }
+        Insert: {
+          bucket: string
+          hit_at?: string
+        }
+        Update: {
+          bucket?: string
+          hit_at?: string
+        }
+        Relationships: []
+      }
       riders: {
         Row: {
           active: boolean
@@ -690,12 +708,24 @@ export type Database = {
         Returns: boolean
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
+      mytown_check_rate_limit: {
+        Args: { p_bucket: string; p_max_hits: number; p_window_seconds: number }
+        Returns: boolean
+      }
       mytown_new_order_id: { Args: never; Returns: string }
       mytown_verify_employee_pin: {
         Args: { p_pin: string }
         Returns: {
           id: string
           name: string
+        }[]
+      }
+      mytown_warden_daily_counts: {
+        Args: { p_location_id?: string }
+        Returns: {
+          completed_orders: number
+          delivery_date: string
+          total_orders: number
         }[]
       }
     }
