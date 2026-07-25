@@ -45,7 +45,8 @@ export function AskFAB() {
     loc.pathname.startsWith("/staff") ||
     loc.pathname.startsWith("/admin") ||
     loc.pathname.startsWith("/order/") ||
-    loc.pathname === "/checkout";
+    loc.pathname === "/checkout" ||
+    loc.pathname === "/cart";
   if (hide) return null;
 
   function resetAttachment() {

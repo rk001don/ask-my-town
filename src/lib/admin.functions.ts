@@ -123,6 +123,77 @@ export const updateAppConfig = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+export const listCategoriesForAdmin = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("categories")
+      .select("id, name, slug")
+      .order("name", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+const ProductCreateSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  category_id: z.string().uuid(),
+  price: z.number().min(0).max(100000).nullable().optional(),
+  show_price: z.boolean().default(true),
+  is_service: z.boolean().default(false),
+  schedulable: z.boolean().default(true),
+  is_veg: z.boolean().nullable().optional(),
+});
+
+export const createProduct = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: z.infer<typeof ProductCreateSchema>) => ProductCreateSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (data.show_price && data.price == null) {
+      throw new Error("Set a price before turning show_price on.");
+    }
+    const { data: inserted, error } = await supabaseAdmin
+      .from("products")
+      .insert({ ...data, is_available: true })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("audit_log").insert({
+      staff_id: context.userId,
+      action: "product.create",
+      entity_type: "product",
+      entity_id: inserted!.id,
+      metadata: data,
+    });
+    return { id: inserted!.id };
+  });
+
+export const deleteProduct = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { id: string }) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Soft-delete: keep is_available=false rather than a hard DELETE, so past
+    // orders that reference this product_id don't lose their history.
+    const { error } = await supabaseAdmin
+      .from("products")
+      .update({ is_available: false })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("audit_log").insert({
+      staff_id: context.userId,
+      action: "product.delete",
+      entity_type: "product",
+      entity_id: data.id,
+      metadata: {},
+    });
+    return { ok: true as const };
+  });
+
 export const listDeliveryBatches = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

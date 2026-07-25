@@ -6,6 +6,8 @@ import { EmptyState } from "@/components/States";
 import { clearCart, useCart } from "@/lib/cart-store";
 import { createOrder, getLocations } from "@/lib/api.functions";
 import { linkCustomerToMe } from "@/lib/auth.functions";
+import { isValidIndianPhone } from "@/lib/phone";
+import { formatTimeRange12h } from "@/lib/time";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -123,7 +125,7 @@ function Checkout() {
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (form.name.trim().length < 2) errs.name = "Please enter your name";
-    if (!/^[+]?[0-9\s-]{7,15}$/.test(form.phone.trim())) errs.phone = "Enter a valid phone number";
+    if (!isValidIndianPhone(form.phone.trim())) errs.phone = "Enter a valid 10-digit mobile number";
     if (form.address.trim().length < 6) errs.address = "Please add a delivery address";
     if (mode === "schedule" && !windowLabel) errs.window = "Pick a delivery window";
     setErrors(errs);
@@ -171,7 +173,6 @@ function Checkout() {
           }),
         );
       } catch {}
-      clearCart();
       try {
         const { data: sess } = await supabase.auth.getSession();
         if (sess.session) {
@@ -180,7 +181,12 @@ function Checkout() {
       } catch {
         /* non-fatal */
       }
-      navigate({ to: "/order/$orderId", params: { orderId: res.orderId } });
+      await navigate({ to: "/order/$orderId", params: { orderId: res.orderId } });
+      // Clear only after we've actually left this page -- clearing first made
+      // checkout's own "cart is empty" state flash for a frame before the
+      // route transition finished, since items.length dropped to 0 while
+      // still mounted here.
+      clearCart();
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Couldn't send your ask. Please try again.";
       toast.error(msg);
@@ -224,7 +230,7 @@ function Checkout() {
                   : "text-[color:var(--text-secondary)]"
               }`}
             >
-              Deliver ASAP
+              Deliver Now
             </button>
             <button
               type="button"
@@ -289,11 +295,11 @@ function Checkout() {
                               ? "border-[color:var(--border-subtle)] bg-transparent text-[color:var(--text-muted)] opacity-60 cursor-not-allowed"
                               : "border-[color:var(--border-strong)] text-[color:var(--text-primary)] bg-[color:var(--bg-elevated-2)]"
                         }`}
-                        title={closed ? "Closed for today" : `${w.start}–${w.end}`}
+                        title={closed ? "Closed for today" : formatTimeRange12h(w.start, w.end)}
                       >
                         {w.label}
                         <span className="ml-1.5 text-xs opacity-70">
-                          {closed ? "closed" : `${w.start}–${w.end}`}
+                          {closed ? "closed" : formatTimeRange12h(w.start, w.end)}
                         </span>
                       </button>
                     );
@@ -318,14 +324,22 @@ function Checkout() {
         </Field>
 
         <Field label="Phone number" error={errors.phone}>
-          <input
-            value={form.phone}
-            onChange={(e) => setForm({ ...form, phone: e.target.value })}
-            autoComplete="tel"
-            inputMode="tel"
-            className="mt-input"
-            placeholder="10-digit mobile"
-          />
+          <div className="mt-input flex items-center gap-2 !px-0">
+            <span className="border-r border-[color:var(--border-strong)] px-3 text-[15px] font-semibold text-[color:var(--text-secondary)]">
+              +91
+            </span>
+            <input
+              value={form.phone}
+              onChange={(e) =>
+                setForm({ ...form, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })
+              }
+              autoComplete="tel"
+              inputMode="numeric"
+              maxLength={10}
+              className="w-full bg-transparent pr-3 outline-none"
+              placeholder="10-digit mobile"
+            />
+          </div>
         </Field>
 
         <Field label="Delivery address" error={errors.address}>

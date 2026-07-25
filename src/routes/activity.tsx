@@ -2,9 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AppHeader } from "@/components/AppHeader";
 import { trackOrder } from "@/lib/api.functions";
-import { EmptyState, ErrorState } from "@/components/States";
+import { getMyOrders } from "@/lib/auth.functions";
+import { EmptyState, ErrorState, CardSkeleton } from "@/components/States";
 import { ORDER_STATUS_STEPS, STATUS_COPY, type OrderStatus } from "@/lib/constants";
-import { useState } from "react";
+import { isValidIndianPhone } from "@/lib/phone";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Search, Check, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/activity")({
@@ -20,20 +24,89 @@ export const Route = createFileRoute("/activity")({
 type Order = Awaited<ReturnType<typeof trackOrder>>["orders"][number];
 
 function Activity() {
+  const [authChecked, setAuthChecked] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setLoggedIn(!!data.session);
+      setAuthChecked(true);
+    });
+  }, []);
+
+  if (!authChecked) {
+    return (
+      <div>
+        <AppHeader title="Activity" showBack={false} />
+        <div className="space-y-3 p-4">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="skeleton h-28 rounded-2xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Logged-in customers already have an identity the server can use to find
+  // their own orders -- making them type their phone number again to "track"
+  // something the app could already show them is exactly the redundant step
+  // that was confusing here. Guests, who have no identity to look up by,
+  // still need the manual tracker below.
+  return loggedIn ? <MyActivity /> : <GuestTracker />;
+}
+
+function MyActivity() {
+  const fetchOrders = useServerFn(getMyOrders);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["my-orders"],
+    queryFn: () => fetchOrders(),
+  });
+
+  return (
+    <div>
+      <AppHeader title="Activity" showBack={false} />
+      {isLoading && (
+        <div className="space-y-3 p-4">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
+      )}
+      {error && <ErrorState />}
+      {data && data.length === 0 && (
+        <EmptyState title="No orders yet" message="Once you place an ask, it'll show up here." />
+      )}
+      {data && data.length > 0 && (
+        <ul className="space-y-3 p-4 pb-8">
+          {data.map((o) => (
+            <OrderCard key={o.id} order={o as unknown as Order} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function GuestTracker() {
   const track = useServerFn(trackOrder);
   const [q, setQ] = useState("");
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "loaded" | "error">("idle");
 
+  const looksLikePhone = /^\d/.test(q.trim());
+
   async function onSearch(e: React.FormEvent) {
     e.preventDefault();
     const value = q.trim();
     if (!value) return;
+    if (looksLikePhone && !isValidIndianPhone(value)) {
+      setState("error");
+      return;
+    }
     setState("loading");
     try {
-      const isOrderId = /^mt-/i.test(value) || (value.length <= 12 && !/^\d/.test(value));
       const res = await track({
-        data: isOrderId ? { orderId: value } : { phone: value },
+        data: looksLikePhone ? { phone: value } : { orderId: value },
       });
       setOrders(res.orders);
       setState("loaded");
@@ -48,16 +121,32 @@ function Activity() {
       <div className="rise p-4">
         <h2 className="text-display text-2xl font-bold">Track your ask</h2>
         <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
-          Enter your phone or order ID (like MT-4A9F2C).
+          Enter your phone or order ID (like MT-4A9F2C).{" "}
+          <Link to="/auth" className="font-semibold text-[color:var(--accent-primary)]">
+            Sign in
+          </Link>{" "}
+          to see all your orders automatically next time.
         </p>
         <form onSubmit={onSearch} className="mt-4">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" />
+          <div className="relative flex items-center overflow-hidden rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] focus-within:border-[color:var(--accent-primary)]">
+            <Search className="pointer-events-none ml-3.5 h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
+            {looksLikePhone && (
+              <span className="ml-2 shrink-0 text-[15px] font-semibold text-[color:var(--text-secondary)]">
+                +91
+              </span>
+            )}
             <input
               value={q}
-              onChange={(e) => setQ(e.target.value)}
+              onChange={(e) =>
+                setQ(
+                  /^\d/.test(e.target.value)
+                    ? e.target.value.replace(/\D/g, "").slice(0, 10)
+                    : e.target.value,
+                )
+              }
+              inputMode={looksLikePhone ? "numeric" : "text"}
               placeholder="Phone or order ID"
-              className="w-full rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] py-3 pl-9 pr-4 text-[15px] focus:border-[color:var(--accent-primary)] focus:outline-none"
+              className="w-full bg-transparent py-3 pl-2 pr-4 text-[15px] outline-none"
             />
           </div>
           <button
@@ -78,7 +167,16 @@ function Activity() {
         </div>
       )}
 
-      {state === "error" && <ErrorState onRetry={() => setState("idle")} />}
+      {state === "error" && (
+        <ErrorState
+          message={
+            looksLikePhone
+              ? "Enter a valid 10-digit mobile number."
+              : "Couldn't find that. Double-check the number or ID."
+          }
+          onRetry={() => setState("idle")}
+        />
+      )}
 
       {state === "loaded" && orders && orders.length === 0 && (
         <EmptyState
@@ -113,7 +211,9 @@ function OrderCard({ order }: { order: Order }) {
             {order.id}
           </div>
         </div>
-        <div className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase ${status === "completed" ? "bg-[color:var(--success)]/20 text-[color:var(--success)]" : status === "cancelled" ? "bg-[color:var(--danger)]/20 text-[color:var(--danger)]" : "bg-[color:var(--accent-primary)]/20 text-[color:var(--accent-primary)]"}`}>
+        <div
+          className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase ${status === "completed" ? "bg-[color:var(--success)]/20 text-[color:var(--success)]" : status === "cancelled" ? "bg-[color:var(--danger)]/20 text-[color:var(--danger)]" : "bg-[color:var(--accent-primary)]/20 text-[color:var(--accent-primary)]"}`}
+        >
           {STATUS_COPY[status].label}
         </div>
       </div>
@@ -125,9 +225,14 @@ function OrderCard({ order }: { order: Order }) {
       </div>
       <ul className="mt-3 space-y-1">
         {order.items.slice(0, 3).map((it, i) => (
-          <li key={i} className="flex items-center gap-2 text-xs text-[color:var(--text-secondary)]">
+          <li
+            key={i}
+            className="flex items-center gap-2 text-xs text-[color:var(--text-secondary)]"
+          >
             {it.is_freeform && <Sparkles className="h-3 w-3 text-[color:var(--accent-primary)]" />}
-            <span className="line-clamp-1">{it.item_name} × {it.quantity}</span>
+            <span className="line-clamp-1">
+              {it.item_name} × {it.quantity}
+            </span>
           </li>
         ))}
         {order.items.length > 3 && (

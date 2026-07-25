@@ -2,6 +2,83 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { isValidIndianPhone, normalizeIndianPhone } from "@/lib/phone";
+
+// A phone number's PIN "account" is really just a normal Supabase Auth user
+// with a synthetic email and the PIN as its password -- this deliberately
+// reuses Supabase's own tested password hashing, session issuance, and
+// brute-force/rate-limit protections on sign-in, rather than hand-rolling a
+// custom PIN-verification + session-minting mechanism ourselves. A 6-digit
+// PIN (not 4) is required specifically to satisfy Supabase Auth's own
+// minimum password length, so no special-casing is needed anywhere else.
+function syntheticEmailForPhone(phone: string): string {
+  return `${phone}@customers.mytown.internal`;
+}
+
+const PinSignupSchema = z.object({
+  phone: z.string().trim(),
+  pin: z.string().regex(/^\d{6}$/, "PIN must be exactly 6 digits"),
+  name: z.string().trim().min(2).max(80).optional(),
+});
+
+export const signUpWithPin = createServerFn({ method: "POST" })
+  .inputValidator((data: z.infer<typeof PinSignupSchema>) => PinSignupSchema.parse(data))
+  .handler(async ({ data }) => {
+    if (!isValidIndianPhone(data.phone)) throw new Error("Enter a valid 10-digit mobile number");
+    const phone = normalizeIndianPhone(data.phone);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Same abuse protection as order creation -- prevents scripted mass
+    // account creation against this endpoint.
+    const { data: allowed, error: rlErr } = await supabaseAdmin.rpc("mytown_check_rate_limit", {
+      p_bucket: `pin_signup:${phone}`,
+      p_max_hits: 5,
+      p_window_seconds: 3600,
+    });
+    if (rlErr) throw new Error(rlErr.message);
+    if (!allowed) throw new Error("Too many attempts. Please try again in a while.");
+
+    const email = syntheticEmailForPhone(phone);
+    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password: data.pin,
+      email_confirm: true,
+      user_metadata: { phone, auth_method: "pin" },
+    });
+    if (error) {
+      if (error.message.toLowerCase().includes("already")) {
+        throw new Error(
+          "This phone number already has an account. Try signing in with your PIN instead.",
+        );
+      }
+      throw new Error(error.message);
+    }
+
+    // Link (or create) the customers row for this phone to the new account,
+    // same as the email/Google linking path -- so past guest orders under
+    // this phone become visible once they sign in.
+    const { data: existingCustomer } = await supabaseAdmin
+      .from("customers")
+      .select("id, user_id")
+      .eq("phone", phone)
+      .maybeSingle();
+    if (existingCustomer && !existingCustomer.user_id) {
+      await supabaseAdmin
+        .from("customers")
+        .update({ user_id: created.user!.id })
+        .eq("id", existingCustomer.id)
+        .is("user_id", null);
+    } else if (!existingCustomer && data.name) {
+      await supabaseAdmin.from("customers").insert({
+        name: data.name,
+        phone,
+        address: "",
+        user_id: created.user!.id,
+      });
+    }
+
+    return { email }; // client immediately calls signInWithPassword with this + the PIN
+  });
 
 // Get the signed-in user's linked customer profile (if any).
 export const getMyProfile = createServerFn({ method: "GET" })

@@ -1,6 +1,7 @@
 // All MyTown server functions. Callable from routes/components via useServerFn or directly.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { isValidIndianPhone, normalizeIndianPhone } from "@/lib/phone";
 
 // ----- shared schemas -----
 const OrderStatus = z.enum([
@@ -17,7 +18,8 @@ const CustomerSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^[+]?[0-9\s-]{7,15}$/, "Enter a valid phone number"),
+    .refine((v) => isValidIndianPhone(v), "Enter a valid 10-digit mobile number")
+    .transform((v) => normalizeIndianPhone(v)),
   address: z.string().trim().min(6, "Address is too short").max(400),
   landmark: z.string().trim().max(120).optional().or(z.literal("")),
 });
@@ -451,9 +453,9 @@ export const createOrder = createServerFn({ method: "POST" })
     // Basic abuse protection: no more than 8 orders per phone number per 10 minutes.
     // There's no reliable client IP in this handler, so phone is the best available
     // identifier; this still meaningfully blocks a script hammering createOrder.
-    const rateLimitPhone = data.customer.phone.replace(/\s|-/g, "");
+    // (data.customer.phone is already normalized to bare 10 digits by CustomerSchema.)
     const { data: allowed, error: rlErr } = await supabaseAdmin.rpc("mytown_check_rate_limit", {
-      p_bucket: `create_order:${rateLimitPhone}`,
+      p_bucket: `create_order:${data.customer.phone}`,
       p_max_hits: 8,
       p_window_seconds: 600,
     });
@@ -465,7 +467,7 @@ export const createOrder = createServerFn({ method: "POST" })
     }
 
     // Upsert customer by phone
-    const phone = data.customer.phone.replace(/\s|-/g, "");
+    const phone = data.customer.phone;
     const { data: existing } = await supabaseAdmin
       .from("customers")
       .select("id")
@@ -629,7 +631,7 @@ export const trackOrder = createServerFn({ method: "GET" })
       query = query.eq("id", data.orderId.toUpperCase());
     }
     if (data.phone) {
-      const phone = data.phone.replace(/\s|-/g, "");
+      const phone = normalizeIndianPhone(data.phone);
       const { data: cust } = await supabaseAdmin
         .from("customers")
         .select("id")

@@ -3,9 +3,11 @@ import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import { signUpWithPin } from "@/lib/auth.functions";
+import { isValidIndianPhone } from "@/lib/phone";
 import { AppHeader } from "@/components/AppHeader";
 import { toast } from "sonner";
-import { Loader2, LogIn } from "lucide-react";
+import { Loader2, LogIn, KeyRound, ChevronDown } from "lucide-react";
 
 const searchSchema = z.object({
   redirect: z.string().optional(),
@@ -16,9 +18,15 @@ export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Sign in — MyTown" },
-      { name: "description", content: "Sign in to MyTown to track your orders and reorder faster." },
+      {
+        name: "description",
+        content: "Sign in to MyTown to track your orders and reorder faster.",
+      },
       { property: "og:title", content: "Sign in — MyTown" },
-      { property: "og:description", content: "Sign in to MyTown to track your orders and reorder faster." },
+      {
+        property: "og:description",
+        content: "Sign in to MyTown to track your orders and reorder faster.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -34,6 +42,16 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+
+  // ----- Phone + PIN: a clearly secondary, collapsed option below email/Google.
+  // Priority order matches guest checkout's own low-friction spirit: email is
+  // the default path, PIN is there for anyone who'd rather skip having an
+  // email at all, not the first thing shown. -----
+  const [showPin, setShowPin] = useState(false);
+  const [pinPhone, setPinPhone] = useState("");
+  const [pinCode, setPinCode] = useState("");
+  const [pinName, setPinName] = useState("");
+  const [pinBusy, setPinBusy] = useState(false);
 
   // Bounce away if already signed in.
   useEffect(() => {
@@ -64,6 +82,46 @@ function AuthPage() {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function submitPin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!isValidIndianPhone(pinPhone)) {
+      toast.error("Enter a valid 10-digit mobile number");
+      return;
+    }
+    if (!/^\d{6}$/.test(pinCode)) {
+      toast.error("PIN must be exactly 6 digits");
+      return;
+    }
+    setPinBusy(true);
+    try {
+      if (mode === "signup") {
+        const { email: syntheticEmail } = await signUpWithPin({
+          data: { phone: pinPhone, pin: pinCode, name: pinName.trim() || undefined },
+        });
+        const { error } = await supabase.auth.signInWithPassword({
+          email: syntheticEmail,
+          password: pinCode,
+        });
+        if (error) throw error;
+        toast.success("Account created!");
+        nav({ to: search.redirect ?? "/my-orders" });
+      } else {
+        const phoneDigits = pinPhone.replace(/\D/g, "").slice(-10);
+        const { error } = await supabase.auth.signInWithPassword({
+          email: `${phoneDigits}@customers.mytown.internal`,
+          password: pinCode,
+        });
+        if (error) throw new Error("Incorrect phone or PIN");
+        toast.success("Welcome back!");
+        nav({ to: search.redirect ?? "/my-orders" });
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setPinBusy(false);
     }
   }
 
@@ -100,8 +158,27 @@ function AuthPage() {
             disabled={googleBusy}
             className="tap-scale mt-5 flex w-full items-center justify-center gap-2 rounded-full border border-[color:var(--border-strong)] bg-white/5 px-4 py-3 font-semibold"
           >
-            {googleBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-              <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35.5 24 35.5c-6.4 0-11.5-5.1-11.5-11.5S17.6 12.5 24 12.5c2.9 0 5.6 1.1 7.6 2.9l5.7-5.7C33.7 6.4 29 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.2 19 12.5 24 12.5c2.9 0 5.6 1.1 7.6 2.9l5.7-5.7C33.7 6.4 29 4.5 24 4.5 16.4 4.5 9.8 8.7 6.3 14.7z"/><path fill="#4CAF50" d="M24 43.5c5 0 9.5-1.9 12.9-5l-6-4.9C29 35 26.6 35.5 24 35.5c-5.3 0-9.7-3.1-11.3-7.4l-6.5 5c3.4 6 10 10.4 17.8 10.4z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6 4.9c-.4.4 6.6-4.8 6.6-14.5 0-1.2-.1-2.4-.4-3.5z"/></svg>
+            {googleBusy ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 48 48">
+                <path
+                  fill="#FFC107"
+                  d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35.5 24 35.5c-6.4 0-11.5-5.1-11.5-11.5S17.6 12.5 24 12.5c2.9 0 5.6 1.1 7.6 2.9l5.7-5.7C33.7 6.4 29 4.5 24 4.5 13.2 4.5 4.5 13.2 4.5 24S13.2 43.5 24 43.5 43.5 34.8 43.5 24c0-1.2-.1-2.4-.4-3.5z"
+                />
+                <path
+                  fill="#FF3D00"
+                  d="M6.3 14.7l6.6 4.8C14.7 15.2 19 12.5 24 12.5c2.9 0 5.6 1.1 7.6 2.9l5.7-5.7C33.7 6.4 29 4.5 24 4.5 16.4 4.5 9.8 8.7 6.3 14.7z"
+                />
+                <path
+                  fill="#4CAF50"
+                  d="M24 43.5c5 0 9.5-1.9 12.9-5l-6-4.9C29 35 26.6 35.5 24 35.5c-5.3 0-9.7-3.1-11.3-7.4l-6.5 5c3.4 6 10 10.4 17.8 10.4z"
+                />
+                <path
+                  fill="#1976D2"
+                  d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6 4.9c-.4.4 6.6-4.8 6.6-14.5 0-1.2-.1-2.4-.4-3.5z"
+                />
+              </svg>
             )}
             Continue with Google
           </button>
@@ -155,6 +232,75 @@ function AuthPage() {
           >
             {mode === "signup" ? "Have an account? Sign in" : "New here? Create an account"}
           </button>
+
+          {/* Secondary, collapsed by default -- email/Google above is the priority path */}
+          <button
+            type="button"
+            onClick={() => setShowPin((v) => !v)}
+            className="tap-scale mt-4 flex w-full items-center justify-center gap-1.5 text-xs font-semibold text-[color:var(--text-tertiary)]"
+          >
+            <KeyRound className="h-3.5 w-3.5" />
+            Or use your phone number + a PIN instead
+            <ChevronDown
+              className={`h-3.5 w-3.5 transition-transform ${showPin ? "rotate-180" : ""}`}
+            />
+          </button>
+
+          {showPin && (
+            <form onSubmit={submitPin} className="rise mt-3 space-y-3 rounded-2xl bg-black/20 p-4">
+              {mode === "signup" && (
+                <label className="block">
+                  <span className="text-xs text-[color:var(--text-secondary)]">Your name</span>
+                  <input
+                    value={pinName}
+                    onChange={(e) => setPinName(e.target.value)}
+                    className="mt-1 w-full rounded-2xl border border-[color:var(--border-subtle)] bg-black/20 px-4 py-3 outline-none focus:border-[color:var(--accent-primary)]"
+                    placeholder="Optional"
+                  />
+                </label>
+              )}
+              <label className="block">
+                <span className="text-xs text-[color:var(--text-secondary)]">Phone number</span>
+                <div className="mt-1 flex items-center gap-2 rounded-2xl border border-[color:var(--border-subtle)] bg-black/20 !px-0">
+                  <span className="border-r border-[color:var(--border-subtle)] px-3 py-3 text-sm font-semibold text-[color:var(--text-secondary)]">
+                    +91
+                  </span>
+                  <input
+                    value={pinPhone}
+                    onChange={(e) => setPinPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    inputMode="numeric"
+                    maxLength={10}
+                    className="w-full bg-transparent py-3 pr-4 outline-none"
+                    placeholder="10-digit mobile"
+                  />
+                </div>
+              </label>
+              <label className="block">
+                <span className="text-xs text-[color:var(--text-secondary)]">6-digit PIN</span>
+                <input
+                  value={pinCode}
+                  onChange={(e) => setPinCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  inputMode="numeric"
+                  maxLength={6}
+                  type="password"
+                  className="mt-1 w-full rounded-2xl border border-[color:var(--border-subtle)] bg-black/20 px-4 py-3 text-center text-lg tracking-[0.4em] outline-none focus:border-[color:var(--accent-primary)]"
+                  placeholder="••••••"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={pinBusy}
+                className="tap-scale flex w-full items-center justify-center gap-2 rounded-full border border-[color:var(--border-strong)] bg-white/5 px-4 py-3 font-semibold"
+              >
+                {pinBusy ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <KeyRound className="h-4 w-4" />
+                )}
+                {mode === "signup" ? "Create account with PIN" : "Sign in with PIN"}
+              </button>
+            </form>
+          )}
 
           <p className="mt-4 text-center text-xs text-[color:var(--text-tertiary)]">
             You can also{" "}

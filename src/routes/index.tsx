@@ -118,7 +118,7 @@ function Home() {
             <p className="mt-1 text-[13px] text-[color:var(--text-secondary)]">{APP_SUBTEXT}</p>
 
             {categories.length > 0 && (
-              <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-0.5">
+              <div className="no-scrollbar -mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-0.5">
                 {categories.slice(0, 6).map((c) => (
                   <Link
                     key={c.id}
@@ -202,7 +202,7 @@ function Home() {
             {
               n: 2,
               t: "We call or WhatsApp you",
-              d: "Our team checks price & availability, then confirms — by a quick call or on WhatsApp, whichever's easier to reach you.",
+              d: "To confirm price & availability, whichever reaches you faster.",
             },
             { n: 3, t: "Delivered to your door", d: "Track status live. Pay on delivery." },
           ].map((s) => (

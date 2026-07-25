@@ -43,8 +43,11 @@ function StaffPage() {
 
   if (checking)
     return (
-      <div className="p-6">
-        <div className="skeleton h-40 rounded-2xl" />
+      <div>
+        <AppHeader title="Staff" showCart={false} showSearch={false} />
+        <div className="p-6">
+          <div className="skeleton h-40 rounded-2xl" />
+        </div>
       </div>
     );
   if (!session) return <StaffSignIn onDone={() => {}} />;
@@ -192,7 +195,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
     <div className="min-h-[100dvh]">
       <div className="sticky top-0 z-30 glass flex items-center justify-between px-4 py-3">
         <div>
-          <div className="text-display text-lg font-semibold">Ops board</div>
+          <div className="text-display text-lg font-semibold">Live orders</div>
           <div className="text-xs text-[color:var(--text-tertiary)]">
             {email} · roles: {rolesQ.data.roles.join(", ")}
           </div>
@@ -245,7 +248,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
           </div>
         </div>
       ) : (
-        <div className="flex gap-3 overflow-x-auto px-3 py-4 md:px-6">
+        <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 py-4 md:px-6">
           {BOARD_STATUSES.map((s) => {
             const list =
               (grouped[s] as unknown as Array<{
@@ -267,7 +270,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                 }[];
               }>) ?? [];
             return (
-              <div key={s} className="min-w-[260px] flex-shrink-0">
+              <div key={s} className="min-w-[85vw] flex-shrink-0 snap-start sm:min-w-[260px]">
                 <div className="mb-2 flex items-center justify-between px-1">
                   <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--text-secondary)]">
                     {STATUS_COPY[s]?.label ?? s}
