@@ -17,6 +17,7 @@ export type Database = {
       app_config: {
         Row: {
           description: string | null
+          is_public: boolean
           key: string
           scope: string
           scope_id: string
@@ -25,6 +26,7 @@ export type Database = {
         }
         Insert: {
           description?: string | null
+          is_public?: boolean
           key: string
           scope?: string
           scope_id?: string
@@ -33,6 +35,7 @@ export type Database = {
         }
         Update: {
           description?: string | null
+          is_public?: boolean
           key?: string
           scope?: string
           scope_id?: string
