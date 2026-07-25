@@ -55,9 +55,7 @@ export const listStaffOrders = createServerFn({ method: "GET" })
       // warden_viewer (or any non-admin/ops staff role): aggregate counts only,
       // via a SECURITY DEFINER RPC. This account has no RLS grant to read
       // customers/orders directly, so there is no path to individual PII here.
-      const { data, error } = await context.supabase.rpc("mytown_warden_daily_counts", {
-        p_location_id: null,
-      });
+      const { data, error } = await context.supabase.rpc("mytown_warden_daily_counts", {});
       if (error) throw new Error(error.message);
       return { aggregateOnly: true as const, dailyCounts: data ?? [] };
     }
