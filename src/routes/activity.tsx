@@ -14,7 +14,7 @@ import { Search, Check, Sparkles } from "lucide-react";
 export const Route = createFileRoute("/activity")({
   head: () => ({
     meta: [
-      { title: "Activity — MyTown" },
+      { title: "Orders — MyTown" },
       { name: "description", content: "Track your MyTown orders by phone or order ID." },
     ],
   }),
@@ -37,7 +37,7 @@ function Activity() {
   if (!authChecked) {
     return (
       <div>
-        <AppHeader title="Activity" showBack={false} />
+        <AppHeader title="Orders" showBack={false} />
         <div className="space-y-3 p-4">
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="skeleton h-28 rounded-2xl" />
@@ -64,7 +64,7 @@ function MyActivity() {
 
   return (
     <div>
-      <AppHeader title="Activity" showBack={false} />
+      <AppHeader title="Orders" showBack={false} />
       {isLoading && (
         <div className="space-y-3 p-4">
           {Array.from({ length: 2 }).map((_, i) => (
@@ -117,7 +117,7 @@ function GuestTracker() {
 
   return (
     <div>
-      <AppHeader title="Activity" showBack={false} />
+      <AppHeader title="Orders" showBack={false} />
       <div className="rise p-4">
         <h2 className="text-display text-2xl font-bold">Track your ask</h2>
         <p className="mt-1 text-sm text-[color:var(--text-secondary)]">

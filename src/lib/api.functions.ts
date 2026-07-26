@@ -2,6 +2,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { isValidIndianPhone, normalizeIndianPhone } from "@/lib/phone";
+import type { ServiceFeeTiers } from "@/lib/serviceFee";
+import { computeServiceFee } from "@/lib/serviceFee";
 
 // ----- shared schemas -----
 const OrderStatus = z.enum([
@@ -47,6 +49,18 @@ export const getLocations = createServerFn({ method: "GET" }).handler(async () =
     .order("name", { ascending: true });
   if (error) throw new Error(error.message);
   return data ?? [];
+});
+
+export const getServiceFeeConfig = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data, error } = await supabaseAdmin
+    .from("app_config")
+    .select("value")
+    .eq("key", "service_fee_tiers")
+    .eq("scope", "global")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data?.value as ServiceFeeTiers | undefined) ?? null;
 });
 
 // =============================================================================
@@ -504,21 +518,11 @@ export const createOrder = createServerFn({ method: "POST" })
     if (idErr) throw new Error(idErr.message);
     const orderId = orderIdRow as unknown as string;
 
-    // Insert order (client-facing insert policy forbids delivery_batch_id; write it as a separate update below via service role — but service role bypasses RLS so the initial insert can include location/date fields)
-    const { error: orderErr } = await supabaseAdmin.from("orders").insert({
-      id: orderId,
-      customer_id: customerId,
-      status: "received",
-      notes: data.notes || null,
-      location_id: locationId,
-      requested_date: requestedDate,
-      requested_window: requestedWindow,
-    });
-    if (orderErr) throw new Error(orderErr.message);
-
     // Snapshot the price actually charged, resolved server-side from the real
     // products table — a client-supplied price is never trusted here, since that
-    // would let a tampered request pay ₹1 for a ₹200 item.
+    // would let a tampered request pay ₹1 for a ₹200 item. Resolved before the
+    // orders insert now so the service fee (computed from this same subtotal)
+    // can be snapshotted onto the order too, not just recomputed live later.
     const priceableProductIds = data.items
       .map((i) => i.productId)
       .filter((id): id is string => !!id);
@@ -530,6 +534,36 @@ export const createOrder = createServerFn({ method: "POST" })
         .in("id", priceableProductIds);
       (priced ?? []).forEach((p) => priceByProductId.set(p.id, p.price));
     }
+    const pricedSubtotal = data.items.reduce((sum, i) => {
+      const price = i.productId ? priceByProductId.get(i.productId) : null;
+      return price != null ? sum + price * i.quantity : sum;
+    }, 0);
+    let serviceFeeEstimate: number | null = null;
+    {
+      const { data: feeConfigRow } = await supabaseAdmin
+        .from("app_config")
+        .select("value")
+        .eq("key", "service_fee_tiers")
+        .eq("scope", "global")
+        .maybeSingle();
+      serviceFeeEstimate = computeServiceFee(
+        pricedSubtotal,
+        (feeConfigRow?.value as ServiceFeeTiers | undefined) ?? null,
+      );
+    }
+
+    // Insert order (client-facing insert policy forbids delivery_batch_id; write it as a separate update below via service role — but service role bypasses RLS so the initial insert can include location/date fields)
+    const { error: orderErr } = await supabaseAdmin.from("orders").insert({
+      id: orderId,
+      customer_id: customerId,
+      status: "received",
+      notes: data.notes || null,
+      location_id: locationId,
+      requested_date: requestedDate,
+      requested_window: requestedWindow,
+      service_fee_estimate: serviceFeeEstimate,
+    });
+    if (orderErr) throw new Error(orderErr.message);
 
     // Insert items
     const { data: insertedItems, error: itemsErr } = await supabaseAdmin
@@ -622,7 +656,7 @@ export const trackOrder = createServerFn({ method: "GET" })
     let query = supabaseAdmin
       .from("orders")
       .select(
-        "id, status, notes, created_at, confirmed_at, completed_at, updated_at, customer:customers(id,name,phone,address,landmark), items:order_items(id,item_name,category,subcategory,quantity,notes,is_freeform,unit_price)",
+        "id, status, notes, created_at, confirmed_at, completed_at, updated_at, requested_date, requested_window, customer:customers(id,name,phone,address,landmark), items:order_items(id,item_name,category,subcategory,quantity,notes,is_freeform,unit_price)",
       )
       .order("created_at", { ascending: false })
       .limit(20);

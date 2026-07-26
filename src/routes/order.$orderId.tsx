@@ -62,8 +62,19 @@ function Confirmation() {
               <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
                 Our team will call or WhatsApp you to confirm shortly.
               </div>
-              <div className="mt-3 inline-flex items-center rounded-full border border-[color:var(--border-strong)] bg-black/25 px-3 py-1.5 text-[13px] font-mono font-semibold tracking-wide">
-                {orderId}
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center rounded-full border border-[color:var(--border-strong)] bg-black/25 px-3 py-1.5 text-[13px] font-mono font-semibold tracking-wide">
+                  {orderId}
+                </div>
+                {/* Window label only, deliberately no time — requested_date
+                    defaults to today for every order (including plain ASAP
+                    ones), so it's not shown here on its own; requested_window
+                    is only ever set for an explicitly scheduled order. */}
+                {order.requested_window && (
+                  <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold capitalize">
+                    Scheduled: {order.requested_window}
+                  </div>
+                )}
               </div>
             </div>
           </div>

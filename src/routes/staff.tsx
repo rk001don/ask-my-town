@@ -4,11 +4,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyRoles } from "@/lib/auth.functions";
-import { listStaffOrders, updateStaffOrderStatus } from "@/lib/staff.functions";
+import {
+  listStaffOrders,
+  updateStaffOrderStatus,
+  getAttachmentSignedUrl,
+} from "@/lib/staff.functions";
 import { ORDER_STATUS_STEPS, STATUS_COPY, type OrderStatus } from "@/lib/constants";
 import { AppHeader } from "@/components/AppHeader";
 import { toast } from "sonner";
-import { Loader2, LogOut, RefreshCw, Phone, MapPin, ShieldAlert } from "lucide-react";
+import { Loader2, LogOut, RefreshCw, Phone, MapPin, ShieldAlert, Paperclip, X } from "lucide-react";
 
 export const Route = createFileRoute("/staff")({
   head: () => ({
@@ -125,6 +129,22 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
   const rolesFn = useServerFn(getMyRoles);
   const listFn = useServerFn(listStaffOrders);
   const updateFn = useServerFn(updateStaffOrderStatus);
+  const signedUrlFn = useServerFn(getAttachmentSignedUrl);
+
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  async function openAttachment(filePath: string) {
+    setPreviewLoading(true);
+    try {
+      const { url } = await signedUrlFn({ data: { filePath } });
+      setPreviewUrl(url);
+    } catch {
+      toast.error("Couldn't load that photo");
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
 
   const rolesQ = useQuery({ queryKey: ["my-roles"], queryFn: () => rolesFn(), staleTime: 60_000 });
   const ordersQ = useQuery({
@@ -267,6 +287,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                   notes: string | null;
                   is_freeform: boolean;
                   unit_price?: number | null;
+                  attachments?: { id: string; file_path: string; file_type: string }[];
                 }[];
               }>) ?? [];
             return (
@@ -320,14 +341,29 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                         )}
                         <ul className="mt-2 space-y-0.5 text-xs">
                           {o.items.map((it, i) => (
-                            <li key={i} className="text-[color:var(--text-primary)]">
-                              {it.quantity}× {it.item_name}
-                              {it.notes ? (
-                                <span className="text-[color:var(--text-tertiary)]">
-                                  {" "}
-                                  — {it.notes}
-                                </span>
-                              ) : null}
+                            <li
+                              key={i}
+                              className="flex items-start gap-1.5 text-[color:var(--text-primary)]"
+                            >
+                              <span>
+                                {it.quantity}× {it.item_name}
+                                {it.notes ? (
+                                  <span className="text-[color:var(--text-tertiary)]">
+                                    {" "}
+                                    — {it.notes}
+                                  </span>
+                                ) : null}
+                              </span>
+                              {(it.attachments ?? []).map((att) => (
+                                <button
+                                  key={att.id}
+                                  onClick={() => openAttachment(att.file_path)}
+                                  className="tap-scale flex shrink-0 items-center gap-0.5 rounded-full bg-[color:var(--accent-primary)]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--accent-primary)]"
+                                  aria-label="View attached photo"
+                                >
+                                  <Paperclip className="h-2.5 w-2.5" /> photo
+                                </button>
+                              ))}
                             </li>
                           ))}
                         </ul>
@@ -346,6 +382,32 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
               </div>
             );
           })}
+        </div>
+      )}
+
+      {(previewUrl || previewLoading) && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
+          onClick={() => setPreviewUrl(null)}
+        >
+          {previewLoading ? (
+            <Loader2 className="h-8 w-8 animate-spin text-white" />
+          ) : (
+            <div className="relative max-h-[85vh] max-w-full">
+              <img
+                src={previewUrl!}
+                alt="Attached photo"
+                className="max-h-[85vh] max-w-full rounded-2xl object-contain"
+              />
+              <button
+                onClick={() => setPreviewUrl(null)}
+                className="tap-scale absolute -top-3 -right-3 grid h-8 w-8 place-items-center rounded-full bg-white text-black"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

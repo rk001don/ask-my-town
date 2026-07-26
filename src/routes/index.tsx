@@ -204,7 +204,12 @@ function Home() {
               t: "We call or WhatsApp you",
               d: "To confirm price & availability, whichever reaches you faster.",
             },
-            { n: 3, t: "Delivered to your door", d: "Track status live. Pay on delivery." },
+            {
+              n: 3,
+              t: "A small service fee applies",
+              d: "₹19–₹99 depending on your order size — shown upfront in your cart, on top of what you're buying.",
+            },
+            { n: 4, t: "Delivered to your door", d: "Track status live. Pay on delivery." },
           ].map((s) => (
             <li key={s.n} className="card-surface flex items-start gap-3 p-4">
               <div className="grid h-8 w-8 place-items-center rounded-full accent-gradient text-sm font-bold">

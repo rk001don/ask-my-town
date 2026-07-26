@@ -63,12 +63,29 @@ export const listStaffOrders = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("orders")
       .select(
-        "id, status, notes, created_at, updated_at, requested_date, requested_window, customer:customers(name,phone,address,landmark), items:order_items(item_name,quantity,notes,is_freeform,unit_price)",
+        "id, status, notes, created_at, updated_at, requested_date, requested_window, customer:customers(name,phone,address,landmark), items:order_items(item_name,quantity,notes,is_freeform,unit_price,attachments:order_attachments(id,file_path,file_type))",
       )
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) throw new Error(error.message);
     return { aggregateOnly: false as const, orders: data ?? [] };
+  });
+
+// The ask-attachments bucket is private -- a raw file_path can't be shown in
+// an <img> tag directly, it needs a short-lived signed URL. Staff-only.
+export const getAttachmentSignedUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { filePath: string }) =>
+    z.object({ filePath: z.string().trim().min(1).max(400) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    await assertStaff(context.supabase as never, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: signed, error } = await supabaseAdmin.storage
+      .from("ask-attachments")
+      .createSignedUrl(data.filePath, 300); // 5 minutes -- just long enough to view, not a durable link
+    if (error) throw new Error(error.message);
+    return { url: signed.signedUrl };
   });
 
 export const updateStaffOrderStatus = createServerFn({ method: "POST" })

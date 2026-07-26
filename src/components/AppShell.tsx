@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 const TABS = [
   { to: "/", label: "Home", icon: Home },
   { to: "/explore", label: "Explore", icon: Compass },
-  { to: "/activity", label: "Activity", icon: ClipboardList },
+  { to: "/activity", label: "Orders", icon: ClipboardList },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {

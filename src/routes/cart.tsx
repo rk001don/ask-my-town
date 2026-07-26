@@ -4,6 +4,7 @@ import { EmptyState } from "@/components/States";
 import { useCart, decrementItem, incrementItem, removeItem, setItemNotes } from "@/lib/cart-store";
 import { Minus, Plus, Sparkles, StickyNote, Trash2 } from "lucide-react";
 import { iconFor } from "@/components/icon-map";
+import { ServiceFeeBreakdown } from "@/components/ServiceFeeBreakdown";
 import { useState } from "react";
 
 export const Route = createFileRoute("/cart")({
@@ -65,10 +66,7 @@ function Cart() {
 
       {priceableItems.length > 0 && (
         <div className="px-4 pb-2">
-          <div className="card-surface flex items-center justify-between p-4">
-            <span className="text-sm font-semibold">Subtotal</span>
-            <span className="text-lg font-bold">₹{subtotal}</span>
-          </div>
+          <ServiceFeeBreakdown subtotal={subtotal} />
         </div>
       )}
 
@@ -78,7 +76,7 @@ function Cart() {
           <p className="text-sm text-[color:var(--text-secondary)]">
             {hasUnpricedItems
               ? "Some items are priced on request — we'll call or WhatsApp you to confirm those before doing anything. Pay on delivery."
-              : "This is what you'll pay on delivery. We'll call or WhatsApp you to confirm availability before doing anything."}
+              : "You'll pay the total above on delivery. We'll call or WhatsApp you to confirm availability first."}
           </p>
         </div>
       </div>
