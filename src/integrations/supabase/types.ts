@@ -401,6 +401,7 @@ export type Database = {
           payment_status: string
           requested_date: string
           requested_window: string | null
+          service_fee_estimate: number | null
           status: Database["public"]["Enums"]["order_status"]
           subscription_id: string | null
           updated_at: string
@@ -420,6 +421,7 @@ export type Database = {
           payment_status?: string
           requested_date?: string
           requested_window?: string | null
+          service_fee_estimate?: number | null
           status?: Database["public"]["Enums"]["order_status"]
           subscription_id?: string | null
           updated_at?: string
@@ -439,6 +441,7 @@ export type Database = {
           payment_status?: string
           requested_date?: string
           requested_window?: string | null
+          service_fee_estimate?: number | null
           status?: Database["public"]["Enums"]["order_status"]
           subscription_id?: string | null
           updated_at?: string
