@@ -52,10 +52,12 @@ export const listStaffOrders = createServerFn({ method: "GET" })
     const isAdminOrOps = roles.some((r) => r === "admin" || r === "ops");
 
     if (!isAdminOrOps) {
-      // warden_viewer (or any non-admin/ops staff role): aggregate counts only,
-      // via a SECURITY DEFINER RPC. This account has no RLS grant to read
-      // customers/orders directly, so there is no path to individual PII here.
-      const { data, error } = await context.supabase.rpc("mytown_warden_daily_counts", {});
+      // warden_viewer (or any non-admin/ops staff role): aggregate counts only.
+      // The RPC is no longer executable by the authenticated role directly (to
+      // avoid exposing a SECURITY DEFINER surface to any signed-in user); we
+      // invoke it via the admin client after verifying the staff role above.
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data, error } = await supabaseAdmin.rpc("mytown_warden_daily_counts", {});
       if (error) throw new Error(error.message);
       return { aggregateOnly: true as const, dailyCounts: data ?? [] };
     }
