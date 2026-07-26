@@ -13,6 +13,7 @@ import {
   listAppConfig,
   updateAppConfig,
   listDeliveryBatches,
+  updateBatchStatus,
 } from "@/lib/admin.functions";
 import { AppHeader } from "@/components/AppHeader";
 import { toast } from "sonner";
@@ -25,6 +26,12 @@ export const Route = createFileRoute("/admin")({
   }),
   component: AdminPage,
 });
+
+const BATCH_NEXT_ACTION_LABEL: Record<string, string> = {
+  open: "Lock",
+  locked: "Mark dispatched",
+  dispatched: "Mark delivered",
+};
 
 function AdminPage() {
   const [email, setEmail] = useState<string | null>(null);
@@ -75,6 +82,7 @@ function AdminBoard({ email }: { email: string }) {
   const configFn = useServerFn(listAppConfig);
   const updateConfigFn = useServerFn(updateAppConfig);
   const batchesFn = useServerFn(listDeliveryBatches);
+  const advanceBatchFn = useServerFn(updateBatchStatus);
 
   const rolesQ = useQuery({ queryKey: ["my-roles"], queryFn: () => rolesFn(), staleTime: 60_000 });
   const isAdmin = rolesQ.data?.isAdmin ?? false;
@@ -175,6 +183,16 @@ function AdminBoard({ email }: { email: string }) {
       qc.invalidateQueries({ queryKey: ["admin-products"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't remove product");
+    }
+  }
+
+  async function advanceBatch(id: string) {
+    try {
+      const { newStatus } = await advanceBatchFn({ data: { id } });
+      toast.success(`Batch marked ${newStatus}`);
+      qc.invalidateQueries({ queryKey: ["admin-batches"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't update batch");
     }
   }
 
@@ -380,7 +398,7 @@ function AdminBoard({ email }: { email: string }) {
             {(batchesQ.data ?? []).map((b) => (
               <div
                 key={b.id}
-                className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2 text-sm"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-3 py-2 text-sm"
               >
                 <span className="capitalize">
                   {b.scheduled_date} · {b.window_label}
@@ -390,9 +408,19 @@ function AdminBoard({ email }: { email: string }) {
                     </span>
                   )}
                 </span>
-                <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs uppercase">
-                  {b.status}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs uppercase">
+                    {b.status}
+                  </span>
+                  {BATCH_NEXT_ACTION_LABEL[b.status] && (
+                    <button
+                      onClick={() => advanceBatch(b.id)}
+                      className="tap-scale rounded-full accent-gradient px-2.5 py-1 text-xs font-semibold"
+                    >
+                      {BATCH_NEXT_ACTION_LABEL[b.status]}
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
             {(batchesQ.data ?? []).length === 0 && (

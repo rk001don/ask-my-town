@@ -207,3 +207,41 @@ export const listDeliveryBatches = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
+// Only the one valid next step from each status is exposed in the UI, so
+// there's no dropdown of arbitrary statuses to pick wrong.
+const BATCH_NEXT_STATUS: Record<string, string> = {
+  open: "locked",
+  locked: "dispatched",
+  dispatched: "delivered",
+};
+
+export const updateBatchStatus = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { id: string }) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: batch, error: fetchErr } = await supabaseAdmin
+      .from("delivery_batches")
+      .select("status")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (fetchErr) throw new Error(fetchErr.message);
+    if (!batch) throw new Error("Batch not found");
+    const next = BATCH_NEXT_STATUS[batch.status];
+    if (!next) throw new Error(`No further action for a batch that's already "${batch.status}".`);
+    const { error } = await supabaseAdmin
+      .from("delivery_batches")
+      .update({ status: next })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("audit_log").insert({
+      staff_id: context.userId,
+      action: "batch.status_update",
+      entity_type: "delivery_batch",
+      entity_id: data.id,
+      metadata: { from: batch.status, to: next },
+    });
+    return { newStatus: next };
+  });

@@ -29,6 +29,104 @@ const BOARD_STATUSES: OrderStatus[] = [
   "completed",
 ];
 
+type StaffOrderRow = {
+  id: string;
+  status: OrderStatus;
+  requested_date?: string | null;
+  requested_window?: string | null;
+  customer: {
+    name: string;
+    phone: string;
+    address: string;
+    landmark: string | null;
+  } | null;
+  items: {
+    item_name: string;
+    quantity: number;
+    notes: string | null;
+    is_freeform: boolean;
+    unit_price?: number | null;
+    attachments?: { id: string; file_path: string; file_type: string }[];
+  }[];
+};
+
+function StaffOrderCard({
+  order: o,
+  onOpenAttachment,
+  onAdvance,
+}: {
+  order: StaffOrderRow;
+  onOpenAttachment: (filePath: string) => void;
+  onAdvance: (orderId: string, nextStatus: OrderStatus) => void;
+}) {
+  const idx = ORDER_STATUS_STEPS.findIndex((st) => st.key === o.status);
+  const nextStep = ORDER_STATUS_STEPS[idx + 1]?.key as OrderStatus | undefined;
+  const priced = o.items.filter((it) => it.unit_price != null);
+  const orderTotal = priced.reduce((n, it) => n + (it.unit_price ?? 0) * it.quantity, 0);
+
+  return (
+    <div className="glass rounded-2xl p-3">
+      <div className="flex items-center justify-between">
+        <div className="font-mono text-xs font-semibold">{o.id}</div>
+        {o.requested_window && (
+          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px]">
+            {o.requested_date} · {o.requested_window}
+          </span>
+        )}
+      </div>
+      <div className="mt-1 text-sm font-semibold">{o.customer?.name}</div>
+      <a
+        href={`tel:${o.customer?.phone ?? ""}`}
+        className="mt-0.5 flex items-center gap-1 text-xs text-[color:var(--text-secondary)]"
+      >
+        <Phone className="h-3 w-3" /> {o.customer?.phone}
+      </a>
+      <div className="mt-1 flex items-start gap-1 text-xs text-[color:var(--text-secondary)]">
+        <MapPin className="mt-0.5 h-3 w-3 flex-shrink-0" />
+        <span className="line-clamp-2">
+          {o.customer?.address}
+          {o.customer?.landmark ? ` · ${o.customer.landmark}` : ""}
+        </span>
+      </div>
+      {priced.length > 0 && (
+        <div className="mt-1 text-xs font-bold text-[color:var(--accent-primary)]">
+          ₹{orderTotal}
+        </div>
+      )}
+      <ul className="mt-2 space-y-0.5 text-xs">
+        {o.items.map((it, i) => (
+          <li key={i} className="flex items-start gap-1.5 text-[color:var(--text-primary)]">
+            <span>
+              {it.quantity}× {it.item_name}
+              {it.notes ? (
+                <span className="text-[color:var(--text-tertiary)]"> — {it.notes}</span>
+              ) : null}
+            </span>
+            {(it.attachments ?? []).map((att) => (
+              <button
+                key={att.id}
+                onClick={() => onOpenAttachment(att.file_path)}
+                className="tap-scale flex shrink-0 items-center gap-0.5 rounded-full bg-[color:var(--accent-primary)]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--accent-primary)]"
+                aria-label="View attached photo"
+              >
+                <Paperclip className="h-2.5 w-2.5" /> photo
+              </button>
+            ))}
+          </li>
+        ))}
+      </ul>
+      {nextStep && (
+        <button
+          onClick={() => onAdvance(o.id, nextStep)}
+          className="tap-scale mt-2 w-full rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold text-[color:var(--on-accent)]"
+        >
+          Mark {STATUS_COPY[nextStep]?.label ?? nextStep}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function StaffPage() {
   const nav = useNavigate();
   const [session, setSession] = useState<null | { email: string | null }>(null);
@@ -132,6 +230,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
   const signedUrlFn = useServerFn(getAttachmentSignedUrl);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [mobileFilter, setMobileFilter] = useState<"active" | OrderStatus>("active");
   const [previewLoading, setPreviewLoading] = useState(false);
 
   async function openAttachment(filePath: string) {
@@ -268,121 +367,90 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
           </div>
         </div>
       ) : (
-        <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 py-4 md:px-6">
-          {BOARD_STATUSES.map((s) => {
-            const list =
-              (grouped[s] as unknown as Array<{
-                id: string;
-                requested_date?: string | null;
-                requested_window?: string | null;
-                customer: {
-                  name: string;
-                  phone: string;
-                  address: string;
-                  landmark: string | null;
-                } | null;
-                items: {
-                  item_name: string;
-                  quantity: number;
-                  notes: string | null;
-                  is_freeform: boolean;
-                  unit_price?: number | null;
-                  attachments?: { id: string; file_path: string; file_type: string }[];
-                }[];
-              }>) ?? [];
-            return (
-              <div key={s} className="min-w-[85vw] flex-shrink-0 snap-start sm:min-w-[260px]">
-                <div className="mb-2 flex items-center justify-between px-1">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--text-secondary)]">
-                    {STATUS_COPY[s]?.label ?? s}
+        <>
+          <div className="no-scrollbar hidden gap-3 overflow-x-auto px-3 py-4 md:flex md:snap-x md:snap-mandatory md:px-6">
+            {BOARD_STATUSES.map((s) => {
+              const list = (grouped[s] as unknown as StaffOrderRow[]) ?? [];
+              return (
+                <div key={s} className="min-w-[260px] flex-shrink-0 snap-start">
+                  <div className="mb-2 flex items-center justify-between px-1">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--text-secondary)]">
+                      {STATUS_COPY[s]?.label ?? s}
+                    </div>
+                    <div className="text-xs text-[color:var(--text-tertiary)]">{list.length}</div>
                   </div>
-                  <div className="text-xs text-[color:var(--text-tertiary)]">{list.length}</div>
+                  <div className="space-y-2">
+                    {list.map((o) => (
+                      <StaffOrderCard
+                        key={o.id}
+                        order={{ ...o, status: s }}
+                        onOpenAttachment={openAttachment}
+                        onAdvance={setStatus}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  {list.map((o) => {
-                    const idx = ORDER_STATUS_STEPS.findIndex((st) => st.key === s);
-                    const nextStep = ORDER_STATUS_STEPS[idx + 1]?.key as OrderStatus | undefined;
-                    const priced = o.items.filter((it) => it.unit_price != null);
-                    const orderTotal = priced.reduce(
-                      (n, it) => n + (it.unit_price ?? 0) * it.quantity,
-                      0,
-                    );
-                    return (
-                      <div key={o.id} className="glass rounded-2xl p-3">
-                        <div className="flex items-center justify-between">
-                          <div className="font-mono text-xs font-semibold">{o.id}</div>
-                          {/* requested_window is only ever set when the customer explicitly
-                              scheduled ahead -- requested_date alone defaults to today for
-                              every order, so it's not shown here on its own to avoid noise. */}
-                          {o.requested_window && (
-                            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px]">
-                              {o.requested_date} · {o.requested_window}
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-1 text-sm font-semibold">{o.customer?.name}</div>
-                        <a
-                          href={`tel:${o.customer?.phone ?? ""}`}
-                          className="mt-0.5 flex items-center gap-1 text-xs text-[color:var(--text-secondary)]"
-                        >
-                          <Phone className="h-3 w-3" /> {o.customer?.phone}
-                        </a>
-                        <div className="mt-1 flex items-start gap-1 text-xs text-[color:var(--text-secondary)]">
-                          <MapPin className="mt-0.5 h-3 w-3 flex-shrink-0" />
-                          <span className="line-clamp-2">
-                            {o.customer?.address}
-                            {o.customer?.landmark ? ` · ${o.customer.landmark}` : ""}
-                          </span>
-                        </div>
-                        {priced.length > 0 && (
-                          <div className="mt-1 text-xs font-bold text-[color:var(--accent-primary)]">
-                            ₹{orderTotal}
-                          </div>
-                        )}
-                        <ul className="mt-2 space-y-0.5 text-xs">
-                          {o.items.map((it, i) => (
-                            <li
-                              key={i}
-                              className="flex items-start gap-1.5 text-[color:var(--text-primary)]"
-                            >
-                              <span>
-                                {it.quantity}× {it.item_name}
-                                {it.notes ? (
-                                  <span className="text-[color:var(--text-tertiary)]">
-                                    {" "}
-                                    — {it.notes}
-                                  </span>
-                                ) : null}
-                              </span>
-                              {(it.attachments ?? []).map((att) => (
-                                <button
-                                  key={att.id}
-                                  onClick={() => openAttachment(att.file_path)}
-                                  className="tap-scale flex shrink-0 items-center gap-0.5 rounded-full bg-[color:var(--accent-primary)]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--accent-primary)]"
-                                  aria-label="View attached photo"
-                                >
-                                  <Paperclip className="h-2.5 w-2.5" /> photo
-                                </button>
-                              ))}
-                            </li>
-                          ))}
-                        </ul>
-                        {nextStep && (
-                          <button
-                            onClick={() => setStatus(o.id, nextStep)}
-                            className="tap-scale mt-2 w-full rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold text-[color:var(--on-accent)]"
-                          >
-                            Mark {STATUS_COPY[nextStep]?.label ?? nextStep}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
+              );
+            })}
+          </div>
+
+          {/* Mobile: a single vertical list with status filter pills, not a
+            side-scrolling kanban — the horizontal scroll itself was the
+            "why is there a sidebar-like strip on mobile" complaint. */}
+          <div className="md:hidden">
+            <div className="no-scrollbar flex gap-2 overflow-x-auto px-3 pb-1 pt-3">
+              {(["active", ...BOARD_STATUSES] as const).map((f) => {
+                const count =
+                  f === "active"
+                    ? BOARD_STATUSES.filter((s) => s !== "completed").reduce(
+                        (n, s) => n + ((grouped[s] as unknown as StaffOrderRow[])?.length ?? 0),
+                        0,
+                      )
+                    : ((grouped[f] as unknown as StaffOrderRow[])?.length ?? 0);
+                const active = mobileFilter === f;
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setMobileFilter(f)}
+                    className="tap-scale flex-shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold capitalize"
+                    style={{
+                      borderColor: active ? "var(--accent-primary)" : "var(--border-strong)",
+                      background: active ? "var(--bg-elevated-2)" : "transparent",
+                    }}
+                  >
+                    {f === "active" ? "Active" : (STATUS_COPY[f]?.label ?? f)} ({count})
+                  </button>
+                );
+              })}
+            </div>
+            <div className="space-y-2 px-3 pb-6 pt-2">
+              {BOARD_STATUSES.filter((s) =>
+                mobileFilter === "active" ? s !== "completed" : s === mobileFilter,
+              )
+                .flatMap((s) =>
+                  ((grouped[s] as unknown as StaffOrderRow[]) ?? []).map((o) => ({
+                    ...o,
+                    status: s,
+                  })),
+                )
+                .map((o) => (
+                  <StaffOrderCard
+                    key={o.id}
+                    order={o}
+                    onOpenAttachment={openAttachment}
+                    onAdvance={setStatus}
+                  />
+                ))}
+              {BOARD_STATUSES.filter((s) =>
+                mobileFilter === "active" ? s !== "completed" : s === mobileFilter,
+              ).flatMap((s) => (grouped[s] as unknown as StaffOrderRow[]) ?? []).length === 0 && (
+                <div className="rounded-2xl border border-dashed border-[color:var(--border-strong)] p-6 text-center text-sm text-[color:var(--text-tertiary)]">
+                  No orders here right now.
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              )}
+            </div>
+          </div>
+        </>
       )}
 
       {(previewUrl || previewLoading) && (
