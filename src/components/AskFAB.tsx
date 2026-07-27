@@ -39,7 +39,6 @@ export function AskFAB() {
     if (open) setTimeout(() => inputRef.current?.focus(), 60);
   }, [open]);
 
-  // Hide FAB on cart/checkout/employee/order confirmation
   const hide =
     loc.pathname.startsWith("/employee") ||
     loc.pathname.startsWith("/staff") ||
@@ -47,7 +46,10 @@ export function AskFAB() {
     loc.pathname.startsWith("/order/") ||
     loc.pathname === "/checkout" ||
     loc.pathname === "/cart";
-  if (hide) return null;
+  // NOTE: `hide` intentionally only ever suppresses the two trigger buttons
+  // below, never the sheet itself -- openAskSheet() can be called from a
+  // page in this hidden list (e.g. cart's own "empty cart, ask MyTown"
+  // button), and if `open` becomes true it must still actually render.
 
   function resetAttachment() {
     setAttachmentPath(null);
@@ -101,7 +103,7 @@ export function AskFAB() {
 
   return (
     <>
-      {!open && (
+      {!open && !hide && (
         <button
           onClick={() => setOpen(true)}
           aria-label="Ask MyTown"
@@ -122,7 +124,7 @@ export function AskFAB() {
       {/* Desktop (md+): bottom nav is hidden (sidebar replaces it), so the FAB
           becomes a normal corner FAB again -- simple right/bottom inset within
           the content column (made a containing block for this in AppShell). */}
-      {!open && (
+      {!open && !hide && (
         <button
           onClick={() => setOpen(true)}
           aria-label="Ask MyTown"

@@ -181,7 +181,7 @@ function Confirmation() {
         </div>
         <Link
           to="/"
-          className="tap-scale block rounded-full py-3 text-center text-sm font-medium text-[color:var(--text-secondary)]"
+          className="tap-scale block rounded-full border border-[color:var(--border-strong)] py-3 text-center text-sm font-semibold"
         >
           Ask again
         </Link>

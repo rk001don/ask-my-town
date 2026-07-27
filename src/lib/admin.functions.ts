@@ -123,6 +123,55 @@ export const updateAppConfig = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+const CategoryCreateSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  parent_id: z.string().uuid().nullable().optional(),
+  icon_key: z.string().trim().max(60).nullable().optional(),
+});
+
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+export const createCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: z.infer<typeof CategoryCreateSchema>) => CategoryCreateSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let slug = slugify(data.name);
+    // Guard against an accidental duplicate slug rather than a raw DB error.
+    const { data: existing } = await supabaseAdmin
+      .from("categories")
+      .select("id")
+      .eq("slug", slug)
+      .maybeSingle();
+    if (existing) slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
+    const { data: inserted, error } = await supabaseAdmin
+      .from("categories")
+      .insert({
+        name: data.name,
+        slug,
+        parent_id: data.parent_id ?? null,
+        icon_key: data.icon_key || null,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("audit_log").insert({
+      staff_id: context.userId,
+      action: "category.create",
+      entity_type: "category",
+      entity_id: inserted!.id,
+      metadata: { name: data.name, slug, parent_id: data.parent_id ?? null },
+    });
+    return { id: inserted!.id, slug };
+  });
+
 export const listCategoriesForAdmin = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -130,7 +179,7 @@ export const listCategoriesForAdmin = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
       .from("categories")
-      .select("id, name, slug")
+      .select("id, name, slug, parent_id")
       .order("name", { ascending: true });
     if (error) throw new Error(error.message);
     return data ?? [];

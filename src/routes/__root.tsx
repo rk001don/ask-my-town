@@ -18,9 +18,7 @@ function NotFoundComponent() {
     <div className="flex min-h-[100dvh] items-center justify-center px-6">
       <div className="max-w-md text-center rise">
         <div className="text-display text-7xl">404</div>
-        <p className="mt-3 text-lg text-[color:var(--text-secondary)]">
-          Can't find that page.
-        </p>
+        <p className="mt-3 text-lg text-[color:var(--text-secondary)]">Can't find that page.</p>
         <a
           href="/"
           className="mt-6 inline-flex items-center justify-center rounded-full accent-gradient px-6 py-3 font-semibold tap-scale"
@@ -41,17 +39,21 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     <div className="flex min-h-[100dvh] items-center justify-center px-6">
       <div className="max-w-md text-center rise">
         <h1 className="text-display text-2xl">Something didn't load</h1>
-        <p className="mt-2 text-[color:var(--text-secondary)]">
-          A hiccup on our end. Try again.
-        </p>
+        <p className="mt-2 text-[color:var(--text-secondary)]">A hiccup on our end. Try again.</p>
         <div className="mt-6 flex justify-center gap-3">
           <button
-            onClick={() => { router.invalidate(); reset(); }}
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
             className="rounded-full accent-gradient px-5 py-2.5 font-semibold tap-scale"
           >
             Try again
           </button>
-          <a href="/" className="rounded-full border border-[color:var(--border-strong)] px-5 py-2.5 font-medium tap-scale">
+          <a
+            href="/"
+            className="rounded-full border border-[color:var(--border-strong)] px-5 py-2.5 font-medium tap-scale"
+          >
             Home
           </a>
         </div>
@@ -67,10 +69,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { name: "theme-color", content: "#1a1a1f" },
       { title: "MyTown — Need Anything? MyTown!" },
-      { name: "description", content: "Hyperlocal assisted commerce for Karimangalam. Just tell us what you need — food, groceries, tickets, rentals, local help — MyTown handles the rest." },
+      {
+        name: "description",
+        content:
+          "Hyperlocal assisted commerce for Karimangalam & nearby areas. Just tell us what you need — food, groceries, tickets, rentals, local help — MyTown handles the rest.",
+      },
       { name: "author", content: "MyTown" },
       { property: "og:title", content: "MyTown — Need Anything? MyTown!" },
-      { property: "og:description", content: "Hyperlocal assisted commerce for Karimangalam. Just tell us what you need — food, groceries, tickets, rentals, local help — MyTown handles the rest." },
+      {
+        property: "og:description",
+        content:
+          "Hyperlocal assisted commerce for Karimangalam & nearby areas. Just tell us what you need — food, groceries, tickets, rentals, local help — MyTown handles the rest.",
+      },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "MyTown" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -78,9 +88,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "apple-mobile-web-app-title", content: "MyTown" },
       { name: "twitter:title", content: "MyTown — Need Anything? MyTown!" },
-      { name: "twitter:description", content: "Hyperlocal assisted commerce for Karimangalam. Just tell us what you need — food, groceries, tickets, rentals, local help — MyTown handles the rest." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/346256e0-2846-4267-87de-70dd88e8508d/id-preview-34318000--7d4e702d-5176-4716-ae13-41db535559b2.lovable.app-1784526867651.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/346256e0-2846-4267-87de-70dd88e8508d/id-preview-34318000--7d4e702d-5176-4716-ae13-41db535559b2.lovable.app-1784526867651.png" },
+      {
+        name: "twitter:description",
+        content:
+          "Hyperlocal assisted commerce for Karimangalam & nearby areas. Just tell us what you need — food, groceries, tickets, rentals, local help — MyTown handles the rest.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/346256e0-2846-4267-87de-70dd88e8508d/id-preview-34318000--7d4e702d-5176-4716-ae13-41db535559b2.lovable.app-1784526867651.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/346256e0-2846-4267-87de-70dd88e8508d/id-preview-34318000--7d4e702d-5176-4716-ae13-41db535559b2.lovable.app-1784526867651.png",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -89,7 +111,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter+Tight:wght@400;500;600;700&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter+Tight:wght@400;500;600;700&display=swap",
+      },
     ],
   }),
   shellComponent: RootShell,
@@ -126,11 +151,14 @@ function RootComponent() {
         if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
       });
       // stash for cleanup
-      (window as unknown as { __mtAuthSub?: { unsubscribe: () => void } }).__mtAuthSub = data.subscription;
+      (window as unknown as { __mtAuthSub?: { unsubscribe: () => void } }).__mtAuthSub =
+        data.subscription;
     });
     return () => {
       cancelled = true;
-      (window as unknown as { __mtAuthSub?: { unsubscribe: () => void } }).__mtAuthSub?.unsubscribe();
+      (
+        window as unknown as { __mtAuthSub?: { unsubscribe: () => void } }
+      ).__mtAuthSub?.unsubscribe();
     };
   }, [queryClient, router]);
 

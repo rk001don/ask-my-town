@@ -53,7 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </nav>
         <div className="mt-auto px-2 text-xs text-[color:var(--text-tertiary)]">
-          <Store className="mb-1 h-4 w-4" /> Karimangalam
+          <Store className="mb-1 h-4 w-4" /> Karimangalam & nearby
         </div>
       </aside>
 

@@ -27,7 +27,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Hyperlocal assisted commerce for Karimangalam. Just tell us what you need — food, groceries, tickets, rentals, local help — MyTown handles the rest.",
+          "Hyperlocal assisted commerce for Karimangalam & nearby areas. Just tell us what you need — food, groceries, tickets, rentals, local help — MyTown handles the rest.",
       },
     ],
   }),
@@ -160,7 +160,7 @@ function Home() {
         </div>
         <div className="no-scrollbar mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
           {POPULAR_PICKS.map((p) => (
-            <div key={p.name} className="w-[45%] shrink-0 snap-start">
+            <div key={p.name} className="w-40 shrink-0 snap-start">
               <ItemCard
                 itemName={p.name}
                 category={p.category}
@@ -207,12 +207,12 @@ function Home() {
             {
               n: 3,
               t: "A small service fee applies",
-              d: "₹19–₹99 depending on your order size — shown upfront in your cart, on top of what you're buying.",
+              d: "Always shown in your cart before you order — never a surprise.",
             },
             { n: 4, t: "Delivered to your door", d: "Track status live. Pay on delivery." },
           ].map((s) => (
             <li key={s.n} className="card-surface flex items-start gap-3 p-4">
-              <div className="grid h-8 w-8 place-items-center rounded-full accent-gradient text-sm font-bold">
+              <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full accent-gradient text-sm font-bold">
                 {s.n}
               </div>
               <div>

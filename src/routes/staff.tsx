@@ -10,6 +10,8 @@ import {
   getAttachmentSignedUrl,
 } from "@/lib/staff.functions";
 import { ORDER_STATUS_STEPS, STATUS_COPY, type OrderStatus } from "@/lib/constants";
+import { getLocations } from "@/lib/api.functions";
+import { formatTimeRange12h } from "@/lib/time";
 import { AppHeader } from "@/components/AppHeader";
 import { toast } from "sonner";
 import { Loader2, LogOut, RefreshCw, Phone, MapPin, ShieldAlert, Paperclip, X } from "lucide-react";
@@ -54,10 +56,12 @@ function StaffOrderCard({
   order: o,
   onOpenAttachment,
   onAdvance,
+  windowRanges,
 }: {
   order: StaffOrderRow;
   onOpenAttachment: (filePath: string) => void;
   onAdvance: (orderId: string, nextStatus: OrderStatus) => void;
+  windowRanges: Record<string, string>;
 }) {
   const idx = ORDER_STATUS_STEPS.findIndex((st) => st.key === o.status);
   const nextStep = ORDER_STATUS_STEPS[idx + 1]?.key as OrderStatus | undefined;
@@ -69,8 +73,9 @@ function StaffOrderCard({
       <div className="flex items-center justify-between">
         <div className="font-mono text-xs font-semibold">{o.id}</div>
         {o.requested_window && (
-          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px]">
+          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] capitalize">
             {o.requested_date} · {o.requested_window}
+            {windowRanges[o.requested_window] ? ` (${windowRanges[o.requested_window]})` : ""}
           </span>
         )}
       </div>
@@ -245,7 +250,23 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
     }
   }
 
+  const locationsFn = useServerFn(getLocations);
   const rolesQ = useQuery({ queryKey: ["my-roles"], queryFn: () => rolesFn(), staleTime: 60_000 });
+  const locationsQ = useQuery({
+    queryKey: ["locations"],
+    queryFn: () => locationsFn(),
+    staleTime: 5 * 60_000,
+  });
+  const windowRanges = useMemo(() => {
+    const windows =
+      (
+        locationsQ.data?.[0]?.config as
+          { delivery_windows?: { label: string; start: string; end: string }[] } | undefined
+      )?.delivery_windows ?? [];
+    const map: Record<string, string> = {};
+    for (const w of windows) map[w.label] = formatTimeRange12h(w.start, w.end);
+    return map;
+  }, [locationsQ.data]);
   const ordersQ = useQuery({
     queryKey: ["staff-orders"],
     queryFn: () => listFn(),
@@ -386,6 +407,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                         order={{ ...o, status: s }}
                         onOpenAttachment={openAttachment}
                         onAdvance={setStatus}
+                        windowRanges={windowRanges}
                       />
                     ))}
                   </div>
@@ -439,6 +461,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                     order={o}
                     onOpenAttachment={openAttachment}
                     onAdvance={setStatus}
+                    windowRanges={windowRanges}
                   />
                 ))}
               {BOARD_STATUSES.filter((s) =>

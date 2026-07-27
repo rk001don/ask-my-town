@@ -10,6 +10,7 @@ import {
   createProduct,
   deleteProduct,
   listCategoriesForAdmin,
+  createCategory,
   listAppConfig,
   updateAppConfig,
   listDeliveryBatches,
@@ -79,6 +80,7 @@ function AdminBoard({ email }: { email: string }) {
   const createProductFn = useServerFn(createProduct);
   const deleteProductFn = useServerFn(deleteProduct);
   const categoriesFn = useServerFn(listCategoriesForAdmin);
+  const createCategoryFn = useServerFn(createCategory);
   const configFn = useServerFn(listAppConfig);
   const updateConfigFn = useServerFn(updateAppConfig);
   const batchesFn = useServerFn(listDeliveryBatches);
@@ -114,6 +116,7 @@ function AdminBoard({ email }: { email: string }) {
   const [sortBy, setSortBy] = useState<"name" | "price" | "category">("name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [showNewProduct, setShowNewProduct] = useState(false);
+  const [showNewCategory, setShowNewCategory] = useState(false);
 
   const filteredProducts = useMemo(() => {
     let rows = productsQ.data ?? [];
@@ -196,6 +199,17 @@ function AdminBoard({ email }: { email: string }) {
     }
   }
 
+  async function addCategory(input: { name: string; parent_id: string | null }) {
+    try {
+      await createCategoryFn({ data: input });
+      toast.success("Category added");
+      setShowNewCategory(false);
+      qc.invalidateQueries({ queryKey: ["admin-categories"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't add category");
+    }
+  }
+
   async function saveConfig(key: string, raw: string) {
     try {
       const value = JSON.parse(raw);
@@ -246,13 +260,29 @@ function AdminBoard({ email }: { email: string }) {
       <section className="mb-8">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-semibold">Products</h2>
-          <button
-            onClick={() => setShowNewProduct((v) => !v)}
-            className="tap-scale flex items-center gap-1 rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold"
-          >
-            <Plus className="h-3.5 w-3.5" /> New product
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowNewCategory((v) => !v)}
+              className="tap-scale flex items-center gap-1 rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-xs font-semibold"
+            >
+              <Plus className="h-3.5 w-3.5" /> New category
+            </button>
+            <button
+              onClick={() => setShowNewProduct((v) => !v)}
+              className="tap-scale flex items-center gap-1 rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold"
+            >
+              <Plus className="h-3.5 w-3.5" /> New product
+            </button>
+          </div>
         </div>
+
+        {showNewCategory && (
+          <NewCategoryForm
+            categories={categoriesQ.data ?? []}
+            onCancel={() => setShowNewCategory(false)}
+            onSubmit={addCategory}
+          />
+        )}
 
         {showNewProduct && (
           <NewProductForm
@@ -462,6 +492,65 @@ function SortableHeader({
         {active && <span className="text-[10px]">{sortDir === "asc" ? "↑" : "↓"}</span>}
       </button>
     </th>
+  );
+}
+
+function NewCategoryForm({
+  categories,
+  onCancel,
+  onSubmit,
+}: {
+  categories: { id: string; name: string; parent_id?: string | null }[];
+  onCancel: () => void;
+  onSubmit: (input: { name: string; parent_id: string | null }) => void;
+}) {
+  const [name, setName] = useState("");
+  const [parentId, setParentId] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+  // Only top-level categories make sensible parents for a new subcategory --
+  // keeps this to two levels deep, matching how the storefront navigates.
+  const topLevel = categories.filter((c) => !c.parent_id);
+
+  return (
+    <div className="glass mb-3 space-y-3 rounded-2xl p-4">
+      <div className="flex items-center justify-between">
+        <div className="text-sm font-semibold">New category</div>
+        <button onClick={onCancel} className="tap-scale" aria-label="Cancel">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Category name"
+          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+        />
+        <select
+          value={parentId}
+          onChange={(e) => setParentId(e.target.value)}
+          className="rounded-lg border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] px-3 py-2 text-sm"
+        >
+          <option value="">Top-level category (no parent)</option>
+          {topLevel.map((c) => (
+            <option key={c.id} value={c.id}>
+              Subcategory of {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      <button
+        disabled={!name.trim() || saving}
+        onClick={async () => {
+          setSaving(true);
+          await onSubmit({ name: name.trim(), parent_id: parentId || null });
+          setSaving(false);
+        }}
+        className="tap-scale w-full rounded-full accent-gradient py-2 text-sm font-semibold disabled:opacity-50"
+      >
+        {saving ? "Adding…" : "Add category"}
+      </button>
+    </div>
   );
 }
 
