@@ -16,9 +16,10 @@ type Props = {
   category?: string;
   subcategory?: string;
   iconKey?: string | null;
+  imageUrl?: string | null;
 };
 
-export function ItemCard({ itemName, category, subcategory, iconKey }: Props) {
+export function ItemCard({ itemName, category, subcategory, iconKey, imageUrl }: Props) {
   const qty = useItemQuantity(itemName, subcategory);
   const { items } = useCart();
   const key = itemKeyFor(itemName, subcategory);
@@ -31,12 +32,25 @@ export function ItemCard({ itemName, category, subcategory, iconKey }: Props) {
     <div className="card-surface rise flex flex-col overflow-hidden">
       <div
         className="relative flex h-28 items-center justify-center"
-        style={{
-          background:
-            "linear-gradient(150deg, oklch(0.28 0.06 60) 0%, oklch(0.22 0.05 30) 60%, oklch(0.18 0.03 260) 100%)",
-        }}
+        style={
+          imageUrl
+            ? undefined
+            : {
+                background:
+                  "linear-gradient(150deg, oklch(0.28 0.06 60) 0%, oklch(0.22 0.05 30) 60%, oklch(0.18 0.03 260) 100%)",
+              }
+        }
       >
-        <Icon className="h-10 w-10 text-white/90" strokeWidth={1.8} />
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={itemName}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <Icon className="h-10 w-10 text-white/90" strokeWidth={1.8} />
+        )}
         <button
           onClick={() => setShowNotes((v) => !v)}
           aria-label="Add note"
@@ -49,9 +63,7 @@ export function ItemCard({ itemName, category, subcategory, iconKey }: Props) {
         <div className="min-h-[2.5rem] text-[14px] font-semibold leading-tight line-clamp-2">
           {itemName}
         </div>
-        <p className="text-[11px] text-[color:var(--text-muted)]">
-          Price confirmed after you ask
-        </p>
+        <p className="text-[11px] text-[color:var(--text-muted)]">Price confirmed after you ask</p>
         {showNotes && (
           <textarea
             value={notes}

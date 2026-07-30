@@ -138,6 +138,7 @@ function Category() {
                     category={sub.parent!.name}
                     subcategory={it.slug}
                     iconKey={it.icon_key}
+                    imageUrl={it.image_url}
                   />
                 ))}
               </div>

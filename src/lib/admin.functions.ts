@@ -32,7 +32,7 @@ export const listAllProducts = createServerFn({ method: "GET" })
     const { data, error } = await supabaseAdmin
       .from("products")
       .select(
-        "id, name, category_id, price, show_price, is_service, schedulable, is_available, is_veg, sort_order, categories(name)",
+        "id, name, category_id, price, show_price, is_service, schedulable, is_available, is_veg, image_url, sort_order, categories(name)",
       )
       .order("sort_order", { ascending: true });
     if (error) throw new Error(error.message);
@@ -46,6 +46,7 @@ const ProductPatchSchema = z.object({
   is_service: z.boolean().optional(),
   schedulable: z.boolean().optional(),
   is_available: z.boolean().optional(),
+  image_url: z.string().trim().max(600).nullable().optional(),
 });
 
 export const updateProduct = createServerFn({ method: "POST" })
@@ -172,6 +173,31 @@ export const createCategory = createServerFn({ method: "POST" })
     return { id: inserted!.id, slug };
   });
 
+const CategoryPatchSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().trim().min(2).max(80).optional(),
+  image_url: z.string().trim().max(600).nullable().optional(),
+});
+
+export const updateCategory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: z.infer<typeof CategoryPatchSchema>) => CategoryPatchSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { id, ...patch } = data;
+    const { error } = await supabaseAdmin.from("categories").update(patch).eq("id", id);
+    if (error) throw new Error(error.message);
+    await supabaseAdmin.from("audit_log").insert({
+      staff_id: context.userId,
+      action: "category.update",
+      entity_type: "category",
+      entity_id: id,
+      metadata: patch,
+    });
+    return { ok: true as const };
+  });
+
 export const listCategoriesForAdmin = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -179,7 +205,7 @@ export const listCategoriesForAdmin = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data, error } = await supabaseAdmin
       .from("categories")
-      .select("id, name, slug, parent_id")
+      .select("id, name, slug, parent_id, image_url")
       .order("name", { ascending: true });
     if (error) throw new Error(error.message);
     return data ?? [];

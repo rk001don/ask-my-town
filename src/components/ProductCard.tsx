@@ -1,4 +1,4 @@
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, ImageOff } from "lucide-react";
 import {
   addCatalogItem,
   decrementItem,
@@ -11,6 +11,7 @@ export type ProductRow = {
   id: string;
   name: string;
   description: string | null;
+  image_url?: string | null;
   price: number | null;
   show_price: boolean;
   is_veg: boolean | null;
@@ -36,6 +37,18 @@ export function ProductCard({
 
   return (
     <div className="card-surface rise flex items-start gap-3 p-3">
+      <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-white/5">
+        {product.image_url ? (
+          <img
+            src={product.image_url}
+            alt={product.name}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <ImageOff className="h-5 w-5 text-[color:var(--text-muted)]" strokeWidth={1.5} />
+        )}
+      </div>
       {product.is_veg != null && (
         <span
           aria-label={product.is_veg ? "Veg" : "Non-veg"}
@@ -51,18 +64,14 @@ export function ProductCard({
         </span>
       )}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="min-w-0 text-[14px] font-semibold leading-tight">
-          {product.name}
-        </div>
+        <div className="min-w-0 text-[14px] font-semibold leading-tight">{product.name}</div>
         {product.description && (
           <p className="line-clamp-2 text-[12px] text-[color:var(--text-secondary)]">
             {product.description}
           </p>
         )}
         <div className="mt-1 flex items-center justify-between gap-2">
-          <div className="text-[13px] font-bold text-[color:var(--text-primary)]">
-            {priceLabel}
-          </div>
+          <div className="text-[13px] font-bold text-[color:var(--text-primary)]">{priceLabel}</div>
           {qty === 0 ? (
             <button
               onClick={() =>

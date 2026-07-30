@@ -11,12 +11,14 @@ import {
   deleteProduct,
   listCategoriesForAdmin,
   createCategory,
+  updateCategory,
   listAppConfig,
   updateAppConfig,
   listDeliveryBatches,
   updateBatchStatus,
 } from "@/lib/admin.functions";
 import { AppHeader } from "@/components/AppHeader";
+import { CatalogImageUpload } from "@/components/CatalogImageUpload";
 import { toast } from "sonner";
 import { to12Hour } from "@/lib/time";
 import { Loader2, ShieldAlert, LogOut, Plus, Trash2, Search, ArrowUpDown, X } from "lucide-react";
@@ -81,6 +83,7 @@ function AdminBoard({ email }: { email: string }) {
   const deleteProductFn = useServerFn(deleteProduct);
   const categoriesFn = useServerFn(listCategoriesForAdmin);
   const createCategoryFn = useServerFn(createCategory);
+  const updateCategoryFn = useServerFn(updateCategory);
   const configFn = useServerFn(listAppConfig);
   const updateConfigFn = useServerFn(updateAppConfig);
   const batchesFn = useServerFn(listDeliveryBatches);
@@ -210,6 +213,16 @@ function AdminBoard({ email }: { email: string }) {
     }
   }
 
+  async function patchCategory(id: string, patch: Record<string, unknown>) {
+    try {
+      await updateCategoryFn({ data: { id, ...patch } });
+      toast.success("Saved");
+      qc.invalidateQueries({ queryKey: ["admin-categories"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Save failed");
+    }
+  }
+
   async function saveConfig(key: string, raw: string) {
     try {
       const value = JSON.parse(raw);
@@ -330,6 +343,7 @@ function AdminBoard({ email }: { email: string }) {
               <table className="w-full text-sm">
                 <thead className="bg-white/5 text-left text-xs uppercase text-[color:var(--text-tertiary)]">
                   <tr>
+                    <th className="p-3">Image</th>
                     <SortableHeader
                       label="Name"
                       col="name"
@@ -383,6 +397,34 @@ function AdminBoard({ email }: { email: string }) {
               ))}
             </div>
           </>
+        )}
+      </section>
+
+      {/* -------------------- Categories -------------------- */}
+      <section className="mb-8">
+        <h2 className="mb-3 text-lg font-semibold">Categories</h2>
+        {categoriesQ.isLoading ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <div className="space-y-2">
+            {(categoriesQ.data ?? []).map((c) => (
+              <div key={c.id} className="card-surface flex items-center gap-3 p-3">
+                <CatalogImageUpload
+                  imageUrl={c.image_url}
+                  onUploaded={(url) => patchCategory(c.id, { image_url: url })}
+                />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold">{c.name}</div>
+                  <div className="text-xs text-[color:var(--text-tertiary)]">
+                    {c.parent_id ? "Subcategory" : "Top-level"}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {(categoriesQ.data ?? []).length === 0 && (
+              <div className="text-sm text-[color:var(--text-tertiary)]">No categories yet.</div>
+            )}
+          </div>
         )}
       </section>
 
@@ -668,6 +710,7 @@ type ProductRowData = {
   is_service: boolean;
   schedulable: boolean;
   is_available: boolean;
+  image_url?: string | null;
   categories: { name: string } | null;
 };
 
@@ -684,6 +727,13 @@ function ProductRow({
 
   return (
     <tr className="border-t border-[color:var(--border-subtle)]">
+      <td className="p-3">
+        <CatalogImageUpload
+          imageUrl={product.image_url}
+          onUploaded={(url) => onPatch({ image_url: url })}
+          size="h-10 w-10"
+        />
+      </td>
       <td className="p-3 font-medium">{product.name}</td>
       <td className="p-3 text-[color:var(--text-secondary)]">{product.categories?.name ?? "—"}</td>
       <td className="p-3">
@@ -753,10 +803,16 @@ function ProductCardAdmin({
   return (
     <div className="card-surface p-3">
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <div className="text-sm font-semibold">{product.name}</div>
-          <div className="text-xs text-[color:var(--text-secondary)]">
-            {product.categories?.name ?? "—"}
+        <div className="flex items-start gap-2">
+          <CatalogImageUpload
+            imageUrl={product.image_url}
+            onUploaded={(url) => onPatch({ image_url: url })}
+          />
+          <div>
+            <div className="text-sm font-semibold">{product.name}</div>
+            <div className="text-xs text-[color:var(--text-secondary)]">
+              {product.categories?.name ?? "—"}
+            </div>
           </div>
         </div>
         <button

@@ -110,7 +110,7 @@ export const getCategories = createServerFn({ method: "GET" }).handler(async () 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin
     .from("categories")
-    .select("id, name, slug, parent_id, icon_key, sort_order")
+    .select("id, name, slug, parent_id, icon_key, image_url, sort_order")
     .is("parent_id", null)
     .order("sort_order", { ascending: true });
   if (error) throw new Error(error.message);
@@ -123,7 +123,7 @@ export const getSubcategories = createServerFn({ method: "GET" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: parent, error: pErr } = await supabaseAdmin
       .from("categories")
-      .select("id, name, slug, icon_key")
+      .select("id, name, slug, icon_key, image_url")
       .eq("slug", data.slug)
       .is("parent_id", null)
       .maybeSingle();
@@ -132,7 +132,7 @@ export const getSubcategories = createServerFn({ method: "GET" })
 
     const { data: items, error: cErr } = await supabaseAdmin
       .from("categories")
-      .select("id, name, slug, icon_key, sort_order")
+      .select("id, name, slug, icon_key, image_url, sort_order")
       .eq("parent_id", parent.id)
       .order("sort_order", { ascending: true });
     if (cErr) throw new Error(cErr.message);

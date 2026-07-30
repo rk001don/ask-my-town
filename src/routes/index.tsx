@@ -187,7 +187,14 @@ function Home() {
         ) : (
           <div className="mt-3 grid grid-cols-4 gap-3 px-4 md:grid-cols-6 lg:grid-cols-8">
             {categories.map((c) => (
-              <CategoryTile key={c.id} slug={c.slug} name={c.name} iconKey={c.icon_key} compact />
+              <CategoryTile
+                key={c.id}
+                slug={c.slug}
+                name={c.name}
+                iconKey={c.icon_key}
+                imageUrl={c.image_url}
+                compact
+              />
             ))}
           </div>
         )}

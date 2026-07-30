@@ -44,7 +44,13 @@ function Explore() {
       ) : (
         <div className="grid grid-cols-2 gap-3 px-4 pb-8 md:grid-cols-3 lg:grid-cols-4">
           {data.map((c) => (
-            <CategoryTile key={c.id} slug={c.slug} name={c.name} iconKey={c.icon_key} />
+            <CategoryTile
+              key={c.id}
+              slug={c.slug}
+              name={c.name}
+              iconKey={c.icon_key}
+              imageUrl={c.image_url}
+            />
           ))}
         </div>
       )}
