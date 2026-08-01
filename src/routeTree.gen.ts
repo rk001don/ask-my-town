@@ -24,6 +24,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrderOrderIdRouteImport } from './routes/order.$orderId'
 import { Route as CSlugRouteImport } from './routes/c.$slug'
 import { Route as AuthenticatedMyOrdersRouteImport } from './routes/_authenticated/my-orders'
+import { Route as ApiPublicCatalogImagePathRouteImport } from './routes/api/public/catalog-image.$path'
 
 const StaffRoute = StaffRouteImport.update({
   id: '/staff',
@@ -99,6 +100,12 @@ const AuthenticatedMyOrdersRoute = AuthenticatedMyOrdersRouteImport.update({
   path: '/my-orders',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicCatalogImagePathRoute =
+  ApiPublicCatalogImagePathRouteImport.update({
+    id: '/api/public/catalog-image/$path',
+    path: '/api/public/catalog-image/$path',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/my-orders': typeof AuthenticatedMyOrdersRoute
   '/c/$slug': typeof CSlugRoute
   '/order/$orderId': typeof OrderOrderIdRoute
+  '/api/public/catalog-image/$path': typeof ApiPublicCatalogImagePathRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -131,6 +139,7 @@ export interface FileRoutesByTo {
   '/my-orders': typeof AuthenticatedMyOrdersRoute
   '/c/$slug': typeof CSlugRoute
   '/order/$orderId': typeof OrderOrderIdRoute
+  '/api/public/catalog-image/$path': typeof ApiPublicCatalogImagePathRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -149,6 +158,7 @@ export interface FileRoutesById {
   '/_authenticated/my-orders': typeof AuthenticatedMyOrdersRoute
   '/c/$slug': typeof CSlugRoute
   '/order/$orderId': typeof OrderOrderIdRoute
+  '/api/public/catalog-image/$path': typeof ApiPublicCatalogImagePathRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -167,6 +177,7 @@ export interface FileRouteTypes {
     | '/my-orders'
     | '/c/$slug'
     | '/order/$orderId'
+    | '/api/public/catalog-image/$path'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -183,6 +194,7 @@ export interface FileRouteTypes {
     | '/my-orders'
     | '/c/$slug'
     | '/order/$orderId'
+    | '/api/public/catalog-image/$path'
   id:
     | '__root__'
     | '/'
@@ -200,6 +212,7 @@ export interface FileRouteTypes {
     | '/_authenticated/my-orders'
     | '/c/$slug'
     | '/order/$orderId'
+    | '/api/public/catalog-image/$path'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -217,6 +230,7 @@ export interface RootRouteChildren {
   StaffRoute: typeof StaffRoute
   CSlugRoute: typeof CSlugRoute
   OrderOrderIdRoute: typeof OrderOrderIdRoute
+  ApiPublicCatalogImagePathRoute: typeof ApiPublicCatalogImagePathRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -326,6 +340,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMyOrdersRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/catalog-image/$path': {
+      id: '/api/public/catalog-image/$path'
+      path: '/api/public/catalog-image/$path'
+      fullPath: '/api/public/catalog-image/$path'
+      preLoaderRoute: typeof ApiPublicCatalogImagePathRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -355,6 +376,7 @@ const rootRouteChildren: RootRouteChildren = {
   StaffRoute: StaffRoute,
   CSlugRoute: CSlugRoute,
   OrderOrderIdRoute: OrderOrderIdRoute,
+  ApiPublicCatalogImagePathRoute: ApiPublicCatalogImagePathRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
