@@ -320,3 +320,29 @@ export const updateBatchStatus = createServerFn({ method: "POST" })
     });
     return { newStatus: next };
   });
+
+// Catalog image upload. The bucket is private (public buckets aren't allowed
+// on this project), so images are served back through the public read-through
+// route at /api/public/catalog-image/$path and image_url stores that path.
+const CatalogImageSchema = z.object({
+  fileName: z.string().trim().min(1).max(200),
+  contentType: z.string().trim().regex(/^image\/[a-zA-Z0-9.+-]+$/),
+  dataBase64: z.string().min(1).max(9_000_000),
+});
+
+export const uploadCatalogImage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: z.infer<typeof CatalogImageSchema>) => CatalogImageSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const bytes = Buffer.from(data.dataBase64, "base64");
+    if (bytes.byteLength > 5 * 1024 * 1024) throw new Error("Image must be under 5MB");
+    const safeName = data.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
+    const { error } = await supabaseAdmin.storage
+      .from("catalog-images")
+      .upload(path, bytes, { contentType: data.contentType, upsert: false });
+    if (error) throw new Error(error.message);
+    return { url: `/api/public/catalog-image/${encodeURIComponent(path)}` };
+  });
