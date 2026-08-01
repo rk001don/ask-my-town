@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
 import { MessageCircle, Search as SearchIcon, ArrowRight, ShoppingBag } from "lucide-react";
+import { MyTownLogo } from "@/components/MyTownLogo";
 import { getCategories } from "@/lib/api.functions";
 import { CategoryTile } from "@/components/CategoryTile";
 import { ItemCard } from "@/components/ItemCard";
@@ -36,17 +37,24 @@ export const Route = createFileRoute("/")({
 });
 
 const POPULAR_PICKS: Array<{ name: string; sub?: string; category?: string; iconKey?: string }> = [
+  { name: "Idli & dosa", sub: "food-tiffin", category: "Food & Home Meals", iconKey: "utensils" },
   {
-    name: "Home-cooked meals",
-    sub: "food-home",
+    name: "Chicken biryani",
+    sub: "food-restaurant",
     category: "Food & Home Meals",
     iconKey: "chef-hat",
   },
-  { name: "Groceries", sub: "daily-groceries", category: "Daily Needs", iconKey: "shopping-cart" },
-  { name: "Medicines", sub: "daily-medicines", category: "Daily Needs", iconKey: "pill" },
-  { name: "Bus tickets", sub: "travel-bus", category: "Travel & Tickets", iconKey: "bus" },
+  { name: "Milk, bread & eggs", sub: "daily-dairy", category: "Daily Needs", iconKey: "milk" },
+  { name: "Vegetables", sub: "daily-produce", category: "Daily Needs", iconKey: "apple" },
+  { name: "Water can", sub: "daily-groceries", category: "Daily Needs", iconKey: "glass-water" },
+  {
+    name: "Phone recharge",
+    sub: "travel-bus",
+    category: "Travel & Tickets",
+    iconKey: "smartphone",
+  },
   { name: "Plumber", sub: "svc-plumber", category: "Local Services", iconKey: "droplets" },
-  { name: "Two-wheeler rental", sub: "rent-bike", category: "Rentals", iconKey: "bike" },
+  { name: "Laundry pickup", sub: "svc-laundry", category: "Local Services", iconKey: "shirt" },
 ];
 
 function Home() {
@@ -60,12 +68,7 @@ function Home() {
       {/* Brand header */}
       <header className="flex items-center justify-between px-4 pt-5">
         <div className="flex items-center gap-3">
-          <div
-            className="grid h-11 w-11 place-items-center rounded-2xl accent-gradient text-[color:var(--on-accent)] text-display text-lg font-bold"
-            aria-hidden
-          >
-            m
-          </div>
+          <MyTownLogo className="h-11 w-11" />
           <div>
             <div className="text-display text-lg font-semibold leading-none">{APP_NAME}</div>
             <div className="text-[11px] text-[color:var(--text-muted)]">Serving {TOWN_NAME}</div>
@@ -75,7 +78,7 @@ function Home() {
           <Link
             to="/search"
             aria-label="Search"
-            className="tap-scale rounded-full p-2 hover:bg-white/5"
+            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
           >
             <SearchIcon className="h-5 w-5" />
           </Link>
@@ -84,14 +87,14 @@ function Home() {
             target="_blank"
             rel="noreferrer noopener"
             aria-label="Chat on WhatsApp"
-            className="tap-scale rounded-full p-2 hover:bg-white/5"
+            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
           >
             <MessageCircle className="h-5 w-5" />
           </a>
           <Link
             to="/cart"
             aria-label="Cart"
-            className="tap-scale relative rounded-full p-2 hover:bg-white/5"
+            className="tap-scale relative grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
           >
             <ShoppingBag className="h-5 w-5" />
             {cartCount > 0 && (
@@ -135,13 +138,13 @@ function Home() {
             <div className="mt-3 flex gap-2">
               <Link
                 to="/explore"
-                className="tap-scale inline-flex items-center gap-1.5 rounded-full accent-gradient px-4 py-2 text-[13px] font-semibold"
+                className="tap-scale inline-flex min-h-11 items-center gap-1.5 rounded-full accent-gradient px-4 py-2 text-[13px] font-semibold"
               >
                 Browse all <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               <Link
                 to="/search"
-                className="tap-scale inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] bg-black/20 px-4 py-2 text-[13px] font-semibold"
+                className="tap-scale inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] bg-black/20 px-4 py-2 text-[13px] font-semibold"
               >
                 <SearchIcon className="h-3.5 w-3.5" /> Search
               </Link>

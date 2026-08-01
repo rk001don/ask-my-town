@@ -95,19 +95,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         property: "og:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/346256e0-2846-4267-87de-70dd88e8508d/id-preview-34318000--7d4e702d-5176-4716-ae13-41db535559b2.lovable.app-1784526867651.png",
+        content: "/mytown-icon.svg",
       },
       {
         name: "twitter:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/346256e0-2846-4267-87de-70dd88e8508d/id-preview-34318000--7d4e702d-5176-4716-ae13-41db535559b2.lovable.app-1784526867651.png",
+        content: "/mytown-icon.svg",
       },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
-      { rel: "apple-touch-icon", href: "/icon-512.png" },
+      { rel: "icon", href: "/mytown-icon.svg", type: "image/svg+xml" },
+      { rel: "apple-touch-icon", href: "/mytown-icon.svg" },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },

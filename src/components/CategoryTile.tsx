@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { iconFor } from "./icon-map";
 
 type Props = {
@@ -11,6 +12,8 @@ type Props = {
 
 export function CategoryTile({ slug, name, iconKey, imageUrl, compact }: Props) {
   const Icon = iconFor(iconKey);
+  const [imageFailed, setImageFailed] = useState(false);
+  const safeImageUrl = imageUrl && !imageFailed ? imageUrl : null;
   return (
     <Link
       to="/c/$slug"
@@ -20,7 +23,7 @@ export function CategoryTile({ slug, name, iconKey, imageUrl, compact }: Props) 
       <div
         className={`grid place-items-center overflow-hidden rounded-2xl ${compact ? "h-11 w-11" : "h-14 w-14"}`}
         style={
-          imageUrl
+          safeImageUrl
             ? undefined
             : {
                 background:
@@ -29,8 +32,14 @@ export function CategoryTile({ slug, name, iconKey, imageUrl, compact }: Props) 
               }
         }
       >
-        {imageUrl ? (
-          <img src={imageUrl} alt={name} className="h-full w-full object-cover" loading="lazy" />
+        {safeImageUrl ? (
+          <img
+            src={safeImageUrl}
+            alt={name}
+            className="h-full w-full object-cover"
+            loading="lazy"
+            onError={() => setImageFailed(true)}
+          />
         ) : (
           <Icon className="h-6 w-6 text-[color:var(--accent-primary)]" strokeWidth={2.2} />
         )}

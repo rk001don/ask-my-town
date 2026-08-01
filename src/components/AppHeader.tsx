@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Search as SearchIcon, ShoppingBag, User } from "lucide-react";
+import { MyTownLogo } from "./MyTownLogo";
 import { useCartCount } from "@/lib/cart-store";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,14 +44,18 @@ export function AppHeader({
         {showBack && (
           <button
             aria-label="Back"
-            onClick={() => history.length > 1 ? history.back() : navigate({ to: "/" })}
-            className="tap-scale rounded-full p-2 hover:bg-white/5"
+            onClick={() => (history.length > 1 ? history.back() : navigate({ to: "/" }))}
+            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
         )}
-        {title && (
+        {title ? (
           <h1 className="text-display truncate text-lg font-semibold">{title}</h1>
+        ) : (
+          <Link to="/" aria-label="MyTown home" className="tap-scale rounded-2xl">
+            <MyTownLogo className="h-9 w-9" />
+          </Link>
         )}
       </div>
       <div className="flex items-center gap-1">
@@ -58,7 +63,7 @@ export function AppHeader({
           <Link
             to="/search"
             aria-label="Search"
-            className="tap-scale rounded-full p-2 hover:bg-white/5"
+            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
           >
             <SearchIcon className="h-5 w-5" />
           </Link>
@@ -66,7 +71,7 @@ export function AppHeader({
         <Link
           to={signedIn ? "/my-orders" : "/auth"}
           aria-label={signedIn ? "My orders" : "Sign in"}
-          className="tap-scale rounded-full p-2 hover:bg-white/5"
+          className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
         >
           <User className="h-5 w-5" />
         </Link>
@@ -74,7 +79,7 @@ export function AppHeader({
           <Link
             to="/cart"
             aria-label="Cart"
-            className="tap-scale relative rounded-full p-2 hover:bg-white/5"
+            className="tap-scale relative grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
           >
             <ShoppingBag className="h-5 w-5" />
             {cartCount > 0 && (
