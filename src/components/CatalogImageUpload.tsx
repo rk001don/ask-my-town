@@ -1,15 +1,16 @@
 import { useRef, useState } from "react";
 import { Loader2, ImageOff, Pencil } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { uploadCatalogImage } from "@/lib/admin.functions";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
 
 /**
- * Small thumbnail with a pencil overlay — click to replace. Uploads directly
- * to the public catalog-images bucket (admin-only write, per its storage
- * policy) and hands back the resulting public URL; the caller is
- * responsible for actually saving that URL onto the product/category row.
+ * Small thumbnail with a pencil overlay — click to replace. Uploads through an
+ * admin-only server function (the storage bucket is private) and hands back a
+ * stable image URL; the caller is responsible for saving that URL onto the
+ * product/category row.
  */
 export function CatalogImageUpload({
   imageUrl,
@@ -22,6 +23,7 @@ export function CatalogImageUpload({
 }) {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const upload = useServerFn(uploadCatalogImage);
 
   async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -36,13 +38,16 @@ export function CatalogImageUpload({
     }
     setUploading(true);
     try {
-      const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-      const { error } = await supabase.storage
-        .from("catalog-images")
-        .upload(path, file, { upsert: false });
-      if (error) throw error;
-      const { data } = supabase.storage.from("catalog-images").getPublicUrl(path);
-      onUploaded(data.publicUrl);
+      const buffer = await file.arrayBuffer();
+      let binary = "";
+      const bytes = new Uint8Array(buffer);
+      for (let i = 0; i < bytes.length; i += 8192) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
+      }
+      const { url } = await upload({
+        data: { fileName: file.name, contentType: file.type, dataBase64: btoa(binary) },
+      });
+      onUploaded(url);
       toast.success("Image updated");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed");
@@ -51,6 +56,7 @@ export function CatalogImageUpload({
       if (fileRef.current) fileRef.current.value = "";
     }
   }
+
 
   return (
     <button
