@@ -263,7 +263,7 @@ function AdminBoard({ email }: { email: string }) {
         <div className="text-display text-xl font-semibold md:text-2xl">Admin console</div>
         <button
           onClick={() => supabase.auth.signOut().then(() => window.location.assign("/"))}
-          className="tap-scale flex items-center gap-1 rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-xs font-semibold"
+          className="tap-scale flex min-h-11 items-center gap-1 rounded-full border border-[color:var(--border-strong)] px-3 py-2 text-xs font-semibold"
         >
           <LogOut className="h-3.5 w-3.5" /> Sign out
         </button>
@@ -271,18 +271,18 @@ function AdminBoard({ email }: { email: string }) {
 
       {/* -------------------- Products -------------------- */}
       <section className="mb-8">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-lg font-semibold">Products</h2>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 sm:flex">
             <button
               onClick={() => setShowNewCategory((v) => !v)}
-              className="tap-scale flex items-center gap-1 rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-xs font-semibold"
+              className="tap-scale flex min-h-11 items-center gap-1 rounded-full border border-[color:var(--border-strong)] px-3 py-2 text-xs font-semibold"
             >
               <Plus className="h-3.5 w-3.5" /> New category
             </button>
             <button
               onClick={() => setShowNewProduct((v) => !v)}
-              className="tap-scale flex items-center gap-1 rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold"
+              className="tap-scale flex min-h-11 items-center gap-1 rounded-full accent-gradient px-3 py-2 text-xs font-semibold"
             >
               <Plus className="h-3.5 w-3.5" /> New product
             </button>
@@ -888,22 +888,22 @@ function ConfigRow({
   const [raw, setRaw] = useState(JSON.stringify(value));
   return (
     <div className="glass rounded-2xl p-3">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="font-mono text-sm font-semibold">{configKey}</div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="break-words font-mono text-sm font-semibold">{configKey}</div>
           {description && (
             <div className="text-xs text-[color:var(--text-tertiary)]">{description}</div>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="grid gap-2 sm:flex sm:items-center">
           <input
             value={raw}
             onChange={(e) => setRaw(e.target.value)}
-            className="w-40 rounded-lg border border-[color:var(--border-strong)] bg-transparent px-2 py-1 font-mono text-xs"
+            className="min-h-11 w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 font-mono text-xs sm:w-56"
           />
           <button
             onClick={() => onSave(raw)}
-            className="tap-scale rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold"
+            className="tap-scale min-h-11 rounded-full accent-gradient px-4 py-2 text-xs font-semibold"
           >
             Save
           </button>

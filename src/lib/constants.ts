@@ -12,18 +12,18 @@ export function waLink(text = WHATSAPP_DEFAULT_MSG) {
 export const ORDER_STATUS_STEPS = [
   { key: "received", label: "Received" },
   { key: "confirmed", label: "Confirmed" },
-  { key: "arranging", label: "Arranging" },
-  { key: "on_the_way", label: "On the way" },
-  { key: "completed", label: "Completed" },
+  { key: "arranging", label: "Preparing" },
+  { key: "on_the_way", label: "Out for delivery" },
+  { key: "completed", label: "Delivered" },
 ] as const;
 
 export type OrderStatus = (typeof ORDER_STATUS_STEPS)[number]["key"] | "cancelled";
 
 export const STATUS_COPY: Record<OrderStatus, { label: string; blurb: string }> = {
   received: { label: "Received", blurb: "We got your ask — our team is on it." },
-  confirmed: { label: "Confirmed", blurb: "Confirmed. We're arranging it now." },
-  arranging: { label: "Arranging", blurb: "Getting your items ready." },
-  on_the_way: { label: "On the way", blurb: "Heading to your address." },
-  completed: { label: "Completed", blurb: "Delivered. Anything else?" },
+  confirmed: { label: "Confirmed", blurb: "Confirmed. We're preparing it now." },
+  arranging: { label: "Preparing", blurb: "Getting your items ready." },
+  on_the_way: { label: "Out for delivery", blurb: "Heading to your address." },
+  completed: { label: "Delivered", blurb: "Delivered. Anything else?" },
   cancelled: { label: "Cancelled", blurb: "This order was cancelled." },
 };

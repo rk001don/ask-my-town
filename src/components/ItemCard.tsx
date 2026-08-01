@@ -27,13 +27,15 @@ export function ItemCard({ itemName, category, subcategory, iconKey, imageUrl }:
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState(currentNotes);
   const Icon = iconFor(iconKey);
+  const [imageFailed, setImageFailed] = useState(false);
+  const safeImageUrl = imageUrl && !imageFailed ? imageUrl : null;
 
   return (
     <div className="card-surface rise flex flex-col overflow-hidden">
       <div
         className="relative flex h-28 items-center justify-center"
         style={
-          imageUrl
+          safeImageUrl
             ? undefined
             : {
                 background:
@@ -41,10 +43,11 @@ export function ItemCard({ itemName, category, subcategory, iconKey, imageUrl }:
               }
         }
       >
-        {imageUrl ? (
+        {safeImageUrl ? (
           <img
-            src={imageUrl}
+            src={safeImageUrl}
             alt={itemName}
+            onError={() => setImageFailed(true)}
             className="h-full w-full object-cover"
             loading="lazy"
           />
