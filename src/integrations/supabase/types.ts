@@ -87,6 +87,7 @@ export type Database = {
           created_at: string
           icon_key: string | null
           id: string
+          image_url: string | null
           name: string
           parent_id: string | null
           slug: string
@@ -96,6 +97,7 @@ export type Database = {
           created_at?: string
           icon_key?: string | null
           id?: string
+          image_url?: string | null
           name: string
           parent_id?: string | null
           slug: string
@@ -105,6 +107,7 @@ export type Database = {
           created_at?: string
           icon_key?: string | null
           id?: string
+          image_url?: string | null
           name?: string
           parent_id?: string | null
           slug?: string
