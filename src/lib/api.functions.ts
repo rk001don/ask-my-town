@@ -40,6 +40,44 @@ const OrderItemSchema = z.object({
 // =============================================================================
 // Locations
 // =============================================================================
+export const getVapidPublicKey = createServerFn({ method: "GET" }).handler(async () => {
+  return { key: process.env.VAPID_PUBLIC_KEY ?? null };
+});
+
+const PushSubscriptionSchema = z.object({
+  orderId: z.string().trim().min(3).max(20),
+  endpoint: z.string().trim().min(10).max(600),
+  p256dh: z.string().trim().min(1).max(300),
+  auth: z.string().trim().min(1).max(300),
+});
+
+export const subscribeToOrderPush = createServerFn({ method: "POST" })
+  .inputValidator((data: z.infer<typeof PushSubscriptionSchema>) =>
+    PushSubscriptionSchema.parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    // Confirm the order actually exists before storing a subscription for it
+    // -- keeps this endpoint from being usable to spam-store arbitrary rows.
+    const { data: order } = await supabaseAdmin
+      .from("orders")
+      .select("id")
+      .eq("id", data.orderId.toUpperCase())
+      .maybeSingle();
+    if (!order) throw new Error("Order not found");
+    const { error } = await supabaseAdmin.from("order_push_subscriptions").upsert(
+      {
+        order_id: order.id,
+        endpoint: data.endpoint,
+        p256dh: data.p256dh,
+        auth: data.auth,
+      },
+      { onConflict: "order_id,endpoint" },
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
 export const getLocations = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin

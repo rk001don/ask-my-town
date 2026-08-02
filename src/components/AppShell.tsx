@@ -1,6 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { Home, Compass, ClipboardList, Store } from "lucide-react";
 import { AskFAB } from "@/components/AskFAB";
+import { MyTownLogo } from "@/components/MyTownLogo";
 import type { ReactNode } from "react";
 
 const TABS = [
@@ -29,7 +30,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-[520px] flex-col md:max-w-none md:flex-row">
       {/* Desktop sidebar (md+) — mobile keeps the bottom nav below */}
       <aside className="sticky top-0 hidden h-[100dvh] w-56 flex-shrink-0 border-r border-[color:var(--border-subtle)] px-3 py-6 md:flex md:flex-col">
-        <div className="px-2 text-display text-lg font-semibold">MyTown</div>
+        <div className="px-2">
+          <MyTownLogo className="h-8 w-8" showWordmark />
+        </div>
         <nav className="mt-8 flex flex-col gap-1" aria-label="Primary">
           {TABS.map((t) => {
             const active = t.to === "/" ? loc.pathname === "/" : loc.pathname.startsWith(t.to);
