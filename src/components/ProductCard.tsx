@@ -1,4 +1,6 @@
-import { Minus, Plus, ImageOff } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
+import { useState } from "react";
+import { catalogVisualFor, type CatalogView } from "@/lib/catalog-display";
 import {
   addCatalogItem,
   decrementItem,
@@ -23,32 +25,60 @@ export type ProductRow = {
 export function ProductCard({
   product,
   categoryName,
+  view = "list",
 }: {
   product: ProductRow;
   categoryName?: string;
+  view?: CatalogView;
 }) {
   const qty = useProductQuantity(product.id);
   const key = productKeyFor(product.id);
+  const [imageFailed, setImageFailed] = useState(false);
+  const safeImageUrl = product.image_url && !imageFailed ? product.image_url : null;
+  const visual = catalogVisualFor(product.name, categoryName);
+  const VisualIcon = visual.Icon;
 
   const priceLabel =
     product.show_price && product.price != null
       ? `₹${Number(product.price).toFixed(0)}`
       : "Price on request";
 
+  const image = (
+    <div
+      className={
+        view === "grid"
+          ? "relative grid aspect-[4/3] w-full shrink-0 place-items-center overflow-hidden rounded-2xl"
+          : "grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl"
+      }
+      style={safeImageUrl ? undefined : { background: visual.gradient }}
+    >
+      {safeImageUrl ? (
+        <img
+          src={safeImageUrl}
+          alt={product.name}
+          className="h-full w-full object-cover"
+          loading="lazy"
+          decoding="async"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <VisualIcon
+          className={view === "grid" ? "h-12 w-12 text-white/90" : "h-7 w-7 text-white/90"}
+          strokeWidth={1.7}
+        />
+      )}
+    </div>
+  );
+
   return (
-    <div className="card-surface rise flex items-start gap-3 p-3">
-      <div className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl bg-white/5">
-        {product.image_url ? (
-          <img
-            src={product.image_url}
-            alt={product.name}
-            className="h-full w-full object-cover"
-            loading="lazy"
-          />
-        ) : (
-          <ImageOff className="h-5 w-5 text-[color:var(--text-muted)]" strokeWidth={1.5} />
-        )}
-      </div>
+    <div
+      className={
+        view === "grid"
+          ? "card-surface rise flex h-full min-h-[250px] flex-col gap-3 p-3"
+          : "card-surface rise flex items-start gap-3 p-3"
+      }
+    >
+      {image}
       {product.is_veg != null && (
         <span
           aria-label={product.is_veg ? "Veg" : "Non-veg"}

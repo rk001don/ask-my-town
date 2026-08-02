@@ -9,6 +9,7 @@ import { TileSkeleton, ErrorState } from "@/components/States";
 import { APP_NAME, APP_TAGLINE, APP_SUBTEXT, TOWN_NAME, waLink } from "@/lib/constants";
 import { useCartCount } from "@/lib/cart-store";
 import { useEffect, useState } from "react";
+import { popularPickReasons } from "@/lib/catalog-display";
 
 const categoriesOptions = queryOptions({
   queryKey: ["categories", "top"],
@@ -36,25 +37,125 @@ export const Route = createFileRoute("/")({
   errorComponent: ({ reset }) => <ErrorState onRetry={reset} />,
 });
 
-const POPULAR_PICKS: Array<{ name: string; sub?: string; category?: string; iconKey?: string }> = [
-  { name: "Idli & dosa", sub: "food-tiffin", category: "Food & Home Meals", iconKey: "utensils" },
+const POPULAR_PICKS: Array<{
+  name: string;
+  sub?: string;
+  category?: string;
+  iconKey?: string;
+  priceLabel?: string;
+}> = [
   {
-    name: "Chicken biryani",
-    sub: "food-restaurant",
+    name: "Chicken Biryani (Plate)",
+    sub: "dinner",
     category: "Food & Home Meals",
     iconKey: "chef-hat",
+    priceLabel: "Est. ₹140",
   },
-  { name: "Milk, bread & eggs", sub: "daily-dairy", category: "Daily Needs", iconKey: "milk" },
-  { name: "Vegetables", sub: "daily-produce", category: "Daily Needs", iconKey: "apple" },
-  { name: "Water can", sub: "daily-groceries", category: "Daily Needs", iconKey: "glass-water" },
   {
-    name: "Phone recharge",
-    sub: "travel-bus",
-    category: "Travel & Tickets",
-    iconKey: "smartphone",
+    name: "Idli (2 pcs)",
+    sub: "breakfast",
+    category: "Food & Home Meals",
+    iconKey: "utensils",
+    priceLabel: "Est. ₹20",
   },
-  { name: "Plumber", sub: "svc-plumber", category: "Local Services", iconKey: "droplets" },
-  { name: "Laundry pickup", sub: "svc-laundry", category: "Local Services", iconKey: "shirt" },
+  {
+    name: "Dosa (1 pc)",
+    sub: "breakfast",
+    category: "Food & Home Meals",
+    iconKey: "utensils",
+    priceLabel: "Est. ₹45",
+  },
+  {
+    name: "Parotta (2 pcs)",
+    sub: "dinner",
+    category: "Food & Home Meals",
+    iconKey: "utensils",
+    priceLabel: "Est. ₹40",
+  },
+  {
+    name: "Chicken Fried Rice (Plate)",
+    sub: "rice-chinese",
+    category: "Food & Home Meals",
+    iconKey: "utensils",
+    priceLabel: "Est. ₹120",
+  },
+  {
+    name: "Chicken Noodles (Plate)",
+    sub: "rice-chinese",
+    category: "Food & Home Meals",
+    iconKey: "utensils",
+    priceLabel: "Est. ₹120",
+  },
+  {
+    name: "Veg Meals (Plate)",
+    sub: "lunch",
+    category: "Food & Home Meals",
+    iconKey: "utensils",
+    priceLabel: "Est. ₹90",
+  },
+  {
+    name: "Watermelon Juice (300 ml)",
+    sub: "juice",
+    category: "Juices & Beverages",
+    iconKey: "glass-water",
+    priceLabel: "Est. ₹40",
+  },
+  {
+    name: "Oreo Shake (300 ml)",
+    sub: "juice",
+    category: "Juices & Beverages",
+    iconKey: "glass-water",
+    priceLabel: "Est. ₹80",
+  },
+  {
+    name: "Veg Puff (1 pc)",
+    sub: "bakery",
+    category: "Bakery",
+    iconKey: "cookie",
+    priceLabel: "Est. ₹20",
+  },
+  {
+    name: "Black Forest Cake (500 g)",
+    sub: "cakes",
+    category: "Cakes",
+    iconKey: "cake",
+    priceLabel: "Est. ₹450",
+  },
+  {
+    name: "Coca-Cola (250 ml)",
+    sub: "beverages",
+    category: "Juices & Beverages",
+    iconKey: "glass-water",
+    priceLabel: "Est. ₹20",
+  },
+  {
+    name: "Sanitary Pads (Pack)",
+    sub: "personal-care",
+    category: "Pharmacy & Personal Care",
+    iconKey: "pill",
+    priceLabel: "Est. ₹45",
+  },
+  {
+    name: "Mobile Recharge",
+    sub: "eseva",
+    category: "e-Seva & Documentation",
+    iconKey: "smartphone",
+    priceLabel: "As requested",
+  },
+  {
+    name: "Hotel Booking Assistance",
+    sub: "local-assistance",
+    category: "Local Assistance",
+    iconKey: "bed",
+    priceLabel: "Service fee",
+  },
+  {
+    name: "Need Anything",
+    sub: "custom",
+    category: "Local Assistance",
+    iconKey: "sparkles",
+    priceLabel: "Ask MyTown",
+  },
 ];
 
 function Home() {
@@ -169,6 +270,8 @@ function Home() {
                 category={p.category}
                 subcategory={p.sub}
                 iconKey={p.iconKey}
+                priceLabel={p.priceLabel}
+                reason={popularPickReasons[p.name]}
               />
             </div>
           ))}
