@@ -2,6 +2,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { STATUS_COPY, type OrderStatus as OrderStatusType } from "@/lib/constants";
 
 const OrderStatus = z.enum([
   "received",
@@ -117,5 +118,18 @@ export const updateStaffOrderStatus = createServerFn({ method: "POST" })
       entity_id: data.orderId,
       metadata: { status: data.status },
     });
+    // Best-effort push notification -- never throws into the caller, a
+    // notification failing must not make the status update itself fail.
+    try {
+      const { sendPushForOrder } = await import("@/lib/push.server");
+      const copy = STATUS_COPY[data.status as OrderStatusType];
+      await sendPushForOrder(data.orderId, {
+        title: "MyTown order update",
+        body: copy?.blurb ?? `Your order is now ${data.status}.`,
+        url: `/order/${data.orderId}`,
+      });
+    } catch {
+      /* notifications are best-effort, see comment above */
+    }
     return { ok: true as const };
   });

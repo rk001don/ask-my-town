@@ -6,9 +6,22 @@ type MyTownLogoProps = {
 export function MyTownLogo({ className = "h-10 w-10", showWordmark = false }: MyTownLogoProps) {
   return (
     <div className="flex items-center gap-2.5">
-      <svg viewBox="0 0 64 64" role="img" aria-label="MyTown" className={className} focusable="false">
+      <svg
+        viewBox="0 0 64 64"
+        role="img"
+        aria-label="MyTown"
+        className={className}
+        focusable="false"
+      >
         <defs>
-          <linearGradient id="mytown-m" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+          <linearGradient
+            id="mytown-m"
+            x1="8"
+            y1="8"
+            x2="56"
+            y2="56"
+            gradientUnits="userSpaceOnUse"
+          >
             <stop stopColor="#fbbf24" />
             <stop offset="1" stopColor="#fb7185" />
           </linearGradient>

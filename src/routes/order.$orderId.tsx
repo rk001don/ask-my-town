@@ -5,6 +5,7 @@ import { trackOrder } from "@/lib/api.functions";
 import { ORDER_STATUS_STEPS, STATUS_COPY, type OrderStatus, waLink } from "@/lib/constants";
 import { Check, MessageCircle, Sparkles } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/States";
+import { NotifyMeButton } from "@/components/NotifyMeButton";
 
 const opts = (orderId: string) =>
   queryOptions({
@@ -75,6 +76,9 @@ function Confirmation() {
                     Scheduled: {order.requested_window}
                   </div>
                 )}
+              </div>
+              <div className="mt-3">
+                <NotifyMeButton orderId={orderId} />
               </div>
             </div>
           </div>
