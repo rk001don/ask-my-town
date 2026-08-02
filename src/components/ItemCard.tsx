@@ -17,9 +17,19 @@ type Props = {
   subcategory?: string;
   iconKey?: string | null;
   imageUrl?: string | null;
+  priceLabel?: string;
+  reason?: string;
 };
 
-export function ItemCard({ itemName, category, subcategory, iconKey, imageUrl }: Props) {
+export function ItemCard({
+  itemName,
+  category,
+  subcategory,
+  iconKey,
+  imageUrl,
+  priceLabel,
+  reason,
+}: Props) {
   const qty = useItemQuantity(itemName, subcategory);
   const { items } = useCart();
   const key = itemKeyFor(itemName, subcategory);
@@ -66,7 +76,12 @@ export function ItemCard({ itemName, category, subcategory, iconKey, imageUrl }:
         <div className="min-h-[2.5rem] text-[14px] font-semibold leading-tight line-clamp-2">
           {itemName}
         </div>
-        <p className="text-[11px] text-[color:var(--text-muted)]">Price confirmed after you ask</p>
+        <p className="text-[11px] font-semibold text-[color:var(--text-primary)]">
+          {priceLabel ?? "Price confirmed after you ask"}
+        </p>
+        {reason && (
+          <p className="line-clamp-2 text-[11px] text-[color:var(--text-muted)]">{reason}</p>
+        )}
         {showNotes && (
           <textarea
             value={notes}

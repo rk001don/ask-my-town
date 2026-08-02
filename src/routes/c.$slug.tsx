@@ -6,7 +6,8 @@ import { ItemCard } from "@/components/ItemCard";
 import { openAskSheet } from "@/components/AskFAB";
 import { ProductCard, type ProductRow } from "@/components/ProductCard";
 import { EmptyState, ErrorState, CardSkeleton } from "@/components/States";
-import { Sparkles } from "lucide-react";
+import { Grid2X2, List, Sparkles } from "lucide-react";
+import { CATALOG_VIEW_KEY, type CatalogView } from "@/lib/catalog-display";
 import { useEffect, useMemo, useState } from "react";
 
 const subOpts = (slug: string) =>
@@ -74,7 +75,17 @@ function Category() {
   const { data: sub } = useSuspenseQuery(subOpts(slug));
   const { data: products } = useSuspenseQuery(prodOpts(slug));
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [view, setView] = useState<CatalogView>("grid");
+  useEffect(() => {
+    setMounted(true);
+    const saved = window.localStorage.getItem(CATALOG_VIEW_KEY);
+    if (saved === "grid" || saved === "list") setView(saved);
+  }, []);
+
+  function chooseView(next: CatalogView) {
+    setView(next);
+    window.localStorage.setItem(CATALOG_VIEW_KEY, next);
+  }
 
   const groups = useMemo(() => {
     const map = new Map<string, ProductRow[]>();
@@ -105,6 +116,34 @@ function Category() {
         />
       ) : (
         <div className="space-y-6 p-4 pb-24">
+          {hasProducts && (
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-[color:var(--text-secondary)]">
+                Grid is optimized for quick food ordering. Switch any time.
+              </p>
+              <div
+                className="flex shrink-0 rounded-full border border-[color:var(--border-strong)] bg-black/20 p-1"
+                aria-label="Catalog view"
+              >
+                <button
+                  type="button"
+                  onClick={() => chooseView("grid")}
+                  aria-pressed={view === "grid"}
+                  className={`tap-scale grid h-9 w-9 place-items-center rounded-full ${view === "grid" ? "accent-gradient" : "text-[color:var(--text-secondary)]"}`}
+                >
+                  <Grid2X2 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => chooseView("list")}
+                  aria-pressed={view === "list"}
+                  className={`tap-scale grid h-9 w-9 place-items-center rounded-full ${view === "list" ? "accent-gradient" : "text-[color:var(--text-secondary)]"}`}
+                >
+                  <List className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
           {/* Priced catalog — the primary content, always shown first when it exists */}
           {hasProducts &&
             groups.map(([groupKey, items]) => (
@@ -114,9 +153,20 @@ function Category() {
                     {GROUP_LABELS[groupKey] ?? titleize(groupKey)}
                   </h2>
                 )}
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <div
+                  className={
+                    view === "grid"
+                      ? "grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+                      : "grid grid-cols-1 gap-2 sm:grid-cols-2"
+                  }
+                >
                   {items.map((p) => (
-                    <ProductCard key={p.id} product={p} categoryName={sub.parent!.name} />
+                    <ProductCard
+                      key={p.id}
+                      product={p}
+                      categoryName={sub.parent!.name}
+                      view={view}
+                    />
                   ))}
                 </div>
               </section>
