@@ -419,6 +419,10 @@ export type Database = {
       orders: {
         Row: {
           assigned_employee_id: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_by_role: string | null
           completed_at: string | null
           confirmed_at: string | null
           created_at: string
@@ -429,9 +433,11 @@ export type Database = {
           location_id: string | null
           notes: string | null
           payment_status: string
+          refund_status: string
           requested_date: string
           requested_window: string | null
           service_fee_estimate: number | null
+          service_fee_final: number | null
           status: Database["public"]["Enums"]["order_status"]
           subscription_id: string | null
           updated_at: string
@@ -439,6 +445,10 @@ export type Database = {
         }
         Insert: {
           assigned_employee_id?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_by_role?: string | null
           completed_at?: string | null
           confirmed_at?: string | null
           created_at?: string
@@ -449,9 +459,11 @@ export type Database = {
           location_id?: string | null
           notes?: string | null
           payment_status?: string
+          refund_status?: string
           requested_date?: string
           requested_window?: string | null
           service_fee_estimate?: number | null
+          service_fee_final?: number | null
           status?: Database["public"]["Enums"]["order_status"]
           subscription_id?: string | null
           updated_at?: string
@@ -459,6 +471,10 @@ export type Database = {
         }
         Update: {
           assigned_employee_id?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_by_role?: string | null
           completed_at?: string | null
           confirmed_at?: string | null
           created_at?: string
@@ -469,9 +485,11 @@ export type Database = {
           location_id?: string | null
           notes?: string | null
           payment_status?: string
+          refund_status?: string
           requested_date?: string
           requested_window?: string | null
           service_fee_estimate?: number | null
+          service_fee_final?: number | null
           status?: Database["public"]["Enums"]["order_status"]
           subscription_id?: string | null
           updated_at?: string
