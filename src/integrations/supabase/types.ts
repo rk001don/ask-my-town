@@ -72,15 +72,7 @@ export type Database = {
           metadata?: Json | null
           staff_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "audit_log_staff_id_fkey"
-            columns: ["staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       categories: {
         Row: {
