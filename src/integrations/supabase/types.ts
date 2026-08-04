@@ -292,6 +292,102 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_campaigns: {
+        Row: {
+          body: string
+          category: string | null
+          created_at: string
+          created_by: string | null
+          deep_link: string | null
+          id: string
+          image_url: string | null
+          scheduled_at: string | null
+          sent_at: string | null
+          status: string
+          target: string
+          target_filter: Json
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          deep_link?: string | null
+          id?: string
+          image_url?: string | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          target?: string
+          target_filter?: Json
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          deep_link?: string | null
+          id?: string
+          image_url?: string | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          target?: string
+          target_filter?: Json
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notification_deliveries: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          device_id: string
+          error: string | null
+          id: string
+          status: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          device_id: string
+          error?: string | null
+          id?: string
+          status?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          device_id?: string
+          error?: string | null
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_deliveries_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "notification_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_deliveries_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "push_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_attachments: {
         Row: {
           created_at: string
@@ -606,6 +702,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_devices: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_seen_at: string
+          p256dh: string
+          platform: string
+          topics: string[]
+          user_id: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_seen_at?: string
+          p256dh: string
+          platform?: string
+          topics?: string[]
+          user_id?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_seen_at?: string
+          p256dh?: string
+          platform?: string
+          topics?: string[]
+          user_id?: string | null
+        }
+        Relationships: []
       }
       rate_limit_hits: {
         Row: {
