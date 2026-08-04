@@ -20,7 +20,8 @@ const STORAGE_KEY = "mytown.cart.v1";
 
 type State = { items: CartItem[] };
 
-let state: State = { items: [] };
+const EMPTY_STATE: State = { items: [] };
+let state: State = EMPTY_STATE;
 const listeners = new Set<() => void>();
 
 function loadFromStorage() {
@@ -69,7 +70,7 @@ function getSnapshot(): State {
 }
 
 function getServerSnapshot(): State {
-  return { items: [] };
+  return EMPTY_STATE;
 }
 
 export function useCart() {

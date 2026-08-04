@@ -81,9 +81,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 function MobileCartBar() {
   const cartCount = useCartCount();
+  const { items } = useCart();
+
   if (cartCount === 0) return null;
 
-  const { items } = useCart();
   const total = items.reduce((sum: number, item: { unitPrice?: number | null; quantity: number }) => {
     const unitPrice = item.unitPrice ?? 0;
     return sum + unitPrice * item.quantity;
