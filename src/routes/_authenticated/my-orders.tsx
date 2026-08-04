@@ -11,6 +11,8 @@ import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { CancelOrderDialog } from "@/components/CancelOrderDialog";
+import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/my-orders")({
   head: () => ({
@@ -33,20 +35,21 @@ function MyOrdersPage() {
   const cancelOrderFn = useServerFn(cancelMyOrder);
   const qc = useQueryClient();
   const nav = useNavigate();
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
-  async function cancelOrder(orderId: string) {
-    const reason = window.prompt(
-      "Tell us why you're cancelling this order (optional):",
-      "Customer cancelled order.",
-    );
-    if (reason === null) return;
-
+  async function cancelOrder(reason: string) {
+    if (!cancelOrderId) return;
+    setCancelling(true);
     try {
-      await cancelOrderFn({ data: { orderId, reason: reason.trim() || undefined } });
+      await cancelOrderFn({ data: { orderId: cancelOrderId, reason: reason || undefined } });
       toast.success("Order cancelled");
+      setCancelOrderId(null);
       qc.invalidateQueries({ queryKey: ["my-orders"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Cancellation failed");
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -144,7 +147,7 @@ function MyOrdersPage() {
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      void cancelOrder(o.id);
+                      setCancelOrderId(o.id);
                     }}
                     className="tap-scale mt-3 rounded-full border border-[color:var(--danger)]/60 px-3 py-1.5 text-[11px] font-semibold text-[color:var(--danger)]"
                   >
@@ -156,6 +159,14 @@ function MyOrdersPage() {
           })}
         </div>
       </div>
+      <CancelOrderDialog
+        open={cancelOrderId !== null}
+        orderId={cancelOrderId}
+        reasonOptional
+        busy={cancelling}
+        onOpenChange={(open) => !open && setCancelOrderId(null)}
+        onConfirm={cancelOrder}
+      />
     </div>
   );
 }

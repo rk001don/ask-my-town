@@ -25,6 +25,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     !loc.pathname.startsWith("/order/") &&
     !loc.pathname.startsWith("/auth") &&
     !loc.pathname.startsWith("/my-orders");
+  const showBottomNav =
+    !loc.pathname.startsWith("/cart") &&
+    !loc.pathname.startsWith("/checkout") &&
+    !loc.pathname.startsWith("/order/") &&
+    !loc.pathname.startsWith("/auth") &&
+    !loc.pathname.startsWith("/my-orders");
 
   if (hideNav) {
     return <div className="min-h-[100dvh] w-full">{children}</div>;
@@ -71,9 +77,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         </main>
         <AskFAB />
         {showFloatingCart && <MobileCartBar />}
-        <div className="md:hidden">
-          <BottomNav pathname={loc.pathname} />
-        </div>
+        {showBottomNav && (
+          <div className="md:hidden">
+            <BottomNav pathname={loc.pathname} />
+          </div>
+        )}
       </div>
     </div>
   );

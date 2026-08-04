@@ -262,9 +262,9 @@ function Home() {
             See all
           </Link>
         </div>
-        <div className="no-scrollbar mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
+        <div className="no-scrollbar mt-3 grid auto-cols-[minmax(9.5rem,10.5rem)] grid-flow-col snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
           {POPULAR_PICKS.map((p) => (
-            <div key={p.name} className="w-40 shrink-0 snap-start">
+            <div key={p.name} className="min-w-0 snap-start [&>div]:h-full">
               <ItemCard
                 itemName={p.name}
                 category={p.category}

@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppHeader } from "@/components/AppHeader";
 import { EmptyState } from "@/components/States";
 import { useCart, decrementItem, incrementItem, removeItem, setItemNotes } from "@/lib/cart-store";
-import { Minus, Plus, Sparkles, StickyNote, Trash2 } from "lucide-react";
+import { ArrowRight, Minus, Plus, ShoppingBag, Sparkles, StickyNote, Trash2 } from "lucide-react";
 import { iconFor } from "@/components/icon-map";
 import { ServiceFeeBreakdown } from "@/components/ServiceFeeBreakdown";
 import { useState } from "react";
@@ -52,10 +52,17 @@ function Cart() {
   return (
     <div>
       <AppHeader title="Your ask" />
-      <div className="px-4 pt-2">
-        <div className="rise text-sm text-[color:var(--text-secondary)]">
-          <span className="text-[color:var(--accent-primary)] font-semibold">{itemCount}</span>{" "}
-          {itemCount === 1 ? "item" : "items"} added
+      <div className="px-4 pt-3">
+        <div className="rise grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl bg-[color:var(--bg-elevated)] p-3">
+          <div className="grid h-10 w-10 place-items-center rounded-lg bg-[color:var(--accent-primary)]/15 text-[color:var(--accent-primary)]">
+            <ShoppingBag className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">Your order</div>
+            <div className="truncate text-xs text-[color:var(--text-secondary)]">
+              {itemCount} {itemCount === 1 ? "item" : "items"} · Review quantities and notes
+            </div>
+          </div>
         </div>
       </div>
       <ul className="space-y-3 p-4">
@@ -82,14 +89,15 @@ function Cart() {
       </div>
 
       <div
-        className="glass fixed bottom-0 left-1/2 z-30 w-full max-w-[520px] -translate-x-1/2 md:max-w-2xl border-t border-[color:var(--border-subtle)] p-4"
+        className="glass fixed bottom-0 left-1/2 z-[60] w-full max-w-[520px] -translate-x-1/2 border-t border-[color:var(--border-subtle)] p-4 md:max-w-2xl"
         style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
       >
         <button
+          type="button"
           onClick={() => navigate({ to: "/checkout" })}
-          className="tap-scale w-full rounded-full accent-gradient py-3.5 text-[15px] font-bold"
+          className="tap-scale flex min-h-12 w-full items-center justify-center gap-2 rounded-xl accent-gradient px-4 py-3.5 text-[15px] font-bold"
         >
-          Continue
+          Continue to delivery <ArrowRight className="h-4 w-4" />
         </button>
       </div>
       <div className="h-24" />

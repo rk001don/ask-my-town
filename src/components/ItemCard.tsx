@@ -41,7 +41,7 @@ export function ItemCard({
   const safeImageUrl = imageUrl && !imageFailed ? imageUrl : null;
 
   return (
-    <div className="card-surface rise flex flex-col overflow-hidden">
+    <div className="card-surface rise flex min-w-0 flex-col overflow-hidden">
       <div
         className="relative flex h-28 items-center justify-center"
         style={
@@ -72,11 +72,11 @@ export function ItemCard({
           <StickyNote className="h-4 w-4" />
         </button>
       </div>
-      <div className="flex flex-1 flex-col gap-2 p-3">
+      <div className="flex min-w-0 flex-1 flex-col gap-2 p-3">
         <div className="min-h-[2.5rem] text-[14px] font-semibold leading-tight line-clamp-2">
           {itemName}
         </div>
-        <p className="text-[11px] font-semibold text-[color:var(--text-primary)]">
+        <p className="break-words text-[11px] font-semibold text-[color:var(--text-primary)]">
           {priceLabel ?? "Price confirmed after you ask"}
         </p>
         {reason && (

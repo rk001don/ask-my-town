@@ -16,6 +16,7 @@ import { formatTimeRange12h } from "@/lib/time";
 import { AppHeader } from "@/components/AppHeader";
 import { toast } from "sonner";
 import { Loader2, LogOut, RefreshCw, Phone, MapPin, ShieldAlert, Paperclip, X } from "lucide-react";
+import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 
 export const Route = createFileRoute("/staff")({
   head: () => ({
@@ -249,6 +250,8 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [mobileFilter, setMobileFilter] = useState<"active" | OrderStatus>("active");
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   async function openAttachment(filePath: string) {
     setPreviewLoading(true);
@@ -314,19 +317,18 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
     }
   }
 
-  async function cancelOrder(orderId: string) {
-    const reason = window.prompt(
-      "Enter the reason for cancelling this order:",
-      "Cancelled by staff.",
-    );
-    if (reason === null) return;
-
+  async function confirmCancellation(reason: string) {
+    if (!cancelOrderId) return;
+    setCancelling(true);
     try {
-      await cancelFn({ data: { orderId, reason: reason.trim() || "Cancelled by staff." } });
+      await cancelFn({ data: { orderId: cancelOrderId, reason: reason || "Cancelled by staff." } });
       toast.success("Order cancelled");
+      setCancelOrderId(null);
       qc.invalidateQueries({ queryKey: ["staff-orders"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Cancellation failed");
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -435,7 +437,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                         order={{ ...o, status: s }}
                         onOpenAttachment={openAttachment}
                         onAdvance={setStatus}
-                        onCancel={cancelOrder}
+                        onCancel={setCancelOrderId}
                         windowRanges={windowRanges}
                       />
                     ))}
@@ -490,7 +492,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                     order={o}
                     onOpenAttachment={openAttachment}
                     onAdvance={setStatus}
-                    onCancel={cancelOrder}
+                    onCancel={setCancelOrderId}
                     windowRanges={windowRanges}
                   />
                 ))}
@@ -531,6 +533,14 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
           )}
         </div>
       )}
+      <CancelOrderDialog
+        open={cancelOrderId !== null}
+        orderId={cancelOrderId}
+        defaultReason="Cancelled by staff."
+        busy={cancelling}
+        onOpenChange={(open) => !open && setCancelOrderId(null)}
+        onConfirm={confirmCancellation}
+      />
     </div>
   );
 }
