@@ -72,15 +72,7 @@ export type Database = {
           metadata?: Json | null
           staff_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "audit_log_staff_id_fkey"
-            columns: ["staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       categories: {
         Row: {
@@ -300,6 +292,102 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_campaigns: {
+        Row: {
+          body: string
+          category: string | null
+          created_at: string
+          created_by: string | null
+          deep_link: string | null
+          id: string
+          image_url: string | null
+          scheduled_at: string | null
+          sent_at: string | null
+          status: string
+          target: string
+          target_filter: Json
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          deep_link?: string | null
+          id?: string
+          image_url?: string | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          target?: string
+          target_filter?: Json
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          deep_link?: string | null
+          id?: string
+          image_url?: string | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          status?: string
+          target?: string
+          target_filter?: Json
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      notification_deliveries: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          device_id: string
+          error: string | null
+          id: string
+          status: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          device_id: string
+          error?: string | null
+          id?: string
+          status?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          device_id?: string
+          error?: string | null
+          id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_deliveries_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "notification_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_deliveries_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "push_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_attachments: {
         Row: {
           created_at: string
@@ -427,6 +515,10 @@ export type Database = {
       orders: {
         Row: {
           assigned_employee_id: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancelled_by_role: string | null
           completed_at: string | null
           confirmed_at: string | null
           created_at: string
@@ -437,9 +529,11 @@ export type Database = {
           location_id: string | null
           notes: string | null
           payment_status: string
+          refund_status: string
           requested_date: string
           requested_window: string | null
           service_fee_estimate: number | null
+          service_fee_final: number | null
           status: Database["public"]["Enums"]["order_status"]
           subscription_id: string | null
           updated_at: string
@@ -447,6 +541,10 @@ export type Database = {
         }
         Insert: {
           assigned_employee_id?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_by_role?: string | null
           completed_at?: string | null
           confirmed_at?: string | null
           created_at?: string
@@ -457,9 +555,11 @@ export type Database = {
           location_id?: string | null
           notes?: string | null
           payment_status?: string
+          refund_status?: string
           requested_date?: string
           requested_window?: string | null
           service_fee_estimate?: number | null
+          service_fee_final?: number | null
           status?: Database["public"]["Enums"]["order_status"]
           subscription_id?: string | null
           updated_at?: string
@@ -467,6 +567,10 @@ export type Database = {
         }
         Update: {
           assigned_employee_id?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          cancelled_by_role?: string | null
           completed_at?: string | null
           confirmed_at?: string | null
           created_at?: string
@@ -477,9 +581,11 @@ export type Database = {
           location_id?: string | null
           notes?: string | null
           payment_status?: string
+          refund_status?: string
           requested_date?: string
           requested_window?: string | null
           service_fee_estimate?: number | null
+          service_fee_final?: number | null
           status?: Database["public"]["Enums"]["order_status"]
           subscription_id?: string | null
           updated_at?: string
@@ -596,6 +702,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_devices: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_seen_at: string
+          p256dh: string
+          platform: string
+          topics: string[]
+          user_id: string | null
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_seen_at?: string
+          p256dh: string
+          platform?: string
+          topics?: string[]
+          user_id?: string | null
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_seen_at?: string
+          p256dh?: string
+          platform?: string
+          topics?: string[]
+          user_id?: string | null
+        }
+        Relationships: []
       }
       rate_limit_hits: {
         Row: {

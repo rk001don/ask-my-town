@@ -6,7 +6,7 @@ import { CategoryTile } from "@/components/CategoryTile";
 import { TileSkeleton, ErrorState } from "@/components/States";
 import { useEffect, useState } from "react";
 
-const opts = queryOptions({ queryKey: ["categories", "top"], queryFn: () => getCategories() });
+export const opts = queryOptions({ queryKey: ["categories", "top"], queryFn: () => getCategories() });
 
 export const Route = createFileRoute("/explore")({
   loader: ({ context }) => context.queryClient.ensureQueryData(opts),
