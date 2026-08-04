@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { getMyOrders } from "@/lib/auth.functions";
+import { cancelMyOrder, getMyOrders } from "@/lib/auth.functions";
 import { AppHeader } from "@/components/AppHeader";
 import { EmptyState, CardSkeleton, ErrorState } from "@/components/States";
 import { STATUS_COPY, type OrderStatus } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
+import { getOrderTotals } from "@/lib/serviceFee";
 import { LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -29,8 +30,25 @@ export const Route = createFileRoute("/_authenticated/my-orders")({
 
 function MyOrdersPage() {
   const fetchOrders = useServerFn(getMyOrders);
+  const cancelOrderFn = useServerFn(cancelMyOrder);
   const qc = useQueryClient();
   const nav = useNavigate();
+
+  async function cancelOrder(orderId: string) {
+    const reason = window.prompt(
+      "Tell us why you're cancelling this order (optional):",
+      "Customer cancelled order.",
+    );
+    if (reason === null) return;
+
+    try {
+      await cancelOrderFn({ data: { orderId, reason: reason.trim() || undefined } });
+      toast.success("Order cancelled");
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Cancellation failed");
+    }
+  }
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["my-orders"],
@@ -99,10 +117,15 @@ function MyOrdersPage() {
                 {(() => {
                   const priced = (o.items ?? []).filter((i) => i.unit_price != null);
                   if (priced.length === 0) return null;
-                  const total = priced.reduce((n, i) => n + (i.unit_price ?? 0) * i.quantity, 0);
+                  const totals = getOrderTotals(priced, o.service_fee_estimate ?? null);
                   return (
                     <div className="mt-1 text-xs font-semibold text-[color:var(--accent-primary)]">
-                      ₹{total}
+                      ₹{totals.total}
+                      {totals.serviceFee != null && (
+                        <span className="ml-1 text-[color:var(--text-secondary)]">
+                          (incl. ₹{totals.serviceFee} fee)
+                        </span>
+                      )}
                     </div>
                   );
                 })()}
@@ -114,6 +137,19 @@ function MyOrdersPage() {
                   <div className="mt-2 text-xs text-[color:var(--text-tertiary)]">
                     Scheduled: {o.requested_date} · {o.requested_window}
                   </div>
+                )}
+                {status === "received" && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      void cancelOrder(o.id);
+                    }}
+                    className="tap-scale mt-3 rounded-full border border-[color:var(--danger)]/60 px-3 py-1.5 text-[11px] font-semibold text-[color:var(--danger)]"
+                  >
+                    Cancel order
+                  </button>
                 )}
               </Link>
             );

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyRoles } from "@/lib/auth.functions";
 import {
+  cancelStaffOrder,
   listStaffOrders,
   updateStaffOrderStatus,
   getAttachmentSignedUrl,
@@ -56,11 +57,13 @@ function StaffOrderCard({
   order: o,
   onOpenAttachment,
   onAdvance,
+  onCancel,
   windowRanges,
 }: {
   order: StaffOrderRow;
   onOpenAttachment: (filePath: string) => void;
   onAdvance: (orderId: string, nextStatus: OrderStatus) => void;
+  onCancel: (orderId: string) => void;
   windowRanges: Record<string, string>;
 }) {
   const idx = ORDER_STATUS_STEPS.findIndex((st) => st.key === o.status);
@@ -126,6 +129,14 @@ function StaffOrderCard({
           className="tap-scale mt-2 w-full rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold text-[color:var(--on-accent)]"
         >
           Mark {STATUS_COPY[nextStep]?.label ?? nextStep}
+        </button>
+      )}
+      {o.status !== "cancelled" && o.status !== "completed" && (
+        <button
+          onClick={() => onCancel(o.id)}
+          className="tap-scale mt-2 w-full rounded-full border border-[color:var(--danger)]/70 px-3 py-1.5 text-xs font-semibold text-[color:var(--danger)]"
+        >
+          Cancel order
         </button>
       )}
     </div>
@@ -232,6 +243,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
   const rolesFn = useServerFn(getMyRoles);
   const listFn = useServerFn(listStaffOrders);
   const updateFn = useServerFn(updateStaffOrderStatus);
+  const cancelFn = useServerFn(cancelStaffOrder);
   const signedUrlFn = useServerFn(getAttachmentSignedUrl);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -299,6 +311,22 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
       qc.invalidateQueries({ queryKey: ["staff-orders"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Update failed");
+    }
+  }
+
+  async function cancelOrder(orderId: string) {
+    const reason = window.prompt(
+      "Enter the reason for cancelling this order:",
+      "Cancelled by staff.",
+    );
+    if (reason === null) return;
+
+    try {
+      await cancelFn({ data: { orderId, reason: reason.trim() || "Cancelled by staff." } });
+      toast.success("Order cancelled");
+      qc.invalidateQueries({ queryKey: ["staff-orders"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Cancellation failed");
     }
   }
 
@@ -407,6 +435,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                         order={{ ...o, status: s }}
                         onOpenAttachment={openAttachment}
                         onAdvance={setStatus}
+                        onCancel={cancelOrder}
                         windowRanges={windowRanges}
                       />
                     ))}
@@ -461,6 +490,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                     order={o}
                     onOpenAttachment={openAttachment}
                     onAdvance={setStatus}
+                    onCancel={cancelOrder}
                     windowRanges={windowRanges}
                   />
                 ))}

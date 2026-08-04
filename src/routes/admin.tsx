@@ -21,6 +21,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { CatalogImageUpload } from "@/components/CatalogImageUpload";
 import { toast } from "sonner";
 import { to12Hour } from "@/lib/time";
+import { createCampaign, listCampaigns, sendTestNotification } from "@/lib/notifications-admin.functions";
 import { Loader2, ShieldAlert, LogOut, Plus, Trash2, Search, ArrowUpDown, X } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
@@ -88,6 +89,9 @@ function AdminBoard({ email }: { email: string }) {
   const updateConfigFn = useServerFn(updateAppConfig);
   const batchesFn = useServerFn(listDeliveryBatches);
   const advanceBatchFn = useServerFn(updateBatchStatus);
+  const createCampaignFn = useServerFn(createCampaign);
+  const listCampaignsFn = useServerFn(listCampaigns);
+  const sendTestNotificationFn = useServerFn(sendTestNotification);
 
   const rolesQ = useQuery({ queryKey: ["my-roles"], queryFn: () => rolesFn(), staleTime: 60_000 });
   const isAdmin = rolesQ.data?.isAdmin ?? false;
@@ -112,6 +116,11 @@ function AdminBoard({ email }: { email: string }) {
     queryFn: () => batchesFn(),
     enabled: isAdmin,
   });
+  const campaignsQ = useQuery({
+    queryKey: ["admin-campaigns"],
+    queryFn: () => listCampaignsFn(),
+    enabled: isAdmin,
+  });
 
   // ----- product list: search, category filter, sort -----
   const [search, setSearch] = useState("");
@@ -120,6 +129,26 @@ function AdminBoard({ email }: { email: string }) {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [showNewProduct, setShowNewProduct] = useState(false);
   const [showNewCategory, setShowNewCategory] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    "dashboard" | "catalog" | "notifications" | "config" | "delivery"
+  >("dashboard");
+
+  const dashboardStats = useMemo(() => {
+    const productCount = productsQ.data?.length ?? 0;
+    const categoryCount = categoriesQ.data?.length ?? 0;
+    const batchCount = batchesQ.data?.length ?? 0;
+    const openBatchCount = (batchesQ.data ?? []).filter((b) => b.status !== "delivered").length;
+    const campaignCount = campaignsQ.data?.length ?? 0;
+    const scheduledCount = (campaignsQ.data ?? []).filter((c) => c.status === "scheduled").length;
+    return {
+      productCount,
+      categoryCount,
+      batchCount,
+      openBatchCount,
+      campaignCount,
+      scheduledCount,
+    };
+  }, [batchesQ.data, campaignsQ.data, categoriesQ.data, productsQ.data]);
 
   const filteredProducts = useMemo(() => {
     let rows = productsQ.data ?? [];
@@ -234,6 +263,34 @@ function AdminBoard({ email }: { email: string }) {
     }
   }
 
+  async function saveCampaign(input: {
+    type: string;
+    title: string;
+    body: string;
+    image_url?: string | null;
+    deep_link?: string | null;
+    category?: string | null;
+    target?: string;
+    scheduled_at?: string | null;
+  }) {
+    try {
+      await createCampaignFn({ data: input });
+      toast.success("Campaign saved");
+      qc.invalidateQueries({ queryKey: ["admin-campaigns"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't save campaign");
+    }
+  }
+
+  async function sendTest(input: { title: string; body: string; deep_link?: string | null }) {
+    try {
+      const result = await sendTestNotificationFn({ data: input });
+      toast.success(result.sent ? `Test push sent to ${result.sent} device(s)` : "No devices registered yet");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't send test");
+    }
+  }
+
   if (rolesQ.isLoading) {
     return (
       <div className="p-6">
@@ -269,241 +326,380 @@ function AdminBoard({ email }: { email: string }) {
         </button>
       </div>
 
-      {/* -------------------- Products -------------------- */}
-      <section className="mb-8">
-        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-semibold">Products</h2>
-          <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 sm:flex">
-            <button
-              onClick={() => setShowNewCategory((v) => !v)}
-              className="tap-scale flex min-h-11 items-center gap-1 rounded-full border border-[color:var(--border-strong)] px-3 py-2 text-xs font-semibold"
-            >
-              <Plus className="h-3.5 w-3.5" /> New category
-            </button>
-            <button
-              onClick={() => setShowNewProduct((v) => !v)}
-              className="tap-scale flex min-h-11 items-center gap-1 rounded-full accent-gradient px-3 py-2 text-xs font-semibold"
-            >
-              <Plus className="h-3.5 w-3.5" /> New product
-            </button>
-          </div>
-        </div>
-
-        {showNewCategory && (
-          <NewCategoryForm
-            categories={categoriesQ.data ?? []}
-            onCancel={() => setShowNewCategory(false)}
-            onSubmit={addCategory}
-          />
-        )}
-
-        {showNewProduct && (
-          <NewProductForm
-            categories={categoriesQ.data ?? []}
-            onCancel={() => setShowNewProduct(false)}
-            onSubmit={addProduct}
-          />
-        )}
-
-        {/* Search + category filter — works the same on mobile and desktop */}
-        <div className="mb-3 flex flex-col gap-2 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search products…"
-              className="w-full rounded-full border border-[color:var(--border-strong)] bg-transparent py-2 pl-9 pr-3 text-sm outline-none focus:border-[color:var(--accent-primary)]"
-            />
-          </div>
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] px-3 py-2 text-sm"
+      <div className="mb-5 flex flex-wrap gap-2">
+        {[
+          { id: "dashboard", label: "Dashboard" },
+          { id: "catalog", label: "Catalog" },
+          { id: "notifications", label: "Notifications" },
+          { id: "config", label: "Config" },
+          { id: "delivery", label: "Delivery" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() =>
+              setActiveTab(
+                tab.id as "dashboard" | "catalog" | "notifications" | "config" | "delivery",
+              )
+            }
+            className={`tap-scale min-h-11 rounded-full px-3 py-2 text-xs font-semibold transition-colors ${
+              activeTab === tab.id
+                ? "accent-gradient text-white"
+                : "border border-[color:var(--border-strong)] bg-transparent text-[color:var(--text-secondary)]"
+            }`}
           >
-            <option value="all">All categories</option>
-            {(categoriesQ.data ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-        {productsQ.isLoading ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
-        ) : filteredProducts.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[color:var(--border-strong)] p-6 text-center text-sm text-[color:var(--text-tertiary)]">
-            No products match that search/filter.
+      {activeTab === "dashboard" && (
+        <section className="mb-8 space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Operations dashboard</h2>
+            <p className="mt-1 text-xs text-[color:var(--text-secondary)]">
+              A quick snapshot of catalog coverage, campaign activity, and delivery flow.
+            </p>
           </div>
-        ) : (
-          <>
-            {/* Desktop: sortable table */}
-            <div className="hidden overflow-x-auto rounded-2xl border border-[color:var(--border-subtle)] md:block">
-              <table className="w-full text-sm">
-                <thead className="bg-white/5 text-left text-xs uppercase text-[color:var(--text-tertiary)]">
-                  <tr>
-                    <th className="p-3">Image</th>
-                    <SortableHeader
-                      label="Name"
-                      col="name"
-                      sortBy={sortBy}
-                      sortDir={sortDir}
-                      onSort={toggleSort}
-                    />
-                    <SortableHeader
-                      label="Category"
-                      col="category"
-                      sortBy={sortBy}
-                      sortDir={sortDir}
-                      onSort={toggleSort}
-                    />
-                    <SortableHeader
-                      label="Price (₹)"
-                      col="price"
-                      sortBy={sortBy}
-                      sortDir={sortDir}
-                      onSort={toggleSort}
-                    />
-                    <th className="p-3">Show price</th>
-                    <th className="p-3">Service</th>
-                    <th className="p-3">Schedulable</th>
-                    <th className="p-3">Available</th>
-                    <th className="p-3" />
-                  </tr>
-                </thead>
-                <tbody>
+
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="glass rounded-2xl p-4">
+              <div className="text-[11px] uppercase tracking-wide text-[color:var(--text-tertiary)]">
+                Products
+              </div>
+              <div className="mt-2 text-2xl font-semibold">{dashboardStats.productCount}</div>
+            </div>
+            <div className="glass rounded-2xl p-4">
+              <div className="text-[11px] uppercase tracking-wide text-[color:var(--text-tertiary)]">
+                Categories
+              </div>
+              <div className="mt-2 text-2xl font-semibold">{dashboardStats.categoryCount}</div>
+            </div>
+            <div className="glass rounded-2xl p-4">
+              <div className="text-[11px] uppercase tracking-wide text-[color:var(--text-tertiary)]">
+                Active batches
+              </div>
+              <div className="mt-2 text-2xl font-semibold">{dashboardStats.openBatchCount}</div>
+            </div>
+            <div className="glass rounded-2xl p-4">
+              <div className="text-[11px] uppercase tracking-wide text-[color:var(--text-tertiary)]">
+                Campaigns
+              </div>
+              <div className="mt-2 text-2xl font-semibold">{dashboardStats.campaignCount}</div>
+            </div>
+            <div className="glass rounded-2xl p-4">
+              <div className="text-[11px] uppercase tracking-wide text-[color:var(--text-tertiary)]">
+                Scheduled
+              </div>
+              <div className="mt-2 text-2xl font-semibold">{dashboardStats.scheduledCount}</div>
+            </div>
+            <div className="glass rounded-2xl p-4">
+              <div className="text-[11px] uppercase tracking-wide text-[color:var(--text-tertiary)]">
+                Total batches
+              </div>
+              <div className="mt-2 text-2xl font-semibold">{dashboardStats.batchCount}</div>
+            </div>
+          </div>
+
+          <div className="glass rounded-2xl p-4">
+            <h3 className="text-sm font-semibold">Quick status</h3>
+            <div className="mt-3 space-y-2 text-sm text-[color:var(--text-secondary)]">
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2">
+                <span>Catalog coverage</span>
+                <span className="font-semibold text-[color:var(--text-primary)]">
+                  {dashboardStats.productCount} products / {dashboardStats.categoryCount} categories
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2">
+                <span>Notification pipeline</span>
+                <span className="font-semibold text-[color:var(--text-primary)]">
+                  {dashboardStats.campaignCount} campaigns, {dashboardStats.scheduledCount} scheduled
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2">
+                <span>Delivery flow</span>
+                <span className="font-semibold text-[color:var(--text-primary)]">
+                  {dashboardStats.openBatchCount} open / {dashboardStats.batchCount} total
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {activeTab === "catalog" && (
+        <>
+          <section className="mb-8">
+            <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-lg font-semibold">Products</h2>
+              <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 sm:flex">
+                <button
+                  onClick={() => setShowNewCategory((v) => !v)}
+                  className="tap-scale flex min-h-11 items-center gap-1 rounded-full border border-[color:var(--border-strong)] px-3 py-2 text-xs font-semibold"
+                >
+                  <Plus className="h-3.5 w-3.5" /> New category
+                </button>
+                <button
+                  onClick={() => setShowNewProduct((v) => !v)}
+                  className="tap-scale flex min-h-11 items-center gap-1 rounded-full accent-gradient px-3 py-2 text-xs font-semibold"
+                >
+                  <Plus className="h-3.5 w-3.5" /> New product
+                </button>
+              </div>
+            </div>
+
+            {showNewCategory && (
+              <NewCategoryForm
+                categories={categoriesQ.data ?? []}
+                onCancel={() => setShowNewCategory(false)}
+                onSubmit={addCategory}
+              />
+            )}
+
+            {showNewProduct && (
+              <NewProductForm
+                categories={categoriesQ.data ?? []}
+                onCancel={() => setShowNewProduct(false)}
+                onSubmit={addProduct}
+              />
+            )}
+
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search products…"
+                  className="w-full rounded-full border border-[color:var(--border-strong)] bg-transparent py-2 pl-9 pr-3 text-sm outline-none focus:border-[color:var(--accent-primary)]"
+                />
+              </div>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] px-3 py-2 text-sm"
+              >
+                <option value="all">All categories</option>
+                {(categoriesQ.data ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {productsQ.isLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : filteredProducts.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-[color:var(--border-strong)] p-6 text-center text-sm text-[color:var(--text-tertiary)]">
+                No products match that search/filter.
+              </div>
+            ) : (
+              <>
+                <div className="hidden overflow-x-auto rounded-2xl border border-[color:var(--border-subtle)] md:block">
+                  <table className="w-full text-sm">
+                    <thead className="bg-white/5 text-left text-xs uppercase text-[color:var(--text-tertiary)]">
+                      <tr>
+                        <th className="p-3">Image</th>
+                        <SortableHeader
+                          label="Name"
+                          col="name"
+                          sortBy={sortBy}
+                          sortDir={sortDir}
+                          onSort={toggleSort}
+                        />
+                        <SortableHeader
+                          label="Category"
+                          col="category"
+                          sortBy={sortBy}
+                          sortDir={sortDir}
+                          onSort={toggleSort}
+                        />
+                        <SortableHeader
+                          label="Price (₹)"
+                          col="price"
+                          sortBy={sortBy}
+                          sortDir={sortDir}
+                          onSort={toggleSort}
+                        />
+                        <th className="p-3">Show price</th>
+                        <th className="p-3">Service</th>
+                        <th className="p-3">Schedulable</th>
+                        <th className="p-3">Available</th>
+                        <th className="p-3" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredProducts.map((p) => (
+                        <ProductRow
+                          key={p.id}
+                          product={p}
+                          onPatch={(patch) => patchProduct(p.id, patch)}
+                          onDelete={() => removeProduct(p.id, p.name)}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="space-y-2 md:hidden">
                   {filteredProducts.map((p) => (
-                    <ProductRow
+                    <ProductCardAdmin
                       key={p.id}
                       product={p}
                       onPatch={(patch) => patchProduct(p.id, patch)}
                       onDelete={() => removeProduct(p.id, p.name)}
                     />
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </div>
+              </>
+            )}
+          </section>
 
-            {/* Mobile: stacked cards, same fields, no forced horizontal scroll */}
-            <div className="space-y-2 md:hidden">
-              {filteredProducts.map((p) => (
-                <ProductCardAdmin
-                  key={p.id}
-                  product={p}
-                  onPatch={(patch) => patchProduct(p.id, patch)}
-                  onDelete={() => removeProduct(p.id, p.name)}
+          <section className="mb-8">
+            <h2 className="mb-3 text-lg font-semibold">Categories</h2>
+            {categoriesQ.isLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <div className="space-y-2">
+                {(categoriesQ.data ?? []).map((c) => (
+                  <div key={c.id} className="card-surface flex items-center gap-3 p-3">
+                    <CatalogImageUpload
+                      imageUrl={c.image_url}
+                      onUploaded={(url) => patchCategory(c.id, { image_url: url })}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold">{c.name}</div>
+                      <div className="text-xs text-[color:var(--text-tertiary)]">
+                        {c.parent_id ? "Subcategory" : "Top-level"}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {(categoriesQ.data ?? []).length === 0 && (
+                  <div className="text-sm text-[color:var(--text-tertiary)]">No categories yet.</div>
+                )}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      {activeTab === "config" && (
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold">Feature flags / config</h2>
+          <p className="mb-3 mt-1 text-xs text-[color:var(--text-secondary)]">
+            App-wide settings you can change without a code deploy. Each value is raw JSON — e.g. for
+            a list of languages, type <span className="font-mono">["ta","en"]</span> (with the
+            brackets and quotes) and press Save.
+          </p>
+          {configQ.isLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <div className="space-y-3">
+              {(configQ.data ?? []).map((c) => (
+                <ConfigRow
+                  key={`${c.key}:${c.scope}:${c.scope_id}`}
+                  configKey={c.key}
+                  description={c.description}
+                  value={c.value}
+                  onSave={(raw) => saveConfig(c.key, raw)}
                 />
               ))}
             </div>
-          </>
-        )}
-      </section>
+          )}
+        </section>
+      )}
 
-      {/* -------------------- Categories -------------------- */}
-      <section className="mb-8">
-        <h2 className="mb-3 text-lg font-semibold">Categories</h2>
-        {categoriesQ.isLoading ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
-        ) : (
-          <div className="space-y-2">
-            {(categoriesQ.data ?? []).map((c) => (
-              <div key={c.id} className="card-surface flex items-center gap-3 p-3">
-                <CatalogImageUpload
-                  imageUrl={c.image_url}
-                  onUploaded={(url) => patchCategory(c.id, { image_url: url })}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold">{c.name}</div>
-                  <div className="text-xs text-[color:var(--text-tertiary)]">
-                    {c.parent_id ? "Subcategory" : "Top-level"}
+      {activeTab === "notifications" && (
+        <section className="mb-8">
+          <h2 className="text-lg font-semibold">Notification center</h2>
+          <p className="mb-3 mt-1 text-xs text-[color:var(--text-secondary)]">
+            Draft or schedule campaigns; send a test push to your own registered device before any
+            live broadcast.
+          </p>
+          <NotificationComposer onSave={saveCampaign} onTest={sendTest} />
+          <div className="mt-4 space-y-2">
+            {(campaignsQ.data ?? []).map((campaign) => (
+              <div key={campaign.id} className="glass rounded-2xl p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-sm font-semibold">{campaign.title}</div>
+                  <span className="rounded-full border border-[color:var(--border-strong)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[color:var(--text-secondary)]">
+                    {campaign.status}
+                  </span>
+                </div>
+                <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
+                  {campaign.type} · {campaign.target} · {campaign.category ?? "all"}
+                </div>
+                <p className="mt-2 text-sm text-[color:var(--text-primary)]">{campaign.body}</p>
+                {campaign.scheduled_at && (
+                  <div className="mt-2 text-[11px] text-[color:var(--text-tertiary)]">
+                    Scheduled: {new Date(campaign.scheduled_at).toLocaleString()}
+                  </div>
+                )}
+              </div>
+            ))}
+            {(campaignsQ.data ?? []).length === 0 && (
+              <div className="text-sm text-[color:var(--text-tertiary)]">
+                No campaigns yet — your first announcement will appear here.
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {activeTab === "delivery" && (
+        <section>
+          <h2 className="text-lg font-semibold">Delivery batches</h2>
+          <p className="mb-3 mt-1 text-xs text-[color:var(--text-secondary)]">
+            Orders placed for the same delivery window (e.g. "tomorrow evening") are grouped into one
+            batch so a single rider can deliver them together in one trip, instead of a separate trip
+            per order. <span className="font-semibold">Open</span> means it's still accepting new
+            orders for that window; <span className="font-semibold">locked/dispatched</span> means
+            it's on its way.
+          </p>
+          {batchesQ.isLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <div className="space-y-2">
+              {(batchesQ.data ?? []).map((b) => (
+                <div
+                  key={b.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-3 py-2 text-sm"
+                >
+                  <span className="capitalize">
+                    {b.scheduled_date} · {b.window_label}
+                    {b.scheduled_at && (
+                      <span className="ml-1 text-xs text-[color:var(--text-tertiary)]">
+                        ({to12Hour(new Date(b.scheduled_at).toTimeString().slice(0, 5))})
+                      </span>
+                    )}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs uppercase">
+                      {b.status}
+                    </span>
+                    {BATCH_NEXT_ACTION_LABEL[b.status] && (
+                      <button
+                        onClick={() => advanceBatch(b.id)}
+                        className="tap-scale rounded-full accent-gradient px-2.5 py-1 text-xs font-semibold"
+                      >
+                        {BATCH_NEXT_ACTION_LABEL[b.status]}
+                      </button>
+                    )}
                   </div>
                 </div>
-              </div>
-            ))}
-            {(categoriesQ.data ?? []).length === 0 && (
-              <div className="text-sm text-[color:var(--text-tertiary)]">No categories yet.</div>
-            )}
-          </div>
-        )}
-      </section>
-
-      {/* -------------------- App config -------------------- */}
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold">Feature flags / config</h2>
-        <p className="mb-3 mt-1 text-xs text-[color:var(--text-secondary)]">
-          App-wide settings you can change without a code deploy. Each value is raw JSON — e.g. for
-          a list of languages, type <span className="font-mono">["ta","en"]</span> (with the
-          brackets and quotes) and press Save.
-        </p>
-        {configQ.isLoading ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
-        ) : (
-          <div className="space-y-3">
-            {(configQ.data ?? []).map((c) => (
-              <ConfigRow
-                key={`${c.key}:${c.scope}:${c.scope_id}`}
-                configKey={c.key}
-                description={c.description}
-                value={c.value}
-                onSave={(raw) => saveConfig(c.key, raw)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* -------------------- Delivery batches -------------------- */}
-      <section>
-        <h2 className="text-lg font-semibold">Delivery batches</h2>
-        <p className="mb-3 mt-1 text-xs text-[color:var(--text-secondary)]">
-          Orders placed for the same delivery window (e.g. "tomorrow evening") are grouped into one
-          batch so a single rider can deliver them together in one trip, instead of a separate trip
-          per order. <span className="font-semibold">Open</span> means it's still accepting new
-          orders for that window; <span className="font-semibold">locked/dispatched</span> means
-          it's on its way.
-        </p>
-        {batchesQ.isLoading ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
-        ) : (
-          <div className="space-y-2">
-            {(batchesQ.data ?? []).map((b) => (
-              <div
-                key={b.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-3 py-2 text-sm"
-              >
-                <span className="capitalize">
-                  {b.scheduled_date} · {b.window_label}
-                  {b.scheduled_at && (
-                    <span className="ml-1 text-xs text-[color:var(--text-tertiary)]">
-                      ({to12Hour(new Date(b.scheduled_at).toTimeString().slice(0, 5))})
-                    </span>
-                  )}
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs uppercase">
-                    {b.status}
-                  </span>
-                  {BATCH_NEXT_ACTION_LABEL[b.status] && (
-                    <button
-                      onClick={() => advanceBatch(b.id)}
-                      className="tap-scale rounded-full accent-gradient px-2.5 py-1 text-xs font-semibold"
-                    >
-                      {BATCH_NEXT_ACTION_LABEL[b.status]}
-                    </button>
-                  )}
+              ))}
+              {(batchesQ.data ?? []).length === 0 && (
+                <div className="text-sm text-[color:var(--text-tertiary)]">
+                  No batches yet — one is created automatically the first time an order is placed for
+                  a given day/window.
                 </div>
-              </div>
-            ))}
-            {(batchesQ.data ?? []).length === 0 && (
-              <div className="text-sm text-[color:var(--text-tertiary)]">
-                No batches yet — one is created automatically the first time an order is placed for
-                a given day/window.
-              </div>
-            )}
-          </div>
-        )}
-      </section>
+              )}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }
@@ -906,6 +1102,159 @@ function ConfigRow({
             className="tap-scale min-h-11 rounded-full accent-gradient px-4 py-2 text-xs font-semibold"
           >
             Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NotificationComposer({
+  onSave,
+  onTest,
+}: {
+  onSave: (input: {
+    type: string;
+    title: string;
+    body: string;
+    image_url?: string | null;
+    deep_link?: string | null;
+    category?: string | null;
+    target?: string;
+    scheduled_at?: string | null;
+  }) => Promise<void>;
+  onTest: (input: { title: string; body: string; deep_link?: string | null }) => Promise<void>;
+}) {
+  const [type, setType] = useState("service_update");
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [deepLink, setDeepLink] = useState("");
+  const [category, setCategory] = useState("");
+  const [target, setTarget] = useState("everyone");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  return (
+    <div className="glass space-y-3 rounded-2xl p-4">
+      <div className="grid gap-2 sm:grid-cols-2">
+        <select
+          value={type}
+          onChange={(e) => setType(e.target.value)}
+          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+        >
+          <option value="order_update">Order update</option>
+          <option value="delivery_update">Delivery update</option>
+          <option value="offer">Offer</option>
+          <option value="new_category">New category</option>
+          <option value="flash_sale">Flash sale</option>
+          <option value="maintenance">Maintenance</option>
+          <option value="service_update">Service update</option>
+          <option value="festival">Festival</option>
+          <option value="emergency">Emergency</option>
+        </select>
+        <select
+          value={target}
+          onChange={(e) => setTarget(e.target.value)}
+          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+        >
+          <option value="everyone">Everyone</option>
+          <option value="customers">Customers</option>
+          <option value="staff">Staff</option>
+          <option value="admins">Admins</option>
+          <option value="selected_users">Selected users</option>
+        </select>
+      </div>
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Title"
+        className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+      />
+      <textarea
+        value={body}
+        onChange={(e) => setBody(e.target.value)}
+        placeholder="Body text"
+        rows={3}
+        className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+      />
+      <div className="grid gap-2 sm:grid-cols-3">
+        <input
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          placeholder="Category (optional)"
+          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+        />
+        <input
+          value={deepLink}
+          onChange={(e) => setDeepLink(e.target.value)}
+          placeholder="Deep link (/explore)"
+          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+        />
+        <input
+          type="datetime-local"
+          value={scheduledAt}
+          onChange={(e) => setScheduledAt(e.target.value)}
+          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+        />
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-[color:var(--text-tertiary)]">Image</span>
+          <CatalogImageUpload
+            imageUrl={imageUrl}
+            onUploaded={(url) => setImageUrl(url)}
+            size="h-12 w-12"
+            allowRemove={Boolean(imageUrl)}
+          />
+        </div>
+        <div className="ml-auto flex gap-2">
+          <button
+            type="button"
+            onClick={async () => {
+              setTesting(true);
+              try {
+                await onTest({ title: title.trim() || "Test notification", body: body.trim() || "Hello from MyTown", deep_link: deepLink || null });
+              } finally {
+                setTesting(false);
+              }
+            }}
+            disabled={testing || !title.trim() || !body.trim()}
+            className="tap-scale rounded-full border border-[color:var(--border-strong)] px-3 py-2 text-xs font-semibold disabled:opacity-50"
+          >
+            {testing ? "Sending…" : "Send test"}
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              setSaving(true);
+              try {
+                await onSave({
+                  type,
+                  title: title.trim(),
+                  body: body.trim(),
+                  image_url: imageUrl ?? null,
+                  deep_link: deepLink || null,
+                  category: category || null,
+                  target,
+                  scheduled_at: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+                });
+                setTitle("");
+                setBody("");
+                setDeepLink("");
+                setCategory("");
+                setTarget("everyone");
+                setScheduledAt("");
+                setImageUrl(null);
+              } finally {
+                setSaving(false);
+              }
+            }}
+            disabled={saving || !title.trim() || !body.trim()}
+            className="tap-scale rounded-full accent-gradient px-3 py-2 text-xs font-semibold disabled:opacity-50"
+          >
+            {saving ? "Saving…" : "Save campaign"}
           </button>
         </div>
       </div>

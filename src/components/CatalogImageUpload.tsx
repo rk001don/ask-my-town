@@ -16,10 +16,12 @@ export function CatalogImageUpload({
   imageUrl,
   onUploaded,
   size = "h-14 w-14",
+  allowRemove = true,
 }: {
   imageUrl?: string | null;
-  onUploaded: (url: string) => void;
+  onUploaded: (url: string | null) => void;
   size?: string;
+  allowRemove?: boolean;
 }) {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -59,26 +61,38 @@ export function CatalogImageUpload({
 
 
   return (
-    <button
-      type="button"
-      onClick={() => fileRef.current?.click()}
-      disabled={uploading}
-      className={`tap-scale group relative grid ${size} shrink-0 place-items-center overflow-hidden rounded-xl bg-white/5`}
-      aria-label="Change image"
-    >
-      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPick} />
-      {imageUrl ? (
-        <img src={imageUrl} alt="" className="h-full w-full object-cover" />
-      ) : (
-        <ImageOff className="h-5 w-5 text-[color:var(--text-muted)]" strokeWidth={1.5} />
-      )}
-      <span className="absolute inset-0 grid place-items-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-        {uploading ? (
-          <Loader2 className="h-4 w-4 animate-spin text-white" />
+    <div className="group relative">
+      <button
+        type="button"
+        onClick={() => fileRef.current?.click()}
+        disabled={uploading}
+        className={`tap-scale relative grid ${size} shrink-0 place-items-center overflow-hidden rounded-xl bg-white/5`}
+        aria-label={imageUrl ? "Change image" : "Add image"}
+      >
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPick} />
+        {imageUrl ? (
+          <img src={imageUrl} alt="" className="h-full w-full object-cover" />
         ) : (
-          <Pencil className="h-4 w-4 text-white" />
+          <ImageOff className="h-5 w-5 text-[color:var(--text-muted)]" strokeWidth={1.5} />
         )}
-      </span>
-    </button>
+        <span className="absolute inset-0 grid place-items-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+          {uploading ? (
+            <Loader2 className="h-4 w-4 animate-spin text-white" />
+          ) : (
+            <Pencil className="h-4 w-4 text-white" />
+          )}
+        </span>
+      </button>
+      {allowRemove && imageUrl && (
+        <button
+          type="button"
+          onClick={() => onUploaded(null)}
+          className="absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full bg-[color:var(--danger)] text-[10px] font-bold text-white shadow-sm"
+          aria-label="Remove image"
+        >
+          ×
+        </button>
+      )}
+    </div>
   );
 }

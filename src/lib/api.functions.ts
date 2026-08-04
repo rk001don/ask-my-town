@@ -694,7 +694,7 @@ export const trackOrder = createServerFn({ method: "GET" })
     let query = supabaseAdmin
       .from("orders")
       .select(
-        "id, status, notes, created_at, confirmed_at, completed_at, updated_at, requested_date, requested_window, customer:customers(id,name,phone,address,landmark), items:order_items(id,item_name,category,subcategory,quantity,notes,is_freeform,unit_price)",
+        "id, status, notes, created_at, confirmed_at, completed_at, updated_at, requested_date, requested_window, service_fee_estimate, cancelled_at, cancellation_reason, refund_status, customer:customers(id,name,phone,address,landmark), items:order_items(id,item_name,category,subcategory,quantity,notes,is_freeform,unit_price)",
       )
       .order("created_at", { ascending: false })
       .limit(20);

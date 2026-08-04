@@ -19,3 +19,28 @@ export function computeServiceFee(subtotal: number, config: ServiceFeeTiers | nu
   }
   return config.default_fee;
 }
+
+export function getOrderTotals<T extends { unit_price?: number | null; quantity?: number }>(
+  items: T[],
+  serviceFeeEstimate?: number | null,
+): { subtotal: number; serviceFee: number | null; total: number } {
+  const subtotal = items.reduce((sum, item) => {
+    const unitPrice = item.unit_price ?? 0;
+    const quantity = item.quantity ?? 1;
+    return sum + unitPrice * quantity;
+  }, 0);
+
+  const serviceFee = serviceFeeEstimate ?? null;
+  return {
+    subtotal,
+    serviceFee,
+    total: subtotal + (serviceFee ?? 0),
+  };
+}
+
+export function getOrderTotalsFromRow<T extends { unit_price?: number | null; quantity?: number }>(
+  items: T[],
+  serviceFeeEstimate?: number | null,
+): { subtotal: number; serviceFee: number | null; total: number } {
+  return getOrderTotals(items, serviceFeeEstimate);
+}

@@ -104,9 +104,19 @@ export const updateStaffOrderStatus = createServerFn({ method: "POST" })
       updated_at: string;
       confirmed_at?: string;
       completed_at?: string;
+      cancelled_at?: string;
+      cancelled_by?: string;
+      cancelled_by_role?: string;
+      cancellation_reason?: string;
     } = { status: data.status, updated_at: now };
     if (data.status === "confirmed") patch.confirmed_at = now;
     if (data.status === "completed") patch.completed_at = now;
+    if (data.status === "cancelled") {
+      patch.cancelled_at = now;
+      patch.cancelled_by = context.userId;
+      patch.cancelled_by_role = "staff";
+      patch.cancellation_reason = "Cancelled by staff.";
+    }
     const { error } = await context.supabase.from("orders").update(patch).eq("id", data.orderId);
     if (error) throw new Error(error.message);
     // Fire-and-forget audit
@@ -131,5 +141,46 @@ export const updateStaffOrderStatus = createServerFn({ method: "POST" })
     } catch {
       /* notifications are best-effort, see comment above */
     }
+    return { ok: true as const };
+  });
+
+export const cancelStaffOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { orderId: string; reason: string }) =>
+    z.object({ orderId: z.string().trim().min(3).max(20), reason: z.string().trim().min(3).max(500) }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    await assertStaff(context.supabase as never, context.userId, true);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: order, error: orderErr } = await supabaseAdmin
+      .from("orders")
+      .select("id, status")
+      .eq("id", data.orderId)
+      .maybeSingle();
+    if (orderErr) throw new Error(orderErr.message);
+    if (!order) throw new Error("Order not found");
+
+    const now = new Date().toISOString();
+    const { error } = await supabaseAdmin
+      .from("orders")
+      .update({
+        status: "cancelled",
+        cancelled_at: now,
+        cancelled_by: context.userId,
+        cancelled_by_role: "staff",
+        cancellation_reason: data.reason,
+        updated_at: now,
+      })
+      .eq("id", data.orderId);
+    if (error) throw new Error(error.message);
+
+    await supabaseAdmin.from("audit_log").insert({
+      staff_id: context.userId,
+      action: "order.cancel",
+      entity_type: "order",
+      entity_id: data.orderId,
+      metadata: { reason: data.reason, status: "cancelled" },
+    });
+
     return { ok: true as const };
   });

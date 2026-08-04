@@ -100,12 +100,66 @@ export const getMyOrders = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("orders")
       .select(
-        "id, status, notes, created_at, confirmed_at, completed_at, updated_at, requested_date, requested_window, items:order_items(id,item_name,category,quantity,notes,is_freeform,unit_price)",
+        "id, status, notes, created_at, confirmed_at, completed_at, updated_at, requested_date, requested_window, service_fee_estimate, cancelled_at, cancellation_reason, refund_status, items:order_items(id,item_name,category,quantity,notes,is_freeform,unit_price)",
       )
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw new Error(error.message);
     return data ?? [];
+  });
+
+export const cancelMyOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { orderId: string; reason?: string }) =>
+    z.object({ orderId: z.string().trim().min(3).max(20), reason: z.string().trim().max(500).optional() }).parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: order, error: orderErr } = await supabaseAdmin
+      .from("orders")
+      .select("id, customer_id, status, service_fee_estimate")
+      .eq("id", data.orderId)
+      .maybeSingle();
+    if (orderErr) throw new Error(orderErr.message);
+    if (!order) throw new Error("Order not found");
+
+    const { data: customer, error: customerErr } = await supabaseAdmin
+      .from("customers")
+      .select("id, user_id")
+      .eq("id", order.customer_id)
+      .maybeSingle();
+    if (customerErr) throw new Error(customerErr.message);
+    if (!customer || customer.user_id !== context.userId) {
+      throw new Error("You can only cancel your own order.");
+    }
+    if (order.status !== "received") {
+      throw new Error("Only newly received orders can be cancelled by the customer.");
+    }
+
+    const now = new Date().toISOString();
+    const { error } = await supabaseAdmin
+      .from("orders")
+      .update({
+        status: "cancelled",
+        cancelled_at: now,
+        cancelled_by: context.userId,
+        cancelled_by_role: "customer",
+        cancellation_reason: data.reason ?? "Customer cancelled order.",
+        refund_status: "not_applicable",
+        updated_at: now,
+      })
+      .eq("id", data.orderId);
+    if (error) throw new Error(error.message);
+
+    await supabaseAdmin.from("audit_log").insert({
+      staff_id: context.userId,
+      action: "order.cancel",
+      entity_type: "order",
+      entity_id: data.orderId,
+      metadata: { reason: data.reason ?? "Customer cancelled order.", status: "cancelled" },
+    });
+
+    return { ok: true as const };
   });
 
 // Link the customer row behind a just-created order to the signed-in user (idempotent).

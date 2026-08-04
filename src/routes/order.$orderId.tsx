@@ -6,6 +6,7 @@ import { ORDER_STATUS_STEPS, STATUS_COPY, type OrderStatus, waLink } from "@/lib
 import { Check, MessageCircle, Sparkles } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/States";
 import { NotifyMeButton } from "@/components/NotifyMeButton";
+import { getOrderTotals } from "@/lib/serviceFee";
 
 const opts = (orderId: string) =>
   queryOptions({
@@ -157,14 +158,37 @@ function Confirmation() {
             ))}
           </ul>
           {order.items.some((it) => it.unit_price != null) && (
-            <div className="mt-3 flex items-center justify-between border-t border-[color:var(--border-subtle)] pt-3">
-              <span className="text-sm font-semibold">Total</span>
-              <span className="text-base font-bold">
-                ₹{order.items.reduce((n, it) => n + (it.unit_price ?? 0) * it.quantity, 0)}
-              </span>
+            <div className="mt-3 space-y-2 border-t border-[color:var(--border-subtle)] pt-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-[color:var(--text-secondary)]">Items</span>
+                <span className="font-semibold">
+                  ₹{getOrderTotals(order.items, order.service_fee_estimate ?? null).subtotal}
+                </span>
+              </div>
+              {order.service_fee_estimate != null && (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[color:var(--text-secondary)]">Service fee</span>
+                  <span className="font-semibold">₹{order.service_fee_estimate}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">Total</span>
+                <span className="text-base font-bold">
+                  ₹{getOrderTotals(order.items, order.service_fee_estimate ?? null).total}
+                </span>
+              </div>
             </div>
           )}
         </div>
+
+        {order.cancellation_reason && (
+          <div className="card-surface p-4">
+            <h3 className="text-display text-sm font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
+              Cancellation note
+            </h3>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{order.cancellation_reason}</p>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="grid grid-cols-2 gap-3">
