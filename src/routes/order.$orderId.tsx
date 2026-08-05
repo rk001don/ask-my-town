@@ -3,7 +3,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { trackOrder } from "@/lib/api.functions";
 import { ORDER_STATUS_STEPS, STATUS_COPY, type OrderStatus, waLink } from "@/lib/constants";
-import { Check, MessageCircle, Sparkles } from "lucide-react";
+import { Check, MessageCircle, Sparkles, XCircle } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/States";
 import { NotifyMeButton } from "@/components/NotifyMeButton";
 import { getOrderTotals } from "@/lib/serviceFee";
