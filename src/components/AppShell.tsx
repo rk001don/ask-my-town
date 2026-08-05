@@ -139,7 +139,6 @@ function BottomNav({ pathname }: { pathname: string }) {
         {TABS.map((t) => {
           const active = t.to === "/" ? pathname === "/" : pathname.startsWith(t.to);
           const Icon = t.icon;
-          const badge = t.to === "/activity" ? 0 : 0; // placeholder for future
           return (
             <li key={t.to} className="flex-1">
               <Link
@@ -151,19 +150,14 @@ function BottomNav({ pathname }: { pathname: string }) {
                     ? "linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))"
                     : "transparent",
                 }}
-                activeProps={{}}
               >
                 <Icon className="h-5 w-5" strokeWidth={2.2} />
                 <span className="text-[11px] font-semibold">{t.label}</span>
-                {badge > 0 && (
-                  <span className="absolute right-2 top-1 rounded-full bg-[color:var(--danger)] px-1.5 text-[10px] font-bold text-white">
-                    {badge}
-                  </span>
-                )}
               </Link>
             </li>
           );
         })}
+
       </ul>
     </nav>
   );
