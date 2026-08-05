@@ -280,8 +280,32 @@ export const listDeliveryBatches = createServerFn({ method: "GET" })
       .order("scheduled_at", { ascending: false })
       .limit(50);
     if (error) throw new Error(error.message);
-    return data ?? [];
+    const batches = data ?? [];
+    if (batches.length === 0) return [];
+
+    // A batch is only meaningful in terms of the orders inside it, so the
+    // admin list carries counts rather than making the operator guess.
+    const { data: orders, error: ordersErr } = await supabaseAdmin
+      .from("orders")
+      .select("delivery_batch_id, status")
+      .in(
+        "delivery_batch_id",
+        batches.map((b) => b.id),
+      );
+    if (ordersErr) throw new Error(ordersErr.message);
+
+    return batches.map((b) => {
+      const rows = (orders ?? []).filter((o) => o.delivery_batch_id === b.id);
+      return {
+        ...b,
+        orderCount: rows.length,
+        pendingCount: rows.filter((o) => o.status !== "completed" && o.status !== "cancelled")
+          .length,
+        deliveredCount: rows.filter((o) => o.status === "completed").length,
+      };
+    });
   });
+
 
 // Only the one valid next step from each status is exposed in the UI, so
 // there's no dropdown of arbitrary statuses to pick wrong.

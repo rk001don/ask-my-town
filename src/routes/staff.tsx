@@ -68,7 +68,11 @@ function StaffOrderCard({
   windowRanges: Record<string, string>;
 }) {
   const idx = ORDER_STATUS_STEPS.findIndex((st) => st.key === o.status);
-  const nextStep = ORDER_STATUS_STEPS[idx + 1]?.key as OrderStatus | undefined;
+  // A cancelled order isn't on the step ladder (idx === -1) — it must never
+  // offer "Mark Received" as if it were a fresh order.
+  const nextStep =
+    idx === -1 ? undefined : (ORDER_STATUS_STEPS[idx + 1]?.key as OrderStatus | undefined);
+
   const priced = o.items.filter((it) => it.unit_price != null);
   const orderTotal = priced.reduce((n, it) => n + (it.unit_price ?? 0) * it.quantity, 0);
 

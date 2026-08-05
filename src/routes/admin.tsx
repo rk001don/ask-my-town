@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyRoles } from "@/lib/auth.functions";
 import {
@@ -36,6 +36,16 @@ const BATCH_NEXT_ACTION_LABEL: Record<string, string> = {
   locked: "Mark dispatched",
   dispatched: "Mark delivered",
 };
+
+// Each batch row states what the operator is expected to do next, so the
+// screen isn't a list of dates with unexplained buttons.
+const BATCH_NEXT_ACTION_HINT: Record<string, string> = {
+  open: "Still collecting orders for this window. Lock it once the cutoff passes.",
+  locked: "Locked and ready — hand it to a rider, then mark it dispatched.",
+  dispatched: "Rider is out. Mark delivered once every order in the trip is dropped.",
+  delivered: "Trip complete.",
+};
+
 
 function AdminPage() {
   const [email, setEmail] = useState<string | null>(null);
@@ -663,33 +673,48 @@ function AdminBoard({ email }: { email: string }) {
           ) : (
             <div className="space-y-2">
               {(batchesQ.data ?? []).map((b) => (
-                <div
-                  key={b.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-3 py-2 text-sm"
-                >
-                  <span className="capitalize">
-                    {b.scheduled_date} · {b.window_label}
-                    {b.scheduled_at && (
-                      <span className="ml-1 text-xs text-[color:var(--text-tertiary)]">
-                        ({to12Hour(new Date(b.scheduled_at).toTimeString().slice(0, 5))})
+                <div key={b.id} className="glass rounded-2xl p-3">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold capitalize">
+                        {new Date(`${b.scheduled_date}T00:00:00`).toLocaleDateString(undefined, {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                        })}{" "}
+                        · {b.window_label}
+                        {b.scheduled_at && (
+                          <span className="ml-1 text-xs font-normal text-[color:var(--text-tertiary)]">
+                            ({to12Hour(new Date(b.scheduled_at).toTimeString().slice(0, 5))})
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
+                        {b.orderCount} order{b.orderCount === 1 ? "" : "s"} in this trip ·{" "}
+                        {b.pendingCount} still to deliver · {b.deliveredCount} delivered
+                      </div>
+                      <div className="mt-1 text-[11px] text-[color:var(--text-tertiary)]">
+                        {BATCH_NEXT_ACTION_HINT[b.status] ?? "Nothing left to do for this trip."}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                        {b.status}
                       </span>
-                    )}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs uppercase">
-                      {b.status}
-                    </span>
-                    {BATCH_NEXT_ACTION_LABEL[b.status] && (
-                      <button
-                        onClick={() => advanceBatch(b.id)}
-                        className="tap-scale rounded-full accent-gradient px-2.5 py-1 text-xs font-semibold"
-                      >
-                        {BATCH_NEXT_ACTION_LABEL[b.status]}
-                      </button>
-                    )}
+                      {BATCH_NEXT_ACTION_LABEL[b.status] && (
+                        <button
+                          onClick={() => advanceBatch(b.id)}
+                          disabled={b.status === "open" && b.orderCount === 0}
+                          className="tap-scale rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
+                        >
+                          {BATCH_NEXT_ACTION_LABEL[b.status]}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
+
               {(batchesQ.data ?? []).length === 0 && (
                 <div className="text-sm text-[color:var(--text-tertiary)]">
                   No batches yet — one is created automatically the first time an order is placed for
@@ -1138,67 +1163,82 @@ function NotificationComposer({
 
   return (
     <div className="glass space-y-3 rounded-2xl p-4">
-      <div className="grid gap-2 sm:grid-cols-2">
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-        >
-          <option value="order_update">Order update</option>
-          <option value="delivery_update">Delivery update</option>
-          <option value="offer">Offer</option>
-          <option value="new_category">New category</option>
-          <option value="flash_sale">Flash sale</option>
-          <option value="maintenance">Maintenance</option>
-          <option value="service_update">Service update</option>
-          <option value="festival">Festival</option>
-          <option value="emergency">Emergency</option>
-        </select>
-        <select
-          value={target}
-          onChange={(e) => setTarget(e.target.value)}
-          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-        >
-          <option value="everyone">Everyone</option>
-          <option value="customers">Customers</option>
-          <option value="staff">Staff</option>
-          <option value="admins">Admins</option>
-          <option value="selected_users">Selected users</option>
-        </select>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Notification type" hint="Used for grouping and reporting only.">
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="w-full rounded-lg border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] px-3 py-2 text-sm"
+          >
+            <option value="order_update">Order update</option>
+            <option value="delivery_update">Delivery update</option>
+            <option value="offer">Offer</option>
+            <option value="new_category">New category</option>
+            <option value="flash_sale">Flash sale</option>
+            <option value="maintenance">Maintenance</option>
+            <option value="service_update">Service update</option>
+            <option value="festival">Festival</option>
+            <option value="emergency">Emergency</option>
+          </select>
+        </Field>
+        <Field label="Audience" hint="Who receives this push once it's sent.">
+          <select
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            className="w-full rounded-lg border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] px-3 py-2 text-sm"
+          >
+            <option value="everyone">Everyone</option>
+            <option value="customers">Customers</option>
+            <option value="staff">Staff</option>
+            <option value="admins">Admins</option>
+            <option value="selected_users">Selected users</option>
+          </select>
+        </Field>
       </div>
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Title"
-        className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-      />
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder="Body text"
-        rows={3}
-        className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-      />
-      <div className="grid gap-2 sm:grid-cols-3">
+      <Field label="Notification title" hint="Shown as the bold first line on the phone.">
         <input
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          placeholder="Category (optional)"
-          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. Fresh vegetables back in stock"
+          className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
         />
-        <input
-          value={deepLink}
-          onChange={(e) => setDeepLink(e.target.value)}
-          placeholder="Deep link (/explore)"
-          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+      </Field>
+      <Field label="Message" hint="Keep it under two short lines.">
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="e.g. Order before 6 PM for evening delivery."
+          rows={3}
+          className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
         />
-        <input
-          type="datetime-local"
-          value={scheduledAt}
-          onChange={(e) => setScheduledAt(e.target.value)}
-          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-        />
+      </Field>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Field label="Category tag (optional)" hint="Free text, for your own filtering.">
+          <input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="e.g. groceries"
+            className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+          />
+        </Field>
+        <Field label="Opens this screen (optional)" hint="An in-app path, e.g. /explore.">
+          <input
+            value={deepLink}
+            onChange={(e) => setDeepLink(e.target.value)}
+            placeholder="/explore"
+            className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+          />
+        </Field>
+        <Field label="Send at (optional)" hint="Leave empty to keep it as a draft.">
+          <input
+            type="datetime-local"
+            value={scheduledAt}
+            onChange={(e) => setScheduledAt(e.target.value)}
+            className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+          />
+        </Field>
       </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="text-xs text-[color:var(--text-tertiary)]">Image</span>
@@ -1223,7 +1263,7 @@ function NotificationComposer({
             disabled={testing || !title.trim() || !body.trim()}
             className="tap-scale rounded-full border border-[color:var(--border-strong)] px-3 py-2 text-xs font-semibold disabled:opacity-50"
           >
-            {testing ? "Sending…" : "Send test"}
+            {testing ? "Sending…" : "Send test to my device"}
           </button>
           <button
             type="button"
@@ -1254,10 +1294,32 @@ function NotificationComposer({
             disabled={saving || !title.trim() || !body.trim()}
             className="tap-scale rounded-full accent-gradient px-3 py-2 text-xs font-semibold disabled:opacity-50"
           >
-            {saving ? "Saving…" : "Save campaign"}
+            {saving ? "Saving…" : scheduledAt ? "Schedule campaign" : "Save as draft"}
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">
+        {label}
+      </span>
+      {children}
+      {hint && (
+        <span className="mt-1 block text-[11px] text-[color:var(--text-tertiary)]">{hint}</span>
+      )}
+    </label>
   );
 }

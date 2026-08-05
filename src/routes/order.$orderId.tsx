@@ -3,7 +3,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { trackOrder } from "@/lib/api.functions";
 import { ORDER_STATUS_STEPS, STATUS_COPY, type OrderStatus, waLink } from "@/lib/constants";
-import { Check, MessageCircle, Sparkles } from "lucide-react";
+import { Check, MessageCircle, Sparkles, XCircle } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/States";
 import { NotifyMeButton } from "@/components/NotifyMeButton";
 import { getOrderTotals } from "@/lib/serviceFee";
@@ -41,28 +41,48 @@ function Confirmation() {
   }
 
   const status = order.status as OrderStatus;
+  const isCancelled = status === "cancelled";
   const currentIdx = ORDER_STATUS_STEPS.findIndex((s) => s.key === status);
 
   return (
     <div>
-      <AppHeader title="Confirmed" showCart={false} showBack={false} />
+      <AppHeader
+        title={isCancelled ? "Cancelled" : STATUS_COPY[status]?.label ?? "Order"}
+        showCart={false}
+        showBack={false}
+      />
       <div className="rise space-y-5 p-4">
-        {/* Hero confirmation */}
+        {/* Hero: reflects the order's real state, not a fixed "confirmed" */}
         <div className="card-surface gradient-hero relative overflow-hidden p-5">
           <div
             className="absolute -right-10 -top-10 h-40 w-40 rounded-full"
             style={{
-              background: "radial-gradient(circle, oklch(0.78 0.15 155 / 0.35), transparent 65%)",
+              background: isCancelled
+                ? "radial-gradient(circle, oklch(0.65 0.2 25 / 0.3), transparent 65%)"
+                : "radial-gradient(circle, oklch(0.78 0.15 155 / 0.35), transparent 65%)",
             }}
           />
           <div className="relative flex items-start gap-3">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[color:var(--success)]/20 border border-[color:var(--success)]/40">
-              <Check className="h-6 w-6 text-[color:var(--success)]" strokeWidth={2.5} />
+            <div
+              className={`grid h-11 w-11 shrink-0 place-items-center rounded-full border ${
+                isCancelled
+                  ? "border-[color:var(--danger)]/40 bg-[color:var(--danger)]/20"
+                  : "border-[color:var(--success)]/40 bg-[color:var(--success)]/20"
+              }`}
+            >
+              {isCancelled ? (
+                <XCircle className="h-6 w-6 text-[color:var(--danger)]" strokeWidth={2.5} />
+              ) : (
+                <Check className="h-6 w-6 text-[color:var(--success)]" strokeWidth={2.5} />
+              )}
             </div>
-            <div>
-              <div className="text-display text-xl font-semibold">MyTown got it</div>
+            <div className="min-w-0">
+              <div className="text-display text-xl font-semibold">
+                {isCancelled ? "Order cancelled" : "MyTown got it"}
+              </div>
               <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
-                Our team will call or WhatsApp you to confirm shortly.
+                {STATUS_COPY[status]?.blurb ??
+                  "Our team will call or WhatsApp you to confirm shortly."}
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <div className="inline-flex items-center rounded-full border border-[color:var(--border-strong)] bg-black/25 px-3 py-1.5 text-[13px] font-mono font-semibold tracking-wide">
@@ -72,21 +92,26 @@ function Confirmation() {
                     defaults to today for every order (including plain ASAP
                     ones), so it's not shown here on its own; requested_window
                     is only ever set for an explicitly scheduled order. */}
-                {order.requested_window && (
+                {!isCancelled && order.requested_window && (
                   <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold capitalize">
                     Scheduled: {order.requested_window}
                   </div>
                 )}
               </div>
-              <div className="mt-3">
-                <NotifyMeButton orderId={orderId} />
-              </div>
+              {!isCancelled && (
+                <div className="mt-3">
+                  <NotifyMeButton orderId={orderId} />
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Timeline */}
+
+        {/* Timeline — irrelevant once an order is cancelled */}
+        {!isCancelled && (
         <div className="card-surface p-4">
+
           <h3 className="text-display text-sm font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
             What happens next
           </h3>
@@ -116,6 +141,10 @@ function Confirmation() {
             })}
           </ol>
         </div>
+        )}
+
+
+
 
         {/* Items summary */}
         <div className="card-surface p-4">
@@ -181,7 +210,7 @@ function Confirmation() {
           )}
         </div>
 
-        {order.cancellation_reason && (
+        {isCancelled && order.cancellation_reason && (
           <div className="card-surface p-4">
             <h3 className="text-display text-sm font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
               Cancellation note
