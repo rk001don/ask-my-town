@@ -139,8 +139,9 @@ function Confirmation() {
                 </li>
               );
             })}
-          </ol>
         </div>
+        )}
+
 
         {/* Items summary */}
         <div className="card-surface p-4">
