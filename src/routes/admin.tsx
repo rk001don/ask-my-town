@@ -663,33 +663,48 @@ function AdminBoard({ email }: { email: string }) {
           ) : (
             <div className="space-y-2">
               {(batchesQ.data ?? []).map((b) => (
-                <div
-                  key={b.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/5 px-3 py-2 text-sm"
-                >
-                  <span className="capitalize">
-                    {b.scheduled_date} · {b.window_label}
-                    {b.scheduled_at && (
-                      <span className="ml-1 text-xs text-[color:var(--text-tertiary)]">
-                        ({to12Hour(new Date(b.scheduled_at).toTimeString().slice(0, 5))})
+                <div key={b.id} className="glass rounded-2xl p-3">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold capitalize">
+                        {new Date(`${b.scheduled_date}T00:00:00`).toLocaleDateString(undefined, {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                        })}{" "}
+                        · {b.window_label}
+                        {b.scheduled_at && (
+                          <span className="ml-1 text-xs font-normal text-[color:var(--text-tertiary)]">
+                            ({to12Hour(new Date(b.scheduled_at).toTimeString().slice(0, 5))})
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
+                        {b.orderCount} order{b.orderCount === 1 ? "" : "s"} in this trip ·{" "}
+                        {b.pendingCount} still to deliver · {b.deliveredCount} delivered
+                      </div>
+                      <div className="mt-1 text-[11px] text-[color:var(--text-tertiary)]">
+                        {BATCH_NEXT_ACTION_HINT[b.status] ?? "Nothing left to do for this trip."}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                        {b.status}
                       </span>
-                    )}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs uppercase">
-                      {b.status}
-                    </span>
-                    {BATCH_NEXT_ACTION_LABEL[b.status] && (
-                      <button
-                        onClick={() => advanceBatch(b.id)}
-                        className="tap-scale rounded-full accent-gradient px-2.5 py-1 text-xs font-semibold"
-                      >
-                        {BATCH_NEXT_ACTION_LABEL[b.status]}
-                      </button>
-                    )}
+                      {BATCH_NEXT_ACTION_LABEL[b.status] && (
+                        <button
+                          onClick={() => advanceBatch(b.id)}
+                          disabled={b.status === "open" && b.orderCount === 0}
+                          className="tap-scale rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
+                        >
+                          {BATCH_NEXT_ACTION_LABEL[b.status]}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
+
               {(batchesQ.data ?? []).length === 0 && (
                 <div className="text-sm text-[color:var(--text-tertiary)]">
                   No batches yet — one is created automatically the first time an order is placed for
