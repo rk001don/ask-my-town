@@ -1163,67 +1163,82 @@ function NotificationComposer({
 
   return (
     <div className="glass space-y-3 rounded-2xl p-4">
-      <div className="grid gap-2 sm:grid-cols-2">
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-        >
-          <option value="order_update">Order update</option>
-          <option value="delivery_update">Delivery update</option>
-          <option value="offer">Offer</option>
-          <option value="new_category">New category</option>
-          <option value="flash_sale">Flash sale</option>
-          <option value="maintenance">Maintenance</option>
-          <option value="service_update">Service update</option>
-          <option value="festival">Festival</option>
-          <option value="emergency">Emergency</option>
-        </select>
-        <select
-          value={target}
-          onChange={(e) => setTarget(e.target.value)}
-          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-        >
-          <option value="everyone">Everyone</option>
-          <option value="customers">Customers</option>
-          <option value="staff">Staff</option>
-          <option value="admins">Admins</option>
-          <option value="selected_users">Selected users</option>
-        </select>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Notification type" hint="Used for grouping and reporting only.">
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value)}
+            className="w-full rounded-lg border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] px-3 py-2 text-sm"
+          >
+            <option value="order_update">Order update</option>
+            <option value="delivery_update">Delivery update</option>
+            <option value="offer">Offer</option>
+            <option value="new_category">New category</option>
+            <option value="flash_sale">Flash sale</option>
+            <option value="maintenance">Maintenance</option>
+            <option value="service_update">Service update</option>
+            <option value="festival">Festival</option>
+            <option value="emergency">Emergency</option>
+          </select>
+        </Field>
+        <Field label="Audience" hint="Who receives this push once it's sent.">
+          <select
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            className="w-full rounded-lg border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] px-3 py-2 text-sm"
+          >
+            <option value="everyone">Everyone</option>
+            <option value="customers">Customers</option>
+            <option value="staff">Staff</option>
+            <option value="admins">Admins</option>
+            <option value="selected_users">Selected users</option>
+          </select>
+        </Field>
       </div>
-      <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        placeholder="Title"
-        className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-      />
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder="Body text"
-        rows={3}
-        className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-      />
-      <div className="grid gap-2 sm:grid-cols-3">
+      <Field label="Notification title" hint="Shown as the bold first line on the phone.">
         <input
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          placeholder="Category (optional)"
-          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. Fresh vegetables back in stock"
+          className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
         />
-        <input
-          value={deepLink}
-          onChange={(e) => setDeepLink(e.target.value)}
-          placeholder="Deep link (/explore)"
-          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+      </Field>
+      <Field label="Message" hint="Keep it under two short lines.">
+        <textarea
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder="e.g. Order before 6 PM for evening delivery."
+          rows={3}
+          className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
         />
-        <input
-          type="datetime-local"
-          value={scheduledAt}
-          onChange={(e) => setScheduledAt(e.target.value)}
-          className="rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
-        />
+      </Field>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Field label="Category tag (optional)" hint="Free text, for your own filtering.">
+          <input
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="e.g. groceries"
+            className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+          />
+        </Field>
+        <Field label="Opens this screen (optional)" hint="An in-app path, e.g. /explore.">
+          <input
+            value={deepLink}
+            onChange={(e) => setDeepLink(e.target.value)}
+            placeholder="/explore"
+            className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+          />
+        </Field>
+        <Field label="Send at (optional)" hint="Leave empty to keep it as a draft.">
+          <input
+            type="datetime-local"
+            value={scheduledAt}
+            onChange={(e) => setScheduledAt(e.target.value)}
+            className="w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-sm"
+          />
+        </Field>
       </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="text-xs text-[color:var(--text-tertiary)]">Image</span>
