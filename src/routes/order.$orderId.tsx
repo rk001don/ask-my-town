@@ -139,8 +139,11 @@ function Confirmation() {
                 </li>
               );
             })}
+          </ol>
         </div>
         )}
+
+
 
 
         {/* Items summary */}
