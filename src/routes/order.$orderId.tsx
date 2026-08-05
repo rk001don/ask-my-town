@@ -108,8 +108,10 @@ function Confirmation() {
         </div>
 
 
-        {/* Timeline */}
+        {/* Timeline — irrelevant once an order is cancelled */}
+        {!isCancelled && (
         <div className="card-surface p-4">
+
           <h3 className="text-display text-sm font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
             What happens next
           </h3>
