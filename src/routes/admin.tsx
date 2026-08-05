@@ -37,6 +37,16 @@ const BATCH_NEXT_ACTION_LABEL: Record<string, string> = {
   dispatched: "Mark delivered",
 };
 
+// Each batch row states what the operator is expected to do next, so the
+// screen isn't a list of dates with unexplained buttons.
+const BATCH_NEXT_ACTION_HINT: Record<string, string> = {
+  open: "Still collecting orders for this window. Lock it once the cutoff passes.",
+  locked: "Locked and ready — hand it to a rider, then mark it dispatched.",
+  dispatched: "Rider is out. Mark delivered once every order in the trip is dropped.",
+  delivered: "Trip complete.",
+};
+
+
 function AdminPage() {
   const [email, setEmail] = useState<string | null>(null);
   const [checking, setChecking] = useState(true);
