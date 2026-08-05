@@ -210,7 +210,7 @@ function Confirmation() {
           )}
         </div>
 
-        {order.cancellation_reason && (
+        {isCancelled && order.cancellation_reason && (
           <div className="card-surface p-4">
             <h3 className="text-display text-sm font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
               Cancellation note
