@@ -1,0 +1,1 @@
+DELETE FROM public.notification_campaigns WHERE title = 'Hi' AND body = 'Hi';
