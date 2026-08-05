@@ -1263,7 +1263,7 @@ function NotificationComposer({
             disabled={testing || !title.trim() || !body.trim()}
             className="tap-scale rounded-full border border-[color:var(--border-strong)] px-3 py-2 text-xs font-semibold disabled:opacity-50"
           >
-            {testing ? "Sending…" : "Send test"}
+            {testing ? "Sending…" : "Send test to my device"}
           </button>
           <button
             type="button"
@@ -1294,10 +1294,32 @@ function NotificationComposer({
             disabled={saving || !title.trim() || !body.trim()}
             className="tap-scale rounded-full accent-gradient px-3 py-2 text-xs font-semibold disabled:opacity-50"
           >
-            {saving ? "Saving…" : "Save campaign"}
+            {saving ? "Saving…" : scheduledAt ? "Schedule campaign" : "Save as draft"}
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">
+        {label}
+      </span>
+      {children}
+      {hint && (
+        <span className="mt-1 block text-[11px] text-[color:var(--text-tertiary)]">{hint}</span>
+      )}
+    </label>
   );
 }
