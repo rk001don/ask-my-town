@@ -15,6 +15,9 @@ self.addEventListener("push", (event) => {
       body: payload.body,
       icon: "/icon-512.png",
       badge: "/icon-512.png",
+      image: payload.image || undefined,
+      tag: payload.tag || undefined,
+      renotify: Boolean(payload.tag),
       data: { url: payload.url },
     }),
   );
