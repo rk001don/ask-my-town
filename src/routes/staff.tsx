@@ -78,6 +78,7 @@ function StaffOrderCard({
 
   const priced = o.items.filter((it) => it.unit_price != null);
   const orderTotal = priced.reduce((n, it) => n + (it.unit_price ?? 0) * it.quantity, 0);
+  const serviceFee = o.service_fee_final ?? o.service_fee_estimate ?? null;
 
   return (
     <div className="glass rounded-2xl p-3">
