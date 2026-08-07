@@ -38,6 +38,9 @@ type StaffOrderRow = {
   status: OrderStatus;
   requested_date?: string | null;
   requested_window?: string | null;
+  service_fee_estimate?: number | null;
+  service_fee_final?: number | null;
+  cancellation_reason?: string | null;
   customer: {
     name: string;
     phone: string;
