@@ -66,7 +66,7 @@ export const listStaffOrders = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("orders")
       .select(
-        "id, status, notes, created_at, updated_at, requested_date, requested_window, customer:customers(name,phone,address,landmark), items:order_items(item_name,quantity,notes,is_freeform,unit_price,attachments:order_attachments(id,file_path,file_type))",
+        "id, status, notes, created_at, updated_at, requested_date, requested_window, service_fee_estimate, service_fee_final, cancellation_reason, customer:customers(name,phone,address,landmark), items:order_items(item_name,quantity,notes,is_freeform,unit_price,attachments:order_attachments(id,file_path,file_type))",
       )
       .order("created_at", { ascending: false })
       .limit(200);
