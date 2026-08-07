@@ -38,6 +38,9 @@ type StaffOrderRow = {
   status: OrderStatus;
   requested_date?: string | null;
   requested_window?: string | null;
+  service_fee_estimate?: number | null;
+  service_fee_final?: number | null;
+  cancellation_reason?: string | null;
   customer: {
     name: string;
     phone: string;
@@ -75,6 +78,7 @@ function StaffOrderCard({
 
   const priced = o.items.filter((it) => it.unit_price != null);
   const orderTotal = priced.reduce((n, it) => n + (it.unit_price ?? 0) * it.quantity, 0);
+  const serviceFee = o.service_fee_final ?? o.service_fee_estimate ?? null;
 
   return (
     <div className="glass rounded-2xl p-3">
@@ -87,6 +91,11 @@ function StaffOrderCard({
           </span>
         )}
       </div>
+      {o.status === "cancelled" && (
+        <div className="mt-1.5 rounded-lg border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-2 py-1 text-[11px] text-[color:var(--danger)]">
+          Cancelled{o.cancellation_reason ? ` — ${o.cancellation_reason}` : ""}
+        </div>
+      )}
       <div className="mt-1 text-sm font-semibold">{o.customer?.name}</div>
       <a
         href={`tel:${o.customer?.phone ?? ""}`}
@@ -102,10 +111,22 @@ function StaffOrderCard({
         </span>
       </div>
       {priced.length > 0 && (
-        <div className="mt-1 text-xs font-bold text-[color:var(--accent-primary)]">
-          ₹{orderTotal}
+        <div className="mt-2 space-y-0.5 rounded-xl bg-white/5 p-2 text-xs">
+          <div className="flex justify-between text-[color:var(--text-secondary)]">
+            <span>Items subtotal</span>
+            <span>₹{orderTotal}</span>
+          </div>
+          <div className="flex justify-between text-[color:var(--text-secondary)]">
+            <span>Service fee</span>
+            <span>{serviceFee == null ? "To confirm" : `₹${serviceFee}`}</span>
+          </div>
+          <div className="flex justify-between font-bold text-[color:var(--accent-primary)]">
+            <span>Total</span>
+            <span>₹{orderTotal + (serviceFee ?? 0)}</span>
+          </div>
         </div>
       )}
+
       <ul className="mt-2 space-y-0.5 text-xs">
         {o.items.map((it, i) => (
           <li key={i} className="flex items-start gap-1.5 text-[color:var(--text-primary)]">
