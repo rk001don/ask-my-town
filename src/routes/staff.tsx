@@ -91,6 +91,11 @@ function StaffOrderCard({
           </span>
         )}
       </div>
+      {o.status === "cancelled" && (
+        <div className="mt-1.5 rounded-lg border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-2 py-1 text-[11px] text-[color:var(--danger)]">
+          Cancelled{o.cancellation_reason ? ` — ${o.cancellation_reason}` : ""}
+        </div>
+      )}
       <div className="mt-1 text-sm font-semibold">{o.customer?.name}</div>
       <a
         href={`tel:${o.customer?.phone ?? ""}`}
