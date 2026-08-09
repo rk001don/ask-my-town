@@ -262,18 +262,17 @@ function Home() {
             See all
           </Link>
         </div>
-        <div className="no-scrollbar mt-3 grid auto-cols-[minmax(9.5rem,10.5rem)] grid-flow-col snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
+        <div className="mt-3 grid grid-cols-2 items-stretch gap-3 px-4 md:grid-cols-3 lg:grid-cols-4">
           {POPULAR_PICKS.map((p) => (
-            <div key={p.name} className="min-w-0 snap-start [&>div]:h-full">
-              <ItemCard
-                itemName={p.name}
-                category={p.category}
-                subcategory={p.sub}
-                iconKey={p.iconKey}
-                priceLabel={p.priceLabel}
-                reason={popularPickReasons[p.name]}
-              />
-            </div>
+            <ItemCard
+              key={p.name}
+              itemName={p.name}
+              category={p.category}
+              subcategory={p.sub}
+              iconKey={p.iconKey}
+              priceLabel={p.priceLabel}
+              reason={popularPickReasons[p.name]}
+            />
           ))}
         </div>
       </section>
