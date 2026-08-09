@@ -39,58 +39,71 @@ export function ServiceFeeBreakdown({ subtotal }: { subtotal: number }) {
         </div>
       )}
 
-      {showInfo && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center"
-          onClick={() => setShowInfo(false)}
-        >
+      {showInfo &&
+        createPortal(
           <div
-            className="glass w-full max-w-[420px] rounded-t-3xl p-5 sm:rounded-3xl"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center"
+            onClick={() => setShowInfo(false)}
+            role="dialog"
+            aria-modal="true"
           >
-            <div className="flex items-center justify-between">
-              <div className="text-base font-semibold">How the service fee works</div>
-              <button onClick={() => setShowInfo(false)} className="tap-scale" aria-label="Close">
-                <X className="h-4 w-4" />
+            <div
+              className="glass max-h-[85dvh] w-full max-w-[420px] overflow-y-auto rounded-t-3xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:rounded-3xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <div className="text-base font-semibold">How the service fee works</div>
+                <button onClick={() => setShowInfo(false)} className="tap-scale" aria-label="Close">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-[color:var(--text-secondary)]">
+                A flat fee for arranging and delivering your order, based on your basket size —
+                separate from what you're buying. Product prices are estimates; your final bill is
+                confirmed once we've actually purchased your items.
+              </p>
+              <table className="mt-3 w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-[color:var(--text-tertiary)]">
+                    <th className="pb-1.5 font-medium">Basket total</th>
+                    <th className="pb-1.5 text-right font-medium">Fee</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(config?.tiers ?? []).map((tier, i, arr) => (
+                    <tr
+                      key={tier.max_subtotal}
+                      className="border-t border-[color:var(--border-subtle)]"
+                    >
+                      <td className="py-1.5">
+                        {i === 0
+                          ? `Under ₹${tier.max_subtotal}`
+                          : `₹${arr[i - 1].max_subtotal}–₹${tier.max_subtotal}`}
+                      </td>
+                      <td className="py-1.5 text-right font-semibold">₹{tier.fee}</td>
+                    </tr>
+                  ))}
+                  <tr className="border-t border-[color:var(--border-subtle)]">
+                    <td className="py-1.5">
+                      Above ₹{config?.tiers[config.tiers.length - 1]?.max_subtotal ?? 999}
+                    </td>
+                    <td className="py-1.5 text-right font-semibold">
+                      ₹{config?.default_fee ?? 99}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <button
+                onClick={() => setShowInfo(false)}
+                className="tap-scale mt-4 w-full rounded-full border border-[color:var(--border-strong)] py-2.5 text-sm font-semibold"
+              >
+                Got it
               </button>
             </div>
-            <p className="mt-2 text-xs text-[color:var(--text-secondary)]">
-              A flat fee for arranging and delivering your order, based on your basket size —
-              separate from what you're buying. Product prices are estimates; your final bill is
-              confirmed once we've actually purchased your items.
-            </p>
-            <table className="mt-3 w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs text-[color:var(--text-tertiary)]">
-                  <th className="pb-1.5 font-medium">Basket total</th>
-                  <th className="pb-1.5 text-right font-medium">Fee</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(config?.tiers ?? []).map((tier, i, arr) => (
-                  <tr
-                    key={tier.max_subtotal}
-                    className="border-t border-[color:var(--border-subtle)]"
-                  >
-                    <td className="py-1.5">
-                      {i === 0
-                        ? `Under ₹${tier.max_subtotal}`
-                        : `₹${arr[i - 1].max_subtotal}–₹${tier.max_subtotal}`}
-                    </td>
-                    <td className="py-1.5 text-right font-semibold">₹{tier.fee}</td>
-                  </tr>
-                ))}
-                <tr className="border-t border-[color:var(--border-subtle)]">
-                  <td className="py-1.5">
-                    Above ₹{config?.tiers[config.tiers.length - 1]?.max_subtotal ?? 999}
-                  </td>
-                  <td className="py-1.5 text-right font-semibold">₹{config?.default_fee ?? 99}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
+
     </div>
   );
 }
