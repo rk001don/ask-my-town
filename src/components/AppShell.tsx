@@ -24,7 +24,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     !loc.pathname.startsWith("/checkout") &&
     !loc.pathname.startsWith("/order/") &&
     !loc.pathname.startsWith("/auth") &&
+    // The orders screen is about tracking, not buying: stacking a cart pill on
+    // top of the order cards there just covered content people came to read.
+    !loc.pathname.startsWith("/activity") &&
     !loc.pathname.startsWith("/my-orders");
+
   const showBottomNav =
     !loc.pathname.startsWith("/cart") &&
     !loc.pathname.startsWith("/checkout") &&
