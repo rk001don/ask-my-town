@@ -16,7 +16,21 @@ import { formatTimeRange12h } from "@/lib/time";
 import { AppHeader } from "@/components/AppHeader";
 import { ErrorState } from "@/components/States";
 import { toast } from "sonner";
-import { Loader2, LogOut, RefreshCw, Phone, MapPin, ShieldAlert, Paperclip, X } from "lucide-react";
+import {
+  Loader2,
+  LogOut,
+  RefreshCw,
+  Phone,
+  MapPin,
+  ShieldAlert,
+  Paperclip,
+  X,
+  Clock,
+  Package,
+  CheckCircle2,
+  XCircle,
+  Truck,
+} from "lucide-react";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 
 export const Route = createFileRoute("/staff")({
@@ -84,30 +98,49 @@ function StaffOrderCard({
   const orderTotal = priced.reduce((n, it) => n + (it.unit_price ?? 0) * it.quantity, 0);
   const serviceFee = o.service_fee_final ?? o.service_fee_estimate ?? null;
 
+  const statusColor: Record<string, string> = {
+    received: "var(--warning)",
+    confirmed: "var(--info)",
+    arranging: "var(--accent-primary)",
+    on_the_way: "var(--accent-secondary)",
+    completed: "var(--success)",
+    cancelled: "var(--danger)",
+  };
+
   return (
-    <div className="glass rounded-2xl p-3">
-      <div className="flex items-center justify-between">
-        <div className="font-mono text-xs font-semibold">{o.id}</div>
+    <div className="card-surface rounded-2xl p-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div
+            className="h-2 w-2 flex-shrink-0 rounded-full"
+            style={{ background: statusColor[o.status] ?? "var(--text-muted)" }}
+          />
+          <span className="truncate font-mono text-xs text-[color:var(--text-muted)]">
+            {o.id.slice(0, 8)}
+          </span>
+        </div>
         {o.requested_window && (
-          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] capitalize">
-            {o.requested_date} · {o.requested_window}
+          <span className="flex items-center gap-1 flex-shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px]">
+            <Clock className="h-2.5 w-2.5" />
+            {o.requested_window}
             {windowRanges[o.requested_window] ? ` (${windowRanges[o.requested_window]})` : ""}
           </span>
         )}
       </div>
       {o.status === "cancelled" && (
-        <div className="mt-1.5 rounded-lg border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-2 py-1 text-[11px] text-[color:var(--danger)]">
+        <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-2.5 py-1.5 text-[11px] text-[color:var(--danger)]">
+          <XCircle className="h-3 w-3 flex-shrink-0" />
           Cancelled{o.cancellation_reason ? ` — ${o.cancellation_reason}` : ""}
         </div>
       )}
-      <div className="mt-1 text-sm font-semibold">{o.customer?.name}</div>
+      <div className="mt-2 text-sm font-semibold">{o.customer?.name}</div>
       <a
         href={`tel:${o.customer?.phone ?? ""}`}
-        className="mt-0.5 flex items-center gap-1 text-xs text-[color:var(--text-secondary)]"
+        className="tap-scale mt-1 inline-flex items-center gap-1.5 rounded-full bg-[color:var(--accent-primary)]/10 px-2.5 py-1 text-xs font-medium text-[color:var(--accent-primary)]"
       >
         <Phone className="h-3 w-3" /> {o.customer?.phone}
       </a>
-      <div className="mt-1 flex items-start gap-1 text-xs text-[color:var(--text-secondary)]">
+      <div className="mt-1.5 flex items-start gap-1.5 text-xs text-[color:var(--text-secondary)]">
         <MapPin className="mt-0.5 h-3 w-3 flex-shrink-0" />
         <span className="line-clamp-2">
           {o.customer?.address}
@@ -131,13 +164,14 @@ function StaffOrderCard({
         </div>
       )}
 
-      <ul className="mt-2 space-y-0.5 text-xs">
+      <ul className="mt-3 space-y-1 text-xs">
         {o.items.map((it, i) => (
-          <li key={i} className="flex items-start gap-1.5 text-[color:var(--text-primary)]">
-            <span>
-              {it.quantity}× {it.item_name}
+          <li key={i} className="flex items-start gap-2 rounded-lg bg-white/5 px-2.5 py-1.5">
+            <span className="font-semibold text-[color:var(--accent-primary)]">{it.quantity}×</span>
+            <span className="flex-1 text-[color:var(--text-primary)]">
+              {it.item_name}
               {it.notes ? (
-                <span className="text-[color:var(--text-tertiary)]"> — {it.notes}</span>
+                <span className="block text-[color:var(--text-tertiary)]">{it.notes}</span>
               ) : null}
             </span>
             {(it.attachments ?? []).map((att) => (
@@ -153,24 +187,34 @@ function StaffOrderCard({
           </li>
         ))}
       </ul>
-      {nextStep && (
-        <button
-          onClick={() => onAdvance(o.id, nextStep)}
-          disabled={isAdvancing}
-          className="tap-scale mt-2 flex w-full items-center justify-center gap-1.5 rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold text-[color:var(--on-accent)] disabled:opacity-50"
-        >
-          {isAdvancing && <Loader2 className="h-3 w-3 animate-spin" />}
-          Mark {STATUS_COPY[nextStep]?.label ?? nextStep}
-        </button>
-      )}
-      {o.status !== "cancelled" && o.status !== "completed" && (
-        <button
-          onClick={() => onCancel(o.id)}
-          className="tap-scale mt-2 w-full rounded-full border border-[color:var(--danger)]/70 px-3 py-1.5 text-xs font-semibold text-[color:var(--danger)]"
-        >
-          Cancel order
-        </button>
-      )}
+      <div className="mt-3 flex gap-2">
+        {nextStep && (
+          <button
+            onClick={() => onAdvance(o.id, nextStep)}
+            disabled={isAdvancing}
+            className="tap-scale flex flex-1 items-center justify-center gap-1.5 rounded-full accent-gradient px-3 py-2.5 text-xs font-semibold text-[color:var(--on-accent)] disabled:opacity-50"
+          >
+            {isAdvancing ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : nextStep === "on_the_way" ? (
+              <Truck className="h-3.5 w-3.5" />
+            ) : nextStep === "completed" ? (
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            ) : (
+              <Package className="h-3.5 w-3.5" />
+            )}
+            Mark {STATUS_COPY[nextStep]?.label ?? nextStep}
+          </button>
+        )}
+        {o.status !== "cancelled" && o.status !== "completed" && (
+          <button
+            onClick={() => onCancel(o.id)}
+            className="tap-scale rounded-full border border-[color:var(--danger)]/50 px-3 py-2.5 text-xs font-semibold text-[color:var(--danger)]"
+          >
+            Cancel
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -400,23 +444,28 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
   return (
     <div className="min-h-[100dvh]">
       <div className="sticky top-0 z-[var(--z-header)] glass flex items-center justify-between px-4 py-3">
-        <div>
-          <div className="text-display text-lg font-semibold">Live orders</div>
-          <div className="text-xs text-[color:var(--text-tertiary)]">
-            {email} · roles: {rolesQ.data.roles.join(", ")}
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <div className="text-display text-lg font-semibold">Live orders</div>
+            {ordersQ.isFetching && (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-[color:var(--accent-primary)]" />
+            )}
+          </div>
+          <div className="truncate text-xs text-[color:var(--text-tertiary)]">
+            {email} · {rolesQ.data.roles.join(", ")}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <button
             onClick={() => qc.invalidateQueries({ queryKey: ["staff-orders"] })}
-            className="tap-scale rounded-full p-2 hover:bg-white/5"
+            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
             aria-label="Refresh"
           >
-            <RefreshCw className={`h-5 w-5 ${ordersQ.isFetching ? "animate-spin" : ""}`} />
+            <RefreshCw className="h-5 w-5" />
           </button>
           <button
             onClick={onSignOut}
-            className="tap-scale rounded-full p-2 hover:bg-white/5"
+            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
             aria-label="Sign out"
           >
             <LogOut className="h-5 w-5" />
@@ -455,18 +504,20 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
         </div>
       ) : (
         <>
-          <div className="no-scrollbar hidden gap-3 overflow-x-auto px-3 py-4 md:flex md:snap-x md:snap-mandatory md:px-6">
+          <div className="no-scrollbar hidden gap-4 overflow-x-auto px-4 py-4 md:flex md:snap-x md:snap-mandatory md:px-6">
             {BOARD_STATUSES.map((s) => {
               const list = (grouped[s] as unknown as StaffOrderRow[]) ?? [];
               return (
-                <div key={s} className="min-w-[260px] flex-shrink-0 snap-start">
-                  <div className="mb-2 flex items-center justify-between px-1">
-                    <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--text-secondary)]">
+                <div key={s} className="min-w-[280px] flex-shrink-0 snap-start">
+                  <div className="mb-3 flex items-center justify-between rounded-xl bg-[color:var(--bg-elevated)] px-3 py-2">
+                    <div className="text-xs font-bold uppercase tracking-wide">
                       {STATUS_COPY[s]?.label ?? s}
                     </div>
-                    <div className="text-xs text-[color:var(--text-tertiary)]">{list.length}</div>
+                    <div className="grid h-5 min-w-5 place-items-center rounded-full bg-white/10 px-1 text-[10px] font-bold">
+                      {list.length}
+                    </div>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {list.map((o) => (
                       <StaffOrderCard
                         key={o.id}
@@ -478,6 +529,11 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                         isAdvancing={advancingOrderId === o.id}
                       />
                     ))}
+                    {list.length === 0 && (
+                      <div className="rounded-xl border border-dashed border-[color:var(--border-subtle)] p-4 text-center text-xs text-[color:var(--text-muted)]">
+                        Empty
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -488,7 +544,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
             side-scrolling kanban — the horizontal scroll itself was the
             "why is there a sidebar-like strip on mobile" complaint. */}
           <div className="md:hidden">
-            <div className="no-scrollbar flex gap-2 overflow-x-auto px-3 pb-1 pt-3">
+            <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-1 pt-3">
               {(["active", ...BOARD_STATUSES] as const).map((f) => {
                 const count =
                   f === "active"
@@ -502,18 +558,21 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                   <button
                     key={f}
                     onClick={() => setMobileFilter(f)}
-                    className="tap-scale flex-shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold capitalize"
+                    className="tap-scale flex-shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold capitalize"
                     style={{
-                      borderColor: active ? "var(--accent-primary)" : "var(--border-strong)",
-                      background: active ? "var(--bg-elevated-2)" : "transparent",
+                      color: active ? "var(--on-accent)" : "var(--text-secondary)",
+                      background: active
+                        ? "linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))"
+                        : "var(--bg-elevated)",
                     }}
                   >
-                    {f === "active" ? "Active" : (STATUS_COPY[f]?.label ?? f)} ({count})
+                    {f === "active" ? "Active" : (STATUS_COPY[f]?.label ?? f)}{" "}
+                    <span style={{ opacity: 0.7 }}>({count})</span>
                   </button>
                 );
               })}
             </div>
-            <div className="space-y-2 px-3 pb-6 pt-2">
+            <div className="space-y-3 px-4 pb-6 pt-3">
               {BOARD_STATUSES.filter((s) =>
                 mobileFilter === "active" ? s !== "completed" : s === mobileFilter,
               )
@@ -537,8 +596,11 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
               {BOARD_STATUSES.filter((s) =>
                 mobileFilter === "active" ? s !== "completed" : s === mobileFilter,
               ).flatMap((s) => (grouped[s] as unknown as StaffOrderRow[]) ?? []).length === 0 && (
-                <div className="rounded-2xl border border-dashed border-[color:var(--border-strong)] p-6 text-center text-sm text-[color:var(--text-tertiary)]">
-                  No orders here right now.
+                <div className="card-surface flex flex-col items-center gap-2 p-8 text-center">
+                  <Package className="h-8 w-8 text-[color:var(--text-muted)]" />
+                  <div className="text-sm text-[color:var(--text-tertiary)]">
+                    No orders here right now.
+                  </div>
                 </div>
               )}
             </div>

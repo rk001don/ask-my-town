@@ -81,7 +81,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="relative flex min-h-[100dvh] w-full flex-1 flex-col md:max-w-4xl md:mx-auto md:[transform:translateZ(0)]">
         <main
-          className={`flex-1 ${showFloatingCart ? "pb-[calc(9.5rem+env(safe-area-inset-bottom))]" : "pb-[calc(5.5rem+env(safe-area-inset-bottom))]"} md:pb-10`}
+          className={`flex-1 ${showFloatingCart ? "pb-[calc(10.5rem+env(safe-area-inset-bottom))]" : "pb-[calc(5.5rem+env(safe-area-inset-bottom))]"} md:pb-10`}
         >
           {children}
         </main>
@@ -112,7 +112,7 @@ function MobileCartBar() {
   );
 
   return (
-    <div className="fixed bottom-[calc(4.8rem+env(safe-area-inset-bottom))] left-1/2 z-[var(--z-overlay)] w-[min(92vw,420px)] -translate-x-1/2 md:hidden">
+    <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-1/2 z-[var(--z-overlay)] w-[min(92vw,420px)] -translate-x-1/2 md:hidden">
       <Link
         to="/cart"
         className="tap-scale flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--border-strong)] bg-[color:var(--surface-strong)]/95 px-4 py-3 shadow-[0_18px_30px_rgba(0,0,0,0.25)] backdrop-blur"
