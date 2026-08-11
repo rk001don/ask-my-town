@@ -1,17 +1,15 @@
-import {
-  Coffee,
-  GlassWater,
-  Hotel,
-  PackageCheck,
-  Pill,
-  ShoppingBasket,
-  Sparkles,
-  Utensils,
-} from "lucide-react";
+import { Coffee, GlassWater, Pill, Utensils, type LucideIcon } from "lucide-react";
+import { iconFor } from "@/components/icon-map";
 
 export type CatalogView = "grid" | "list";
 
 export const CATALOG_VIEW_KEY = "mytown.catalogView";
+
+// One consistent warm placeholder background across every product/category/
+// item tile that has no photo -- matches CategoryTile and ItemCard so a
+// grid never mixes a rainbow of unrelated placeholder colors.
+export const CATALOG_FALLBACK_GRADIENT =
+  "linear-gradient(150deg, oklch(0.28 0.06 60) 0%, oklch(0.22 0.05 30) 60%, oklch(0.18 0.03 260) 100%)";
 
 const foodWords = [
   "idli",
@@ -31,44 +29,28 @@ const foodWords = [
   "snack",
 ];
 const beverageWords = ["juice", "shake", "coca", "pepsi", "milk"];
-const serviceWords = [
-  "assistance",
-  "booking",
-  "pickup",
-  "delivery",
-  "submission",
-  "translation",
-  "recharge",
-  "anything",
-  "guide",
-  "queue",
-];
 
-export function catalogVisualFor(name: string, categoryName?: string | null) {
+/**
+ * Picks the icon shown on a product's placeholder tile when it has no photo.
+ * Falls back to the item's own category icon (same icon_key CategoryTile
+ * uses) rather than a generic box, so a category's product grid always
+ * reads as visually part of that category.
+ */
+export function catalogVisualFor(
+  name: string,
+  categoryName?: string | null,
+  categoryIcon?: string | null,
+): { Icon: LucideIcon; gradient: string } {
   const key = `${name} ${categoryName ?? ""}`.toLowerCase();
-  if (serviceWords.some((word) => key.includes(word))) {
-    return { Icon: Sparkles, gradient: "linear-gradient(135deg, #312e81, #7c3aed 52%, #f97316)" };
-  }
+  let Icon: LucideIcon = iconFor(categoryIcon);
   if (key.includes("medicine") || key.includes("band") || key.includes("pad")) {
-    return { Icon: Pill, gradient: "linear-gradient(135deg, #064e3b, #0f766e 52%, #67e8f9)" };
+    Icon = Pill;
+  } else if (beverageWords.some((word) => key.includes(word))) {
+    Icon = GlassWater;
+  } else if (foodWords.some((word) => key.includes(word))) {
+    Icon = Utensils;
+  } else if (key.includes("coffee") || key.includes("tea")) {
+    Icon = Coffee;
   }
-  if (beverageWords.some((word) => key.includes(word))) {
-    return { Icon: GlassWater, gradient: "linear-gradient(135deg, #075985, #06b6d4 52%, #facc15)" };
-  }
-  if (foodWords.some((word) => key.includes(word))) {
-    return { Icon: Utensils, gradient: "linear-gradient(135deg, #7c2d12, #ea580c 52%, #fbbf24)" };
-  }
-  if (key.includes("hotel") || key.includes("lodge")) {
-    return { Icon: Hotel, gradient: "linear-gradient(135deg, #1e3a8a, #2563eb 52%, #f59e0b)" };
-  }
-  if (key.includes("daily") || key.includes("bread") || key.includes("egg")) {
-    return {
-      Icon: ShoppingBasket,
-      gradient: "linear-gradient(135deg, #365314, #65a30d 52%, #fde047)",
-    };
-  }
-  if (key.includes("coffee") || key.includes("tea")) {
-    return { Icon: Coffee, gradient: "linear-gradient(135deg, #422006, #92400e 52%, #fbbf24)" };
-  }
-  return { Icon: PackageCheck, gradient: "linear-gradient(135deg, #1f2937, #475569 52%, #f97316)" };
+  return { Icon, gradient: CATALOG_FALLBACK_GRADIENT };
 }

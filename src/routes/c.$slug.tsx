@@ -181,6 +181,7 @@ function Category() {
                       key={p.id}
                       product={p}
                       categoryName={sub.parent!.name}
+                      categoryIcon={sub.parent!.icon_key}
                       view={view}
                     />
                   ))}
