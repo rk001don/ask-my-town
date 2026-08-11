@@ -414,6 +414,7 @@ export const createOrder = createServerFn({ method: "POST" })
       locationId?: string;
       requestedDate?: string;
       requestedWindow?: string;
+      idempotencyKey?: string;
     }) =>
       z
         .object({
@@ -426,11 +427,24 @@ export const createOrder = createServerFn({ method: "POST" })
             .regex(/^\d{4}-\d{2}-\d{2}$/)
             .optional(),
           requestedWindow: z.string().trim().min(1).max(40).optional(),
+          idempotencyKey: z.string().trim().min(10).max(100).optional(),
         })
         .parse(data),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // A genuine network-retry (not a double-click, which the client already
+    // guards against) can re-send the exact same submit. If this key already
+    // produced an order, return that order instead of creating a duplicate.
+    if (data.idempotencyKey) {
+      const { data: existing } = await supabaseAdmin
+        .from("orders")
+        .select("id")
+        .eq("idempotency_key", data.idempotencyKey)
+        .maybeSingle();
+      if (existing) return { orderId: existing.id };
+    }
 
     // Resolve location: caller-supplied or fallback to first active
     let locationId = data.locationId;
@@ -609,8 +623,23 @@ export const createOrder = createServerFn({ method: "POST" })
       requested_date: requestedDate,
       requested_window: requestedWindow,
       service_fee_estimate: serviceFeeEstimate,
+      idempotency_key: data.idempotencyKey ?? null,
     });
-    if (orderErr) throw new Error(orderErr.message);
+    if (orderErr) {
+      // Unique-violation on idempotency_key means a concurrent retry of this
+      // exact submit already won the race and created the order -- return
+      // that order rather than surfacing an error for what the customer
+      // experiences as one successful checkout.
+      if (orderErr.code === "23505" && data.idempotencyKey) {
+        const { data: raced } = await supabaseAdmin
+          .from("orders")
+          .select("id")
+          .eq("idempotency_key", data.idempotencyKey)
+          .maybeSingle();
+        if (raced) return { orderId: raced.id };
+      }
+      throw new Error(orderErr.message);
+    }
 
     // Insert items
     const { data: insertedItems, error: itemsErr } = await supabaseAdmin

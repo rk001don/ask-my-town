@@ -2,7 +2,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AppHeader } from "@/components/AppHeader";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { trackOrder } from "@/lib/api.functions";
-import { ORDER_STATUS_STEPS, STATUS_COPY, type OrderStatus, waLink } from "@/lib/constants";
+import {
+  CUSTOMER_ORDER_STEPS,
+  STATUS_COPY,
+  customerFacingStatus,
+  type OrderStatus,
+  waLink,
+} from "@/lib/constants";
 import { Check, MessageCircle, Sparkles, XCircle } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/States";
 import { NotifyMeButton } from "@/components/NotifyMeButton";
@@ -42,12 +48,12 @@ function Confirmation() {
 
   const status = order.status as OrderStatus;
   const isCancelled = status === "cancelled";
-  const currentIdx = ORDER_STATUS_STEPS.findIndex((s) => s.key === status);
+  const currentIdx = CUSTOMER_ORDER_STEPS.findIndex((s) => s.key === customerFacingStatus(status));
 
   return (
     <div>
       <AppHeader
-        title={isCancelled ? "Cancelled" : STATUS_COPY[status]?.label ?? "Order"}
+        title={isCancelled ? "Cancelled" : (STATUS_COPY[status]?.label ?? "Order")}
         showCart={false}
         showBack={false}
       />
@@ -107,44 +113,39 @@ function Confirmation() {
           </div>
         </div>
 
-
         {/* Timeline — irrelevant once an order is cancelled */}
         {!isCancelled && (
-        <div className="card-surface p-4">
-
-          <h3 className="text-display text-sm font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
-            What happens next
-          </h3>
-          <ol className="mt-3 space-y-3">
-            {ORDER_STATUS_STEPS.map((s, i) => {
-              const done = i <= currentIdx;
-              const active = i === currentIdx;
-              return (
-                <li key={s.key} className="flex items-start gap-3">
-                  <div
-                    className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-bold ${done ? "accent-gradient" : "border border-[color:var(--border-strong)] text-[color:var(--text-muted)]"}`}
-                  >
-                    {done ? <Check className="h-3.5 w-3.5" /> : i + 1}
-                  </div>
-                  <div>
+          <div className="card-surface p-4">
+            <h3 className="text-display text-sm font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
+              What happens next
+            </h3>
+            <ol className="mt-3 space-y-3">
+              {CUSTOMER_ORDER_STEPS.map((s, i) => {
+                const done = i <= currentIdx;
+                const active = i === currentIdx;
+                return (
+                  <li key={s.key} className="flex items-start gap-3">
                     <div
-                      className={`text-sm font-semibold ${active ? "text-[color:var(--accent-primary)]" : done ? "" : "text-[color:var(--text-muted)]"}`}
+                      className={`mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-bold ${done ? "accent-gradient" : "border border-[color:var(--border-strong)] text-[color:var(--text-muted)]"}`}
                     >
-                      {s.label}
+                      {done ? <Check className="h-3.5 w-3.5" /> : i + 1}
                     </div>
-                    <div className="text-xs text-[color:var(--text-secondary)]">
-                      {STATUS_COPY[s.key as OrderStatus].blurb}
+                    <div>
+                      <div
+                        className={`text-sm font-semibold ${active ? "text-[color:var(--accent-primary)]" : done ? "" : "text-[color:var(--text-muted)]"}`}
+                      >
+                        {s.label}
+                      </div>
+                      <div className="text-xs text-[color:var(--text-secondary)]">
+                        {STATUS_COPY[s.key as OrderStatus].blurb}
+                      </div>
                     </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
         )}
-
-
-
 
         {/* Items summary */}
         <div className="card-surface p-4">
@@ -215,7 +216,9 @@ function Confirmation() {
             <h3 className="text-display text-sm font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
               Cancellation note
             </h3>
-            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">{order.cancellation_reason}</p>
+            <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
+              {order.cancellation_reason}
+            </p>
           </div>
         )}
 

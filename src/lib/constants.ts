@@ -9,6 +9,9 @@ export function waLink(text = WHATSAPP_DEFAULT_MSG) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 }
 
+// Internal/staff-facing step order -- includes every operational status,
+// including "arranging" which staff actively use to track kitchen/prep work.
+// Do not use this for customer-facing screens; see CUSTOMER_ORDER_STEPS below.
 export const ORDER_STATUS_STEPS = [
   { key: "received", label: "Received" },
   { key: "confirmed", label: "Confirmed" },
@@ -27,3 +30,19 @@ export const STATUS_COPY: Record<OrderStatus, { label: string; blurb: string }> 
   completed: { label: "Delivered", blurb: "Delivered. Anything else?" },
   cancelled: { label: "Cancelled", blurb: "This order was cancelled." },
 };
+
+// Customer-facing lifecycle is intentionally simpler than the internal one:
+// Received -> Confirmed -> Out for delivery -> Delivered. The internal
+// "arranging" (prep) status is real and still drives the staff board, but a
+// customer should never see it as a distinct step -- it reads as still
+// "Confirmed" to them (their order is confirmed and being worked on).
+export const CUSTOMER_ORDER_STEPS = [
+  { key: "received", label: "Received" },
+  { key: "confirmed", label: "Confirmed" },
+  { key: "on_the_way", label: "Out for delivery" },
+  { key: "completed", label: "Delivered" },
+] as const;
+
+export function customerFacingStatus(status: OrderStatus): OrderStatus {
+  return status === "arranging" ? "confirmed" : status;
+}

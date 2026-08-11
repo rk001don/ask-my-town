@@ -10,7 +10,7 @@ import { isValidIndianPhone } from "@/lib/phone";
 import { formatTimeRange12h } from "@/lib/time";
 import { ServiceFeeBreakdown, StickyFeeSummary } from "@/components/ServiceFeeBreakdown";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -92,6 +92,12 @@ function Checkout() {
   const [form, setForm] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // One key per checkout attempt (stable across re-renders, fresh on remount)
+  // -- lets a genuine network-retry of the same submit land on the same
+  // order server-side instead of creating a duplicate, without affecting the
+  // existing double-click guard (`busy`), which already stops a second tap.
+  const idempotencyKeyRef = useRef<string | null>(null);
+  if (idempotencyKeyRef.current === null) idempotencyKeyRef.current = crypto.randomUUID();
 
   // Scheduling state
   const [mode, setMode] = useState<"asap" | "schedule">("asap");
@@ -163,6 +169,7 @@ function Checkout() {
           })),
           notes: form.notes?.trim() || undefined,
           locationId: location?.id,
+          idempotencyKey: idempotencyKeyRef.current ?? undefined,
           ...(mode === "schedule"
             ? { requestedDate: dateIso, requestedWindow: windowLabel ?? undefined }
             : {}),
@@ -398,7 +405,7 @@ function Checkout() {
         `}</style>
 
         <div
-          className="glass fixed bottom-0 left-1/2 z-30 w-full max-w-[520px] -translate-x-1/2 md:max-w-2xl border-t border-[color:var(--border-subtle)] p-4"
+          className="glass fixed bottom-0 left-1/2 z-[var(--z-header)] w-full max-w-[520px] -translate-x-1/2 md:max-w-2xl border-t border-[color:var(--border-subtle)] p-4"
           style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
         >
           <StickyFeeSummary

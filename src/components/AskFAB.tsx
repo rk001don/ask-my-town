@@ -107,7 +107,7 @@ export function AskFAB() {
         <button
           onClick={() => setOpen(true)}
           aria-label="Ask MyTown"
-          className="fixed z-40 tap-scale accent-gradient shadow-[var(--shadow-glow)] grid h-14 w-14 place-items-center rounded-full md:hidden"
+          className="fixed z-[var(--z-nav)] tap-scale accent-gradient shadow-[var(--shadow-glow)] grid h-14 w-14 place-items-center rounded-full md:hidden"
           style={{
             // Matches the bottom nav's actual right edge exactly: the nav is
             // w-[min(92vw,480px)] centered via left-1/2 -translate-x-1/2, so its
@@ -128,7 +128,7 @@ export function AskFAB() {
         <button
           onClick={() => setOpen(true)}
           aria-label="Ask MyTown"
-          className="fixed z-40 tap-scale accent-gradient shadow-[var(--shadow-glow)] hidden items-center gap-2 rounded-full px-5 py-3 font-semibold md:flex"
+          className="fixed z-[var(--z-nav)] tap-scale accent-gradient shadow-[var(--shadow-glow)] hidden items-center gap-2 rounded-full px-5 py-3 font-semibold md:flex"
           style={{ right: "1.5rem", bottom: "1.5rem" }}
         >
           <Sparkles className="h-4 w-4" />
@@ -137,7 +137,7 @@ export function AskFAB() {
       )}
       {open && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[var(--z-overlay)] flex items-end justify-center bg-black/60 backdrop-blur-sm"
           onClick={() => setOpen(false)}
         >
           <div

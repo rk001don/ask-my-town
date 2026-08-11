@@ -100,7 +100,7 @@ function SearchPage() {
   return (
     <div>
       <AppHeader title="Search" showSearch={false} />
-      <div className="sticky top-14 z-20 px-4 pt-2 pb-3 glass">
+      <div className="sticky top-14 z-[var(--z-sticky)] px-4 pt-2 pb-3 glass">
         <div className="relative">
           <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[color:var(--text-muted)]" />
           <input

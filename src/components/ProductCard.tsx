@@ -84,12 +84,12 @@ export function ProductCard({
           aria-label={product.is_veg ? "Veg" : "Non-veg"}
           className="mt-1.5 grid h-4 w-4 shrink-0 place-items-center border"
           style={{
-            borderColor: product.is_veg ? "#2f9e44" : "#c92a2a",
+            borderColor: product.is_veg ? "var(--success)" : "var(--danger)",
           }}
         >
           <span
             className="h-2 w-2 rounded-full"
-            style={{ background: product.is_veg ? "#2f9e44" : "#c92a2a" }}
+            style={{ background: product.is_veg ? "var(--success)" : "var(--danger)" }}
           />
         </span>
       )}

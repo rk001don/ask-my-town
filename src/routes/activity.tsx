@@ -4,7 +4,12 @@ import { AppHeader } from "@/components/AppHeader";
 import { trackOrder } from "@/lib/api.functions";
 import { getMyOrders } from "@/lib/auth.functions";
 import { EmptyState, ErrorState, CardSkeleton } from "@/components/States";
-import { ORDER_STATUS_STEPS, STATUS_COPY, type OrderStatus } from "@/lib/constants";
+import {
+  CUSTOMER_ORDER_STEPS,
+  STATUS_COPY,
+  customerFacingStatus,
+  type OrderStatus,
+} from "@/lib/constants";
 import { isValidIndianPhone } from "@/lib/phone";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
@@ -198,8 +203,9 @@ function GuestTracker() {
 
 function OrderCard({ order }: { order: Order }) {
   const status = order.status as OrderStatus;
-  const idx = ORDER_STATUS_STEPS.findIndex((s) => s.key === status);
-  const pct = status === "cancelled" ? 0 : ((idx + 1) / ORDER_STATUS_STEPS.length) * 100;
+  const displayStatus = customerFacingStatus(status);
+  const idx = CUSTOMER_ORDER_STEPS.findIndex((s) => s.key === displayStatus);
+  const pct = status === "cancelled" ? 0 : ((idx + 1) / CUSTOMER_ORDER_STEPS.length) * 100;
   return (
     <li className="card-surface p-4">
       <div className="flex items-start justify-between gap-3">
@@ -214,11 +220,11 @@ function OrderCard({ order }: { order: Order }) {
         <div
           className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase ${status === "completed" ? "bg-[color:var(--success)]/20 text-[color:var(--success)]" : status === "cancelled" ? "bg-[color:var(--danger)]/20 text-[color:var(--danger)]" : "bg-[color:var(--accent-primary)]/20 text-[color:var(--accent-primary)]"}`}
         >
-          {STATUS_COPY[status].label}
+          {STATUS_COPY[displayStatus].label}
         </div>
       </div>
       <div className="mt-3 text-xs text-[color:var(--text-secondary)]">
-        {STATUS_COPY[status].blurb}
+        {STATUS_COPY[displayStatus].blurb}
       </div>
       <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--bg-elevated-2)]">
         <div className="h-full accent-gradient transition-all" style={{ width: `${pct}%` }} />
@@ -247,7 +253,7 @@ function OrderCard({ order }: { order: Order }) {
         >
           View details
         </Link>
-        {idx >= ORDER_STATUS_STEPS.length - 1 && (
+        {idx >= CUSTOMER_ORDER_STEPS.length - 1 && (
           <span className="inline-flex items-center gap-1 text-xs text-[color:var(--success)]">
             <Check className="h-3.5 w-3.5" /> Done
           </span>
