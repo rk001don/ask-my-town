@@ -13,25 +13,6 @@ export type CatalogView = "grid" | "list";
 
 export const CATALOG_VIEW_KEY = "mytown.catalogView";
 
-export const popularPickReasons: Record<string, string> = {
-  "Chicken Biryani (Plate)": "High-intent lunch and dinner order for hostel and shift workers.",
-  "Idli (2 pcs)": "Repeat breakfast staple with clear unit sizing.",
-  "Dosa (1 pc)": "Fast-moving tiffin item that is easy to recognize visually.",
-  "Parotta (2 pcs)": "Common evening and dinner purchase in Tamil Nadu.",
-  "Chicken Fried Rice (Plate)": "Frequent restaurant pickup for employees away from home.",
-  "Chicken Noodles (Plate)": "Popular late lunch and dinner option.",
-  "Veg Meals (Plate)": "Daily value meal with high conversion potential.",
-  "Watermelon Juice (300 ml)": "Hot-weather beverage with strong impulse demand.",
-  "Oreo Shake (300 ml)": "Youth-friendly beverage for repeat snack orders.",
-  "Veg Puff (1 pc)": "Low-price bakery snack with strong add-on potential.",
-  "Black Forest Cake (500 g)": "Celebration purchase that signals bakery depth.",
-  "Coca-Cola (250 ml)": "Known beverage brand and frequent meal add-on.",
-  "Sanitary Pads (Pack)": "Essential personal-care item needing discreet availability.",
-  "Mobile Recharge": "Utility request that keeps MyTown useful beyond food.",
-  "Hotel Booking Assistance": "Local-help differentiator for guests and family visits.",
-  "Need Anything": "Catch-all assisted commerce flow for unlisted needs.",
-};
-
 const foodWords = [
   "idli",
   "dosa",

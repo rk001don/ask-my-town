@@ -49,7 +49,9 @@ function SearchPage() {
     try {
       const raw = localStorage.getItem(RECENTS_KEY);
       if (raw) setRecents(JSON.parse(raw));
-    } catch {}
+    } catch {
+      /* localStorage unavailable (private browsing, quota) -- recents just stay empty */
+    }
   }, []);
 
   useEffect(() => {
@@ -84,7 +86,9 @@ function SearchPage() {
     setRecents(next);
     try {
       localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
-    } catch {}
+    } catch {
+      /* localStorage unavailable (private browsing, quota) -- non-fatal */
+    }
   }
 
   const showEmpty =

@@ -1,23 +1,31 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
+import { useSuspenseQuery, useQuery, queryOptions } from "@tanstack/react-query";
 import { MessageCircle, Search as SearchIcon, ArrowRight, ShoppingBag } from "lucide-react";
 import { MyTownLogo } from "@/components/MyTownLogo";
-import { getCategories } from "@/lib/api.functions";
+import { getCategories, getProducts } from "@/lib/api.functions";
 import { CategoryTile } from "@/components/CategoryTile";
-import { ItemCard } from "@/components/ItemCard";
-import { TileSkeleton, ErrorState } from "@/components/States";
+import { ProductCard } from "@/components/ProductCard";
+import { TileSkeleton, CardSkeleton, ErrorState } from "@/components/States";
 import { APP_NAME, APP_TAGLINE, APP_SUBTEXT, TOWN_NAME, waLink } from "@/lib/constants";
 import { useCartCount } from "@/lib/cart-store";
 import { useEffect, useState } from "react";
-import { popularPickReasons } from "@/lib/catalog-display";
 
 const categoriesOptions = queryOptions({
   queryKey: ["categories", "top"],
   queryFn: () => getCategories(),
 });
 
+const popularProductsOptions = queryOptions({
+  queryKey: ["products", "popular"],
+  queryFn: () => getProducts({ data: { tag: "popular", limit: 16 } }),
+});
+
 export const Route = createFileRoute("/")({
-  loader: ({ context }) => context.queryClient.ensureQueryData(categoriesOptions),
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(categoriesOptions),
+      context.queryClient.ensureQueryData(popularProductsOptions),
+    ]),
   head: () => ({
     meta: [
       { title: "MyTown — Need Anything? MyTown!" },
@@ -37,129 +45,9 @@ export const Route = createFileRoute("/")({
   errorComponent: ({ reset }) => <ErrorState onRetry={reset} />,
 });
 
-const POPULAR_PICKS: Array<{
-  name: string;
-  sub?: string;
-  category?: string;
-  iconKey?: string;
-  priceLabel?: string;
-}> = [
-  {
-    name: "Chicken Biryani (Plate)",
-    sub: "dinner",
-    category: "Food & Home Meals",
-    iconKey: "chef-hat",
-    priceLabel: "Est. ₹140",
-  },
-  {
-    name: "Idli (2 pcs)",
-    sub: "breakfast",
-    category: "Food & Home Meals",
-    iconKey: "utensils",
-    priceLabel: "Est. ₹20",
-  },
-  {
-    name: "Dosa (1 pc)",
-    sub: "breakfast",
-    category: "Food & Home Meals",
-    iconKey: "utensils",
-    priceLabel: "Est. ₹45",
-  },
-  {
-    name: "Parotta (2 pcs)",
-    sub: "dinner",
-    category: "Food & Home Meals",
-    iconKey: "utensils",
-    priceLabel: "Est. ₹40",
-  },
-  {
-    name: "Chicken Fried Rice (Plate)",
-    sub: "rice-chinese",
-    category: "Food & Home Meals",
-    iconKey: "utensils",
-    priceLabel: "Est. ₹120",
-  },
-  {
-    name: "Chicken Noodles (Plate)",
-    sub: "rice-chinese",
-    category: "Food & Home Meals",
-    iconKey: "utensils",
-    priceLabel: "Est. ₹120",
-  },
-  {
-    name: "Veg Meals (Plate)",
-    sub: "lunch",
-    category: "Food & Home Meals",
-    iconKey: "utensils",
-    priceLabel: "Est. ₹90",
-  },
-  {
-    name: "Watermelon Juice (300 ml)",
-    sub: "juice",
-    category: "Juices & Beverages",
-    iconKey: "glass-water",
-    priceLabel: "Est. ₹40",
-  },
-  {
-    name: "Oreo Shake (300 ml)",
-    sub: "juice",
-    category: "Juices & Beverages",
-    iconKey: "glass-water",
-    priceLabel: "Est. ₹80",
-  },
-  {
-    name: "Veg Puff (1 pc)",
-    sub: "bakery",
-    category: "Bakery",
-    iconKey: "cookie",
-    priceLabel: "Est. ₹20",
-  },
-  {
-    name: "Black Forest Cake (500 g)",
-    sub: "cakes",
-    category: "Cakes",
-    iconKey: "cake",
-    priceLabel: "Est. ₹450",
-  },
-  {
-    name: "Coca-Cola (250 ml)",
-    sub: "beverages",
-    category: "Juices & Beverages",
-    iconKey: "glass-water",
-    priceLabel: "Est. ₹20",
-  },
-  {
-    name: "Sanitary Pads (Pack)",
-    sub: "personal-care",
-    category: "Pharmacy & Personal Care",
-    iconKey: "pill",
-    priceLabel: "Est. ₹45",
-  },
-  {
-    name: "Mobile Recharge",
-    sub: "eseva",
-    category: "e-Seva & Documentation",
-    iconKey: "smartphone",
-    priceLabel: "As requested",
-  },
-  {
-    name: "Hotel Booking Assistance",
-    sub: "local-assistance",
-    category: "Local Assistance",
-    iconKey: "bed",
-    priceLabel: "Service fee",
-  },
-  {
-    name: "Need Anything",
-    sub: "custom",
-    category: "Local Assistance",
-    iconKey: "sparkles",
-    priceLabel: "Ask MyTown",
-  },
-];
-
 function Home() {
   const { data: categories } = useSuspenseQuery(categoriesOptions);
+  const popularQ = useQuery(popularProductsOptions);
   const cartCount = useCartCount();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -254,28 +142,32 @@ function Home() {
         </div>
       </section>
 
-      {/* Popular picks */}
-      <section className="mt-8">
-        <div className="flex items-baseline justify-between px-4">
-          <h2 className="text-display text-lg font-semibold">Popular picks</h2>
-          <Link to="/explore" className="text-xs font-semibold text-[color:var(--accent-primary)]">
-            See all
-          </Link>
-        </div>
-        <div className="mt-3 grid grid-cols-2 items-stretch gap-3 px-4 md:grid-cols-3 lg:grid-cols-4">
-          {POPULAR_PICKS.map((p) => (
-            <ItemCard
-              key={p.name}
-              itemName={p.name}
-              category={p.category}
-              subcategory={p.sub}
-              iconKey={p.iconKey}
-              priceLabel={p.priceLabel}
-              reason={popularPickReasons[p.name]}
-            />
-          ))}
-        </div>
-      </section>
+      {/* Popular picks — pulled live from products tagged "popular" so this
+          section always reflects real availability and pricing. */}
+      {(popularQ.isLoading || (popularQ.data?.length ?? 0) > 0) && (
+        <section className="mt-8">
+          <div className="flex items-baseline justify-between px-4">
+            <h2 className="text-display text-lg font-semibold">Popular picks</h2>
+            <Link
+              to="/explore"
+              className="text-xs font-semibold text-[color:var(--accent-primary)]"
+            >
+              See all
+            </Link>
+          </div>
+          {popularQ.isLoading ? (
+            <div className="mt-3 px-4">
+              <CardSkeleton />
+            </div>
+          ) : (
+            <div className="mt-3 grid grid-cols-2 items-stretch gap-3 px-4 md:grid-cols-3 lg:grid-cols-4">
+              {(popularQ.data ?? []).map((p) => (
+                <ProductCard key={p.id} product={p} categoryName={p.categories?.name} view="grid" />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Categories grid */}
       <section className="mt-8">

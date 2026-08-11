@@ -95,17 +95,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       {
         property: "og:image",
-        content: "/mytown-icon.svg",
+        content: "/icon-512.png",
       },
+      { property: "og:image:width", content: "512" },
+      { property: "og:image:height", content: "512" },
       {
         name: "twitter:image",
-        content: "/mytown-icon.svg",
+        content: "/icon-512.png",
       },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/mytown-icon.svg", type: "image/svg+xml" },
-      { rel: "apple-touch-icon", href: "/mytown-icon.svg" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
