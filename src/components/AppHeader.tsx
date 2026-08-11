@@ -38,7 +38,7 @@ export function AppHeader({
 
   return (
     <header
-      className={`sticky top-0 z-30 flex items-center justify-between gap-2 px-4 py-3 ${transparent ? "" : "glass"}`}
+      className={`sticky top-0 z-[var(--z-header)] flex items-center justify-between gap-2 px-4 py-3 ${transparent ? "" : "glass"}`}
     >
       <div className="flex min-w-0 items-center gap-2">
         {showBack && (

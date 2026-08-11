@@ -22,8 +22,8 @@ export function MyTownLogo({ className = "h-10 w-10", showWordmark = false }: My
             y2="56"
             gradientUnits="userSpaceOnUse"
           >
-            <stop stopColor="#fbbf24" />
-            <stop offset="1" stopColor="#fb7185" />
+            <stop stopColor="var(--accent-primary)" />
+            <stop offset="1" stopColor="var(--accent-secondary)" />
           </linearGradient>
         </defs>
         <rect width="64" height="64" rx="18" fill="#0b0d12" />

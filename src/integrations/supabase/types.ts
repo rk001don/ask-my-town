@@ -526,6 +526,7 @@ export type Database = {
           delivery_batch_id: string | null
           group_order_id: string | null
           id: string
+          idempotency_key: string | null
           location_id: string | null
           notes: string | null
           payment_status: string
@@ -552,6 +553,7 @@ export type Database = {
           delivery_batch_id?: string | null
           group_order_id?: string | null
           id: string
+          idempotency_key?: string | null
           location_id?: string | null
           notes?: string | null
           payment_status?: string
@@ -578,6 +580,7 @@ export type Database = {
           delivery_batch_id?: string | null
           group_order_id?: string | null
           id?: string
+          idempotency_key?: string | null
           location_id?: string | null
           notes?: string | null
           payment_status?: string

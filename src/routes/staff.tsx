@@ -399,7 +399,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
 
   return (
     <div className="min-h-[100dvh]">
-      <div className="sticky top-0 z-30 glass flex items-center justify-between px-4 py-3">
+      <div className="sticky top-0 z-[var(--z-header)] glass flex items-center justify-between px-4 py-3">
         <div>
           <div className="text-display text-lg font-semibold">Live orders</div>
           <div className="text-xs text-[color:var(--text-tertiary)]">
@@ -548,7 +548,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
 
       {(previewUrl || previewLoading) && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6"
+          className="fixed inset-0 z-[var(--z-overlay)] flex items-center justify-center bg-black/80 p-6"
           onClick={() => setPreviewUrl(null)}
         >
           {previewLoading ? (

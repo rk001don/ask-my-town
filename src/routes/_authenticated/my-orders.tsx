@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { cancelMyOrder, getMyOrders } from "@/lib/auth.functions";
 import { AppHeader } from "@/components/AppHeader";
 import { EmptyState, CardSkeleton, ErrorState } from "@/components/States";
-import { STATUS_COPY, type OrderStatus } from "@/lib/constants";
+import { STATUS_COPY, customerFacingStatus, type OrderStatus } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
 import { getOrderTotals } from "@/lib/serviceFee";
 import { LogOut } from "lucide-react";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
+import { NotificationOptIn } from "@/components/NotificationOptIn";
 import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/my-orders")({
@@ -80,6 +81,10 @@ function MyOrdersPage() {
           </button>
         </div>
 
+        <div className="mb-4">
+          <NotificationOptIn />
+        </div>
+
         {isLoading && <CardSkeleton count={3} />}
         {error && <ErrorState onRetry={() => refetch()} />}
         {!isLoading && !error && (data?.length ?? 0) === 0 && (
@@ -99,7 +104,7 @@ function MyOrdersPage() {
 
         <div className="space-y-3">
           {(data ?? []).map((o) => {
-            const status = (o.status ?? "received") as OrderStatus;
+            const status = customerFacingStatus((o.status ?? "received") as OrderStatus);
             const copy = STATUS_COPY[status] ?? { label: status, blurb: "" };
             return (
               <Link

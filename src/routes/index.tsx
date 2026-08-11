@@ -1,11 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, useQuery, queryOptions } from "@tanstack/react-query";
-import { MessageCircle, Search as SearchIcon, ArrowRight, ShoppingBag } from "lucide-react";
+import {
+  MessageCircle,
+  Search as SearchIcon,
+  ArrowRight,
+  ShoppingBag,
+  Sparkles,
+} from "lucide-react";
 import { MyTownLogo } from "@/components/MyTownLogo";
 import { getCategories, getProducts } from "@/lib/api.functions";
 import { CategoryTile } from "@/components/CategoryTile";
 import { ProductCard } from "@/components/ProductCard";
 import { TileSkeleton, CardSkeleton, ErrorState } from "@/components/States";
+import { openAskSheet } from "@/components/AskFAB";
 import { APP_NAME, APP_TAGLINE, APP_SUBTEXT, TOWN_NAME, waLink } from "@/lib/constants";
 import { useCartCount } from "@/lib/cart-store";
 import { useEffect, useState } from "react";
@@ -140,6 +147,27 @@ function Home() {
             </div>
           </div>
         </div>
+      </section>
+
+      {/* Need Anything — the app's central differentiator, previously reachable
+          only via the floating AskFAB. Gives it a real home-page presence
+          without duplicating the sheet itself. */}
+      <section className="px-4 pt-6">
+        <button
+          onClick={() => openAskSheet()}
+          className="tap-scale card-surface flex w-full items-center gap-3 p-4 text-left"
+        >
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full accent-gradient">
+            <Sparkles className="h-5 w-5 text-[color:var(--on-accent)]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold">Don't see it? Just ask.</div>
+            <div className="text-xs text-[color:var(--text-secondary)]">
+              Tell us what you need — medicine, a repair, tickets, anything local.
+            </div>
+          </div>
+          <ArrowRight className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
+        </button>
       </section>
 
       {/* Popular picks — pulled live from products tagged "popular" so this

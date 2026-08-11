@@ -25,6 +25,7 @@ import { to12Hour } from "@/lib/time";
 import {
   createCampaign,
   listCampaigns,
+  sendCampaignNow,
   sendTestNotification,
 } from "@/lib/notifications-admin.functions";
 import { Loader2, ShieldAlert, LogOut, Plus, Trash2, Search, ArrowUpDown, X } from "lucide-react";
@@ -106,6 +107,7 @@ function AdminBoard({ email }: { email: string }) {
   const advanceBatchFn = useServerFn(updateBatchStatus);
   const createCampaignFn = useServerFn(createCampaign);
   const listCampaignsFn = useServerFn(listCampaigns);
+  const sendCampaignNowFn = useServerFn(sendCampaignNow);
   const sendTestNotificationFn = useServerFn(sendTestNotification);
 
   const rolesQ = useQuery({ queryKey: ["my-roles"], queryFn: () => rolesFn(), staleTime: 60_000 });
@@ -147,6 +149,7 @@ function AdminBoard({ email }: { email: string }) {
   const [advancingBatchId, setAdvancingBatchId] = useState<string | null>(null);
   const [savingConfigKey, setSavingConfigKey] = useState<string | null>(null);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [sendingCampaignId, setSendingCampaignId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
     "dashboard" | "catalog" | "notifications" | "config" | "delivery"
   >("dashboard");
@@ -320,6 +323,27 @@ function AdminBoard({ email }: { email: string }) {
       );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't send test");
+    }
+  }
+
+  async function sendCampaign(id: string) {
+    if (sendingCampaignId) return;
+    setSendingCampaignId(id);
+    try {
+      const result = await sendCampaignNowFn({ data: { id } });
+      if (result.sent === 0 && result.failed === 0) {
+        toast.success("Sent — but no devices are registered for this audience yet");
+      } else {
+        toast.success(
+          `Sent to ${result.sent} device(s)${result.failed ? `, ${result.failed} failed` : ""}`,
+        );
+      }
+      qc.invalidateQueries({ queryKey: ["admin-campaigns"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't send campaign");
+      qc.invalidateQueries({ queryKey: ["admin-campaigns"] });
+    } finally {
+      setSendingCampaignId(null);
     }
   }
 
@@ -653,30 +677,65 @@ function AdminBoard({ email }: { email: string }) {
         <section className="mb-8">
           <h2 className="text-lg font-semibold">Notification center</h2>
           <p className="mb-3 mt-1 text-xs text-[color:var(--text-secondary)]">
-            Draft or schedule campaigns; send a test push to your own registered device before any
-            live broadcast.
+            Draft campaigns, send a test push to your own registered device first, then hit "Send
+            now" to broadcast to every opted-in device for the chosen audience. Scheduling a time
+            doesn't send it automatically yet — come back and press "Send now" when it's time.
           </p>
           <NotificationComposer onSave={saveCampaign} onTest={sendTest} />
           <div className="mt-4 space-y-2">
-            {(campaignsQ.data ?? []).map((campaign) => (
-              <div key={campaign.id} className="glass rounded-2xl p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-sm font-semibold">{campaign.title}</div>
-                  <span className="rounded-full border border-[color:var(--border-strong)] px-2 py-0.5 text-[10px] uppercase tracking-wide text-[color:var(--text-secondary)]">
-                    {campaign.status}
-                  </span>
-                </div>
-                <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
-                  {campaign.type} · {campaign.target} · {campaign.category ?? "all"}
-                </div>
-                <p className="mt-2 text-sm text-[color:var(--text-primary)]">{campaign.body}</p>
-                {campaign.scheduled_at && (
-                  <div className="mt-2 text-[11px] text-[color:var(--text-tertiary)]">
-                    Scheduled: {new Date(campaign.scheduled_at).toLocaleString()}
+            {(campaignsQ.data ?? []).map((campaign) => {
+              const sendable =
+                campaign.status === "draft" ||
+                campaign.status === "scheduled" ||
+                campaign.status === "failed";
+              const isSending = sendingCampaignId === campaign.id;
+              return (
+                <div key={campaign.id} className="glass rounded-2xl p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-sm font-semibold">{campaign.title}</div>
+                    <span
+                      className={`rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide ${
+                        campaign.status === "sent"
+                          ? "border-[color:var(--success)]/40 text-[color:var(--success)]"
+                          : campaign.status === "failed"
+                            ? "border-[color:var(--danger)]/40 text-[color:var(--danger)]"
+                            : "border-[color:var(--border-strong)] text-[color:var(--text-secondary)]"
+                      }`}
+                    >
+                      {campaign.status}
+                    </span>
                   </div>
-                )}
-              </div>
-            ))}
+                  <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
+                    {campaign.type} · {campaign.target} · {campaign.category ?? "all"}
+                  </div>
+                  <p className="mt-2 text-sm text-[color:var(--text-primary)]">{campaign.body}</p>
+                  {campaign.scheduled_at && (
+                    <div className="mt-2 text-[11px] text-[color:var(--text-tertiary)]">
+                      Scheduled: {new Date(campaign.scheduled_at).toLocaleString()}
+                    </div>
+                  )}
+                  {campaign.sent_at && (
+                    <div className="mt-2 text-[11px] text-[color:var(--text-tertiary)]">
+                      Sent: {new Date(campaign.sent_at).toLocaleString()}
+                    </div>
+                  )}
+                  {sendable && (
+                    <button
+                      onClick={() => sendCampaign(campaign.id)}
+                      disabled={isSending}
+                      className="tap-scale mt-3 flex items-center gap-1.5 rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                    >
+                      {isSending && <Loader2 className="h-3 w-3 animate-spin" />}
+                      {isSending
+                        ? "Sending…"
+                        : campaign.status === "failed"
+                          ? "Retry send"
+                          : "Send now"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
             {(campaignsQ.data ?? []).length === 0 && (
               <div className="text-sm text-[color:var(--text-tertiary)]">
                 No campaigns yet — your first announcement will appear here.
@@ -1155,7 +1214,26 @@ function ConfigRow({
   onSave: (raw: string) => void;
   isSaving: boolean;
 }) {
+  const isBoolean = typeof value === "boolean";
+  const isStringArray = Array.isArray(value) && value.every((v) => typeof v === "string");
+
+  // Typed editors cover the simple config shapes actually in use (a plain
+  // on/off flag, a list of short string values like enabled languages).
+  // Anything more complex (e.g. the nested service-fee tier structure) keeps
+  // the raw-JSON editor -- that's still the correct tool for a real object,
+  // not a gap to fill in.
+  const [boolValue, setBoolValue] = useState(isBoolean ? (value as boolean) : false);
+  const [arrValue, setArrValue] = useState<string[]>(isStringArray ? (value as string[]) : []);
+  const [tagInput, setTagInput] = useState("");
   const [raw, setRaw] = useState(JSON.stringify(value));
+
+  function addTag() {
+    const v = tagInput.trim();
+    if (!v || arrValue.includes(v)) return;
+    setArrValue((prev) => [...prev, v]);
+    setTagInput("");
+  }
+
   return (
     <div className="glass rounded-2xl p-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1165,21 +1243,87 @@ function ConfigRow({
             <div className="text-xs text-[color:var(--text-tertiary)]">{description}</div>
           )}
         </div>
-        <div className="grid gap-2 sm:flex sm:items-center">
-          <input
-            value={raw}
-            onChange={(e) => setRaw(e.target.value)}
-            className="min-h-11 w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 font-mono text-xs sm:w-56"
-          />
-          <button
-            onClick={() => onSave(raw)}
-            disabled={isSaving}
-            className="tap-scale flex min-h-11 items-center justify-center gap-1.5 rounded-full accent-gradient px-4 py-2 text-xs font-semibold disabled:opacity-50"
-          >
-            {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
-            Save
-          </button>
-        </div>
+
+        {isBoolean ? (
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={boolValue}
+                onChange={(e) => setBoolValue(e.target.checked)}
+                className="h-5 w-5"
+              />
+              {boolValue ? "On" : "Off"}
+            </label>
+            <button
+              onClick={() => onSave(JSON.stringify(boolValue))}
+              disabled={isSaving}
+              className="tap-scale flex min-h-11 items-center justify-center gap-1.5 rounded-full accent-gradient px-4 py-2 text-xs font-semibold disabled:opacity-50"
+            >
+              {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+              Save
+            </button>
+          </div>
+        ) : isStringArray ? (
+          <div className="w-full sm:w-64">
+            <div className="flex flex-wrap gap-1.5">
+              {arrValue.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-xs"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => setArrValue((prev) => prev.filter((t) => t !== tag))}
+                    aria-label={`Remove ${tag}`}
+                    className="tap-scale text-[color:var(--text-muted)] hover:text-[color:var(--danger)]"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+            <div className="mt-2 flex gap-2">
+              <input
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addTag();
+                  }
+                }}
+                placeholder="Add value, press Enter"
+                className="min-h-11 w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 text-xs"
+              />
+              <button
+                onClick={() => onSave(JSON.stringify(arrValue))}
+                disabled={isSaving}
+                className="tap-scale flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full accent-gradient px-4 py-2 text-xs font-semibold disabled:opacity-50"
+              >
+                {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+                Save
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid gap-2 sm:flex sm:items-center">
+            <input
+              value={raw}
+              onChange={(e) => setRaw(e.target.value)}
+              className="min-h-11 w-full rounded-lg border border-[color:var(--border-strong)] bg-transparent px-3 py-2 font-mono text-xs sm:w-56"
+            />
+            <button
+              onClick={() => onSave(raw)}
+              disabled={isSaving}
+              className="tap-scale flex min-h-11 items-center justify-center gap-1.5 rounded-full accent-gradient px-4 py-2 text-xs font-semibold disabled:opacity-50"
+            >
+              {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
+              Save
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

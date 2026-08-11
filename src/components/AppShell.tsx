@@ -97,13 +97,16 @@ function MobileCartBar() {
 
   if (cartCount === 0) return null;
 
-  const total = items.reduce((sum: number, item: { unitPrice?: number | null; quantity: number }) => {
-    const unitPrice = item.unitPrice ?? 0;
-    return sum + unitPrice * item.quantity;
-  }, 0);
+  const total = items.reduce(
+    (sum: number, item: { unitPrice?: number | null; quantity: number }) => {
+      const unitPrice = item.unitPrice ?? 0;
+      return sum + unitPrice * item.quantity;
+    },
+    0,
+  );
 
   return (
-    <div className="fixed bottom-[calc(4.8rem+env(safe-area-inset-bottom))] left-1/2 z-50 w-[min(92vw,420px)] -translate-x-1/2 md:hidden">
+    <div className="fixed bottom-[calc(4.8rem+env(safe-area-inset-bottom))] left-1/2 z-[var(--z-overlay)] w-[min(92vw,420px)] -translate-x-1/2 md:hidden">
       <Link
         to="/cart"
         className="tap-scale flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--border-strong)] bg-[color:var(--surface-strong)]/95 px-4 py-3 shadow-[0_18px_30px_rgba(0,0,0,0.25)] backdrop-blur"
@@ -135,7 +138,7 @@ function MobileCartBar() {
 function BottomNav({ pathname }: { pathname: string }) {
   return (
     <nav
-      className="glass fixed bottom-3 left-1/2 z-40 w-[min(92vw,480px)] -translate-x-1/2 rounded-full px-2 py-2"
+      className="glass fixed bottom-3 left-1/2 z-[var(--z-nav)] w-[min(92vw,480px)] -translate-x-1/2 rounded-full px-2 py-2"
       aria-label="Primary"
       style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
     >
@@ -161,7 +164,6 @@ function BottomNav({ pathname }: { pathname: string }) {
             </li>
           );
         })}
-
       </ul>
     </nav>
   );

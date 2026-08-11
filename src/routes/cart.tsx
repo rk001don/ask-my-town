@@ -89,7 +89,7 @@ function Cart() {
       </div>
 
       <div
-        className="glass fixed bottom-0 left-1/2 z-[60] w-full max-w-[520px] -translate-x-1/2 border-t border-[color:var(--border-subtle)] p-4 md:max-w-2xl"
+        className="glass fixed bottom-0 left-1/2 z-[var(--z-header)] w-full max-w-[520px] -translate-x-1/2 border-t border-[color:var(--border-subtle)] p-4 md:max-w-2xl"
         style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
       >
         <button
