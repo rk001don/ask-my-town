@@ -4,12 +4,13 @@ import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { trackOrder } from "@/lib/api.functions";
 import {
   CUSTOMER_ORDER_STEPS,
+  DELIVERY_ETA_LABEL,
   STATUS_COPY,
   customerFacingStatus,
   type OrderStatus,
   waLink,
 } from "@/lib/constants";
-import { Check, MessageCircle, Sparkles, XCircle } from "lucide-react";
+import { Check, Clock, MessageCircle, Sparkles, XCircle } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/States";
 import { NotifyMeButton } from "@/components/NotifyMeButton";
 import { getOrderTotals } from "@/lib/serviceFee";
@@ -103,6 +104,15 @@ function Confirmation() {
                     Scheduled: {order.requested_window}
                   </div>
                 )}
+                {!isCancelled &&
+                  !order.requested_window &&
+                  status !== "received" &&
+                  status !== "completed" && (
+                    <div className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold text-[color:var(--text-secondary)]">
+                      <Clock className="h-3.5 w-3.5" />
+                      {DELIVERY_ETA_LABEL}
+                    </div>
+                  )}
               </div>
               {!isCancelled && (
                 <div className="mt-3">

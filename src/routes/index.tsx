@@ -27,11 +27,20 @@ const popularProductsOptions = queryOptions({
   queryFn: () => getProducts({ data: { tag: "popular", limit: 16 } }),
 });
 
+// Curated shelf pulled from the existing catalog via the "trending" tag
+// (see the price-visibility/trending migration) -- not a new product set,
+// just a quick-order view into items already in stock.
+const trendingProductsOptions = queryOptions({
+  queryKey: ["products", "trending"],
+  queryFn: () => getProducts({ data: { tag: "trending", limit: 12 } }),
+});
+
 export const Route = createFileRoute("/")({
   loader: ({ context }) =>
     Promise.all([
       context.queryClient.ensureQueryData(categoriesOptions),
       context.queryClient.ensureQueryData(popularProductsOptions),
+      context.queryClient.ensureQueryData(trendingProductsOptions),
     ]),
   head: () => ({
     meta: [
@@ -55,6 +64,7 @@ export const Route = createFileRoute("/")({
 function Home() {
   const { data: categories } = useSuspenseQuery(categoriesOptions);
   const popularQ = useQuery(popularProductsOptions);
+  const trendingQ = useQuery(trendingProductsOptions);
   const cartCount = useCartCount();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -127,6 +137,37 @@ function Home() {
             <div className="mt-3 grid grid-cols-2 items-stretch gap-3 px-4 md:grid-cols-3 lg:grid-cols-4">
               {(popularQ.data ?? []).map((p) => (
                 <ProductCard key={p.id} product={p} categoryName={p.categories?.name} view="grid" />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Trending picks — a curated shelf into the existing catalog (self-care
+          + snacking essentials), horizontal so it reads distinctly from the
+          Popular grid above it while staying above Categories for quick
+          reordering. */}
+      {(trendingQ.isLoading || (trendingQ.data?.length ?? 0) > 0) && (
+        <section className="pt-6">
+          <div className="flex items-baseline justify-between px-4">
+            <h2 className="text-display text-lg font-semibold">Trending picks</h2>
+            <Link
+              to="/explore"
+              className="text-xs font-semibold text-[color:var(--accent-primary)]"
+            >
+              See all
+            </Link>
+          </div>
+          {trendingQ.isLoading ? (
+            <div className="mt-3 px-4">
+              <CardSkeleton />
+            </div>
+          ) : (
+            <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-4 pb-1">
+              {(trendingQ.data ?? []).map((p) => (
+                <div key={p.id} className="w-[152px] shrink-0">
+                  <ProductCard product={p} categoryName={p.categories?.name} view="grid" />
+                </div>
               ))}
             </div>
           )}

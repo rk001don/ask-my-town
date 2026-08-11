@@ -85,7 +85,9 @@
   --z-sticky: 20; /* in-flow sticky sub-headers (e.g. a search bar under the app header) */
   --z-header: 30; /* app header/footer bars: sticky top headers, sticky bottom CTA bars */
   --z-nav: 40; /* bottom navigation, floating action buttons */
-  --z-overlay: 50; /* anything that should sit above nav: floating cart bar, modals, full-screen previews */
+  --z-overlay: 50; /* floating bars that sit above nav but below any modal: the cart bar */
+  --z-modal: 60; /* anything that must cover everything else: sheets, dialogs, full-screen previews.
+                    Always above --z-overlay so a modal never visually collides with the cart bar. */
 }
 
 @layer base {

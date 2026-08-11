@@ -610,7 +610,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
 
       {(previewUrl || previewLoading) && (
         <div
-          className="fixed inset-0 z-[var(--z-overlay)] flex items-center justify-center bg-black/80 p-6"
+          className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-black/80 p-6"
           onClick={() => setPreviewUrl(null)}
         >
           {previewLoading ? (

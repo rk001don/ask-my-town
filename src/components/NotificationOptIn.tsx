@@ -78,9 +78,9 @@ export function NotificationOptIn() {
   return (
     <div className="glass flex items-center justify-between gap-3 rounded-2xl p-4">
       <div className="min-w-0">
-        <div className="text-sm font-semibold">Order & offer notifications</div>
+        <div className="text-sm font-semibold">Notifications</div>
         <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">
-          Get a push on this device for order updates and MyTown announcements.
+          Order updates & offers on this device.
         </p>
       </div>
       {state === "subscribed" ? (

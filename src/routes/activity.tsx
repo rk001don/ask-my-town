@@ -6,6 +6,7 @@ import { cancelMyOrder, getMyOrders } from "@/lib/auth.functions";
 import { EmptyState, ErrorState, CardSkeleton } from "@/components/States";
 import {
   CUSTOMER_ORDER_STEPS,
+  DELIVERY_ETA_LABEL,
   STATUS_COPY,
   customerFacingStatus,
   type OrderStatus,
@@ -14,7 +15,7 @@ import { isValidIndianPhone } from "@/lib/phone";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Check, Sparkles } from "lucide-react";
+import { Search, Check, Clock, Sparkles } from "lucide-react";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 import { NotificationOptIn } from "@/components/NotificationOptIn";
 import { toast } from "sonner";
@@ -259,6 +260,15 @@ function OrderCard({ order, onCancel }: { order: Order; onCancel?: (orderId: str
       <div className="mt-3 text-xs text-[color:var(--text-secondary)]">
         {STATUS_COPY[displayStatus].blurb}
       </div>
+      {status !== "cancelled" &&
+        status !== "received" &&
+        status !== "completed" &&
+        !order.requested_window && (
+          <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-[color:var(--accent-primary)]">
+            <Clock className="h-3 w-3" />
+            {DELIVERY_ETA_LABEL}
+          </div>
+        )}
       <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--bg-elevated-2)]">
         <div className="h-full accent-gradient transition-all" style={{ width: `${pct}%` }} />
       </div>

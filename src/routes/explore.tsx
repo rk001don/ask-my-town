@@ -1,15 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { getCategories } from "@/lib/api.functions";
+import { queryOptions, useSuspenseQuery, useQuery } from "@tanstack/react-query";
+import { getCategories, getProducts } from "@/lib/api.functions";
 import { AppHeader } from "@/components/AppHeader";
 import { CategoryTile } from "@/components/CategoryTile";
-import { TileSkeleton, ErrorState } from "@/components/States";
+import { ProductCard } from "@/components/ProductCard";
+import { TileSkeleton, CardSkeleton, ErrorState } from "@/components/States";
 import { useEffect, useState } from "react";
 
-export const opts = queryOptions({ queryKey: ["categories", "top"], queryFn: () => getCategories() });
+export const opts = queryOptions({
+  queryKey: ["categories", "top"],
+  queryFn: () => getCategories(),
+});
+
+const trendingOpts = queryOptions({
+  queryKey: ["products", "trending"],
+  queryFn: () => getProducts({ data: { tag: "trending", limit: 12 } }),
+});
 
 export const Route = createFileRoute("/explore")({
-  loader: ({ context }) => context.queryClient.ensureQueryData(opts),
+  loader: ({ context }) =>
+    Promise.all([
+      context.queryClient.ensureQueryData(opts),
+      context.queryClient.ensureQueryData(trendingOpts),
+    ]),
   head: () => ({
     meta: [
       { title: "Explore — MyTown" },
@@ -28,6 +41,7 @@ export const Route = createFileRoute("/explore")({
 
 function Explore() {
   const { data } = useSuspenseQuery(opts);
+  const trendingQ = useQuery(trendingOpts);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   return (
@@ -39,6 +53,26 @@ function Explore() {
           Tap a category to see options, or just ask us.
         </p>
       </div>
+      {(trendingQ.isLoading || (trendingQ.data?.length ?? 0) > 0) && (
+        <div className="pb-6">
+          <h3 className="px-4 text-sm font-bold uppercase tracking-wider text-[color:var(--text-secondary)]">
+            Trending picks
+          </h3>
+          {trendingQ.isLoading ? (
+            <div className="mt-3 px-4">
+              <CardSkeleton />
+            </div>
+          ) : (
+            <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-4 pb-1">
+              {(trendingQ.data ?? []).map((p) => (
+                <div key={p.id} className="w-[152px] shrink-0">
+                  <ProductCard product={p} categoryName={p.categories?.name} view="grid" />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       {!mounted ? (
         <TileSkeleton count={12} />
       ) : (
