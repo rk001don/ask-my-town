@@ -121,7 +121,7 @@ export const getProducts = createServerFn({ method: "GET" })
     let query = supabaseAdmin
       .from("products")
       .select(
-        "id, category_id, name, description, image_url, price, currency, show_price, payment_mode, is_veg, is_service, is_available, schedulable, sort_order, tags, categories(name)",
+        "id, category_id, name, description, image_url, price, currency, show_price, payment_mode, is_veg, is_service, is_available, schedulable, sort_order, tags, categories(name, icon_key)",
       )
       .eq("is_available", true)
       .order("sort_order", { ascending: true });

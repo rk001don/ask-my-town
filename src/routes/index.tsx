@@ -133,25 +133,6 @@ function Home() {
         </section>
       )}
 
-      {/* Need Anything — the app's central differentiator */}
-      <section className="px-4 pt-5">
-        <button
-          onClick={() => openAskSheet()}
-          className="tap-scale card-surface flex w-full items-center gap-3 p-4 text-left"
-        >
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full accent-gradient">
-            <Sparkles className="h-5 w-5 text-[color:var(--on-accent)]" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold">Don't see it? Just ask.</div>
-            <div className="text-xs text-[color:var(--text-secondary)]">
-              Tell us what you need — medicine, a repair, tickets, anything local.
-            </div>
-          </div>
-          <ArrowRight className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
-        </button>
-      </section>
-
       {/* Hero — brand presence with category quick-jump */}
       <section className="px-4 pt-5">
         <div className="gradient-hero card-surface relative overflow-hidden p-4">
@@ -218,6 +199,27 @@ function Home() {
             ))}
           </div>
         )}
+      </section>
+
+      {/* Need Anything — the app's central differentiator, kept as a
+          fallback beneath the browsable catalog rather than competing with
+          it for the top of the page. */}
+      <section className="mt-8 px-4">
+        <button
+          onClick={() => openAskSheet()}
+          className="tap-scale card-surface flex w-full items-center gap-3 p-4 text-left"
+        >
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full accent-gradient">
+            <Sparkles className="h-5 w-5 text-[color:var(--on-accent)]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold">Don't see it? Just ask.</div>
+            <div className="text-xs text-[color:var(--text-secondary)]">
+              Tell us what you need — medicine, a repair, tickets, anything local.
+            </div>
+          </div>
+          <ArrowRight className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
+        </button>
       </section>
 
       {/* How it works */}

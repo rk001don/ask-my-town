@@ -20,22 +20,29 @@ export type ProductRow = {
   is_service: boolean;
   schedulable: boolean;
   tags: string[];
+  categories?: { name: string; icon_key?: string | null } | null;
 };
 
 export function ProductCard({
   product,
   categoryName,
+  categoryIcon,
   view = "list",
 }: {
   product: ProductRow;
   categoryName?: string;
+  categoryIcon?: string | null;
   view?: CatalogView;
 }) {
   const qty = useProductQuantity(product.id);
   const key = productKeyFor(product.id);
   const [imageFailed, setImageFailed] = useState(false);
   const safeImageUrl = product.image_url && !imageFailed ? product.image_url : null;
-  const visual = catalogVisualFor(product.name, categoryName);
+  const visual = catalogVisualFor(
+    product.name,
+    categoryName,
+    categoryIcon ?? product.categories?.icon_key,
+  );
   const VisualIcon = visual.Icon;
 
   const priceLabel =

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, Compass, ClipboardList, Store } from "lucide-react";
+import { Home, Compass, ClipboardList, Store, ShoppingBag, ArrowRight } from "lucide-react";
 import { AskFAB } from "@/components/AskFAB";
 import { MyTownLogo } from "@/components/MyTownLogo";
 import { useCart, useCartCount } from "@/lib/cart-store";
@@ -81,11 +81,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="relative flex min-h-[100dvh] w-full flex-1 flex-col md:max-w-4xl md:mx-auto md:[transform:translateZ(0)]">
         <main
-          className={`flex-1 ${showFloatingCart ? "pb-[calc(10.5rem+env(safe-area-inset-bottom))]" : "pb-[calc(5.5rem+env(safe-area-inset-bottom))]"} md:pb-10`}
+          className={`flex-1 ${cartBarVisible ? "pb-[calc(10rem+env(safe-area-inset-bottom))]" : "pb-[calc(5.5rem+env(safe-area-inset-bottom))]"} md:pb-10`}
         >
           {children}
         </main>
-        <AskFAB liftForCart={cartBarVisible} />
+        <AskFAB hideMobileTrigger={cartBarVisible} />
         {cartBarVisible && <MobileCartBar />}
         {showBottomNav && (
           <div className="md:hidden">
@@ -112,30 +112,28 @@ function MobileCartBar() {
   );
 
   return (
-    <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-1/2 z-[var(--z-overlay)] w-[min(92vw,420px)] -translate-x-1/2 md:hidden">
+    <div
+      className="fixed inset-x-0 z-[var(--z-overlay)] px-3 md:hidden"
+      style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom))" }}
+    >
       <Link
         to="/cart"
-        className="tap-scale flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--border-strong)] bg-[color:var(--surface-strong)]/95 px-4 py-3 shadow-[0_18px_30px_rgba(0,0,0,0.25)] backdrop-blur"
+        className="tap-scale accent-gradient mx-auto flex max-w-[480px] items-center justify-between gap-3 rounded-2xl px-4 py-3.5 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)]"
       >
-        <div className="min-w-0">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[color:var(--text-muted)]">
-            Cart
-          </div>
-          <div className="truncate text-sm font-semibold">
-            {cartCount} item{cartCount === 1 ? "" : "s"}
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <div className="text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">
-              Total
-            </div>
-            <div className="text-sm font-bold text-[color:var(--accent-primary)]">₹{total}</div>
-          </div>
-          <span className="rounded-full accent-gradient px-3 py-2 text-xs font-semibold text-[color:var(--on-accent)]">
-            View cart
+        <div className="flex min-w-0 items-center gap-2.5 text-[color:var(--on-accent)]">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/15">
+            <ShoppingBag className="h-4.5 w-4.5" />
           </span>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-bold leading-tight">
+              {cartCount} item{cartCount === 1 ? "" : "s"} · ₹{total}
+            </div>
+            <div className="text-[11px] font-medium opacity-80">Tap to review your order</div>
+          </div>
         </div>
+        <span className="flex shrink-0 items-center gap-1 rounded-full bg-black/15 px-3.5 py-2 text-xs font-bold text-[color:var(--on-accent)]">
+          View cart <ArrowRight className="h-3.5 w-3.5" />
+        </span>
       </Link>
     </div>
   );

@@ -3,42 +3,19 @@ type MyTownLogoProps = {
   showWordmark?: boolean;
 };
 
+// Renders the same static asset used for the favicon/PWA/apple-touch icons,
+// instead of re-drawing the mark inline -- one source of truth, and no risk
+// of the inline gradient defs silently failing to paint on some devices.
 export function MyTownLogo({ className = "h-10 w-10", showWordmark = false }: MyTownLogoProps) {
   return (
     <div className="flex items-center gap-2.5">
-      <svg
-        viewBox="0 0 64 64"
-        role="img"
-        aria-label="MyTown"
-        className={className}
-        focusable="false"
-      >
-        <defs>
-          <linearGradient
-            id="mytown-m"
-            x1="8"
-            y1="8"
-            x2="56"
-            y2="56"
-            gradientUnits="userSpaceOnUse"
-          >
-            <stop stopColor="var(--accent-primary)" />
-            <stop offset="1" stopColor="var(--accent-secondary)" />
-          </linearGradient>
-        </defs>
-        <rect width="64" height="64" rx="18" fill="#0b0d12" />
-        <text
-          x="32"
-          y="43.5"
-          textAnchor="middle"
-          fontFamily="Sora, Inter, system-ui, sans-serif"
-          fontSize="32"
-          fontWeight="800"
-          fill="url(#mytown-m)"
-        >
-          M
-        </text>
-      </svg>
+      <img
+        src="/mytown-icon.svg"
+        alt="MyTown"
+        width={64}
+        height={64}
+        className={`${className} rounded-[22%] shadow-[0_2px_10px_rgba(0,0,0,0.35)]`}
+      />
       {showWordmark && (
         <div className="leading-none">
           <div className="text-display text-lg font-semibold">MyTown</div>
