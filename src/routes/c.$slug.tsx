@@ -68,6 +68,22 @@ const GROUP_LABELS: Record<string, string> = {
   utility: "Recharge & utility",
   stationery: "Stationery",
   remittance: "Bookings & courier",
+  "rice-chinese": "Rice & Chinese",
+  "side-dishes": "Side Dishes",
+  curries: "Curry & Gravies",
+  juice: "Fresh Juices",
+  shake: "Milkshakes",
+  "soft-drink": "Beverages",
+  "ice-cream": "Ice Cream",
+  chocolate: "Chocolates",
+  snack: "Snacks",
+  medicine: "Medicines",
+  "first-aid": "First Aid",
+  "womens-essentials": "Women's Essentials",
+  "personal-care": "Personal Care",
+  rental: "Rentals",
+  eseva: "e-Seva & Documentation",
+  "local-service": "Local Assistance",
 };
 
 function Category() {

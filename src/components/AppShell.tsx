@@ -36,6 +36,12 @@ export function AppShell({ children }: { children: ReactNode }) {
     !loc.pathname.startsWith("/auth") &&
     !loc.pathname.startsWith("/my-orders");
 
+  const cartCount = useCartCount();
+  // The floating cart bar and the Ask FAB both live in the bottom-right
+  // corner on mobile -- when the cart bar is actually rendered, lift the FAB
+  // above it instead of letting the two collide.
+  const cartBarVisible = showFloatingCart && cartCount > 0;
+
   if (hideNav) {
     return <div className="min-h-[100dvh] w-full">{children}</div>;
   }
@@ -79,8 +85,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           {children}
         </main>
-        <AskFAB />
-        {showFloatingCart && <MobileCartBar />}
+        <AskFAB liftForCart={cartBarVisible} />
+        {cartBarVisible && <MobileCartBar />}
         {showBottomNav && (
           <div className="md:hidden">
             <BottomNav pathname={loc.pathname} />
