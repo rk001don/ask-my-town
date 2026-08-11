@@ -142,7 +142,7 @@ export function AskFAB({ hideMobileTrigger = false }: { hideMobileTrigger?: bool
       )}
       {open && (
         <div
-          className="fixed inset-0 z-[var(--z-overlay)] flex items-end justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[var(--z-modal)] flex items-end justify-center bg-black/60 backdrop-blur-sm"
           onClick={() => setOpen(false)}
         >
           <div

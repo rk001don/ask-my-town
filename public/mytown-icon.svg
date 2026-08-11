@@ -1,10 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="MyTown">
   <defs>
-    <linearGradient id="mtGrad" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+    <linearGradient id="mtGrad" x1="6" y1="4" x2="60" y2="62" gradientUnits="userSpaceOnUse">
       <stop stop-color="#fbbf24"/>
-      <stop offset="1" stop-color="#fb7185"/>
+      <stop offset="1" stop-color="#f43f5e"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="18" fill="#0b0d12"/>
-  <text x="32" y="43.5" text-anchor="middle" font-family="'Sora','Inter',system-ui,sans-serif" font-size="32" font-weight="800" fill="url(#mtGrad)">M</text>
+  <rect width="64" height="64" rx="16" fill="url(#mtGrad)"/>
+  <path d="M32 12c-8.28 0-15 6.7-15 14.95C17 38.2 32 54 32 54s15-15.8 15-27.05C47 18.7 40.28 12 32 12z" fill="#12131a"/>
+  <circle cx="32" cy="26.5" r="6.4" fill="url(#mtGrad)"/>
 </svg>

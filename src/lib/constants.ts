@@ -9,6 +9,11 @@ export function waLink(text = WHATSAPP_DEFAULT_MSG) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 }
 
+// Static estimate shown once an order is confirmed -- not a live ETA (no
+// dispatch/route data feeds this), just a realistic expectation for a
+// single-town delivery radius.
+export const DELIVERY_ETA_LABEL = "Est. delivery: ~15–30 min";
+
 // Internal/staff-facing step order -- includes every operational status,
 // including "arranging" which staff actively use to track kitchen/prep work.
 // Do not use this for customer-facing screens; see CUSTOMER_ORDER_STEPS below.
