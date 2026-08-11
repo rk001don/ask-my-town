@@ -18,10 +18,15 @@ import {
   updateBatchStatus,
 } from "@/lib/admin.functions";
 import { AppHeader } from "@/components/AppHeader";
+import { ErrorState } from "@/components/States";
 import { CatalogImageUpload } from "@/components/CatalogImageUpload";
 import { toast } from "sonner";
 import { to12Hour } from "@/lib/time";
-import { createCampaign, listCampaigns, sendTestNotification } from "@/lib/notifications-admin.functions";
+import {
+  createCampaign,
+  listCampaigns,
+  sendTestNotification,
+} from "@/lib/notifications-admin.functions";
 import { Loader2, ShieldAlert, LogOut, Plus, Trash2, Search, ArrowUpDown, X } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
@@ -29,6 +34,7 @@ export const Route = createFileRoute("/admin")({
     meta: [{ title: "Admin — MyTown" }, { name: "robots", content: "noindex" }],
   }),
   component: AdminPage,
+  errorComponent: ({ reset }) => <ErrorState onRetry={reset} />,
 });
 
 const BATCH_NEXT_ACTION_LABEL: Record<string, string> = {
@@ -45,7 +51,6 @@ const BATCH_NEXT_ACTION_HINT: Record<string, string> = {
   dispatched: "Rider is out. Mark delivered once every order in the trip is dropped.",
   delivered: "Trip complete.",
 };
-
 
 function AdminPage() {
   const [email, setEmail] = useState<string | null>(null);
@@ -139,6 +144,9 @@ function AdminBoard({ email }: { email: string }) {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [showNewProduct, setShowNewProduct] = useState(false);
   const [showNewCategory, setShowNewCategory] = useState(false);
+  const [advancingBatchId, setAdvancingBatchId] = useState<string | null>(null);
+  const [savingConfigKey, setSavingConfigKey] = useState<string | null>(null);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<
     "dashboard" | "catalog" | "notifications" | "config" | "delivery"
   >("dashboard");
@@ -222,22 +230,30 @@ function AdminBoard({ email }: { email: string }) {
       )
     )
       return;
+    if (deletingProductId) return;
+    setDeletingProductId(id);
     try {
       await deleteProductFn({ data: { id } });
       toast.success("Removed");
       qc.invalidateQueries({ queryKey: ["admin-products"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't remove product");
+    } finally {
+      setDeletingProductId(null);
     }
   }
 
   async function advanceBatch(id: string) {
+    if (advancingBatchId) return;
+    setAdvancingBatchId(id);
     try {
       const { newStatus } = await advanceBatchFn({ data: { id } });
       toast.success(`Batch marked ${newStatus}`);
       qc.invalidateQueries({ queryKey: ["admin-batches"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't update batch");
+    } finally {
+      setAdvancingBatchId(null);
     }
   }
 
@@ -263,6 +279,8 @@ function AdminBoard({ email }: { email: string }) {
   }
 
   async function saveConfig(key: string, raw: string) {
+    if (savingConfigKey) return;
+    setSavingConfigKey(key);
     try {
       const value = JSON.parse(raw);
       await updateConfigFn({ data: { key, value } });
@@ -270,6 +288,8 @@ function AdminBoard({ email }: { email: string }) {
       qc.invalidateQueries({ queryKey: ["admin-config"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Invalid JSON or save failed");
+    } finally {
+      setSavingConfigKey(null);
     }
   }
 
@@ -295,7 +315,9 @@ function AdminBoard({ email }: { email: string }) {
   async function sendTest(input: { title: string; body: string; deep_link?: string | null }) {
     try {
       const result = await sendTestNotificationFn({ data: input });
-      toast.success(result.sent ? `Test push sent to ${result.sent} device(s)` : "No devices registered yet");
+      toast.success(
+        result.sent ? `Test push sent to ${result.sent} device(s)` : "No devices registered yet",
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't send test");
     }
@@ -423,7 +445,8 @@ function AdminBoard({ email }: { email: string }) {
               <div className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2">
                 <span>Notification pipeline</span>
                 <span className="font-semibold text-[color:var(--text-primary)]">
-                  {dashboardStats.campaignCount} campaigns, {dashboardStats.scheduledCount} scheduled
+                  {dashboardStats.campaignCount} campaigns, {dashboardStats.scheduledCount}{" "}
+                  scheduled
                 </span>
               </div>
               <div className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2">
@@ -546,6 +569,7 @@ function AdminBoard({ email }: { email: string }) {
                           product={p}
                           onPatch={(patch) => patchProduct(p.id, patch)}
                           onDelete={() => removeProduct(p.id, p.name)}
+                          isDeleting={deletingProductId === p.id}
                         />
                       ))}
                     </tbody>
@@ -559,6 +583,7 @@ function AdminBoard({ email }: { email: string }) {
                       product={p}
                       onPatch={(patch) => patchProduct(p.id, patch)}
                       onDelete={() => removeProduct(p.id, p.name)}
+                      isDeleting={deletingProductId === p.id}
                     />
                   ))}
                 </div>
@@ -587,7 +612,9 @@ function AdminBoard({ email }: { email: string }) {
                   </div>
                 ))}
                 {(categoriesQ.data ?? []).length === 0 && (
-                  <div className="text-sm text-[color:var(--text-tertiary)]">No categories yet.</div>
+                  <div className="text-sm text-[color:var(--text-tertiary)]">
+                    No categories yet.
+                  </div>
                 )}
               </div>
             )}
@@ -599,8 +626,8 @@ function AdminBoard({ email }: { email: string }) {
         <section className="mb-8">
           <h2 className="text-lg font-semibold">Feature flags / config</h2>
           <p className="mb-3 mt-1 text-xs text-[color:var(--text-secondary)]">
-            App-wide settings you can change without a code deploy. Each value is raw JSON — e.g. for
-            a list of languages, type <span className="font-mono">["ta","en"]</span> (with the
+            App-wide settings you can change without a code deploy. Each value is raw JSON — e.g.
+            for a list of languages, type <span className="font-mono">["ta","en"]</span> (with the
             brackets and quotes) and press Save.
           </p>
           {configQ.isLoading ? (
@@ -614,6 +641,7 @@ function AdminBoard({ email }: { email: string }) {
                   description={c.description}
                   value={c.value}
                   onSave={(raw) => saveConfig(c.key, raw)}
+                  isSaving={savingConfigKey === c.key}
                 />
               ))}
             </div>
@@ -662,11 +690,11 @@ function AdminBoard({ email }: { email: string }) {
         <section>
           <h2 className="text-lg font-semibold">Delivery batches</h2>
           <p className="mb-3 mt-1 text-xs text-[color:var(--text-secondary)]">
-            Orders placed for the same delivery window (e.g. "tomorrow evening") are grouped into one
-            batch so a single rider can deliver them together in one trip, instead of a separate trip
-            per order. <span className="font-semibold">Open</span> means it's still accepting new
-            orders for that window; <span className="font-semibold">locked/dispatched</span> means
-            it's on its way.
+            Orders placed for the same delivery window (e.g. "tomorrow evening") are grouped into
+            one batch so a single rider can deliver them together in one trip, instead of a separate
+            trip per order. <span className="font-semibold">Open</span> means it's still accepting
+            new orders for that window; <span className="font-semibold">locked/dispatched</span>{" "}
+            means it's on its way.
           </p>
           {batchesQ.isLoading ? (
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -704,9 +732,14 @@ function AdminBoard({ email }: { email: string }) {
                       {BATCH_NEXT_ACTION_LABEL[b.status] && (
                         <button
                           onClick={() => advanceBatch(b.id)}
-                          disabled={b.status === "open" && b.orderCount === 0}
-                          className="tap-scale rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
+                          disabled={
+                            (b.status === "open" && b.orderCount === 0) || advancingBatchId === b.id
+                          }
+                          className="tap-scale flex items-center gap-1.5 rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
                         >
+                          {advancingBatchId === b.id && (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          )}
                           {BATCH_NEXT_ACTION_LABEL[b.status]}
                         </button>
                       )}
@@ -717,8 +750,8 @@ function AdminBoard({ email }: { email: string }) {
 
               {(batchesQ.data ?? []).length === 0 && (
                 <div className="text-sm text-[color:var(--text-tertiary)]">
-                  No batches yet — one is created automatically the first time an order is placed for
-                  a given day/window.
+                  No batches yet — one is created automatically the first time an order is placed
+                  for a given day/window.
                 </div>
               )}
             </div>
@@ -939,10 +972,12 @@ function ProductRow({
   product,
   onPatch,
   onDelete,
+  isDeleting,
 }: {
   product: ProductRowData;
   onPatch: (patch: Record<string, unknown>) => void;
   onDelete: () => void;
+  isDeleting: boolean;
 }) {
   const [price, setPrice] = useState(product.price != null ? String(product.price) : "");
 
@@ -1000,10 +1035,15 @@ function ProductRow({
       <td className="p-3">
         <button
           onClick={onDelete}
-          className="tap-scale text-[color:var(--danger)]"
+          disabled={isDeleting}
+          className="tap-scale text-[color:var(--danger)] disabled:opacity-40"
           aria-label="Remove product"
         >
-          <Trash2 className="h-4 w-4" />
+          {isDeleting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="h-4 w-4" />
+          )}
         </button>
       </td>
     </tr>
@@ -1014,10 +1054,12 @@ function ProductCardAdmin({
   product,
   onPatch,
   onDelete,
+  isDeleting,
 }: {
   product: ProductRowData;
   onPatch: (patch: Record<string, unknown>) => void;
   onDelete: () => void;
+  isDeleting: boolean;
 }) {
   const [price, setPrice] = useState(product.price != null ? String(product.price) : "");
 
@@ -1038,10 +1080,15 @@ function ProductCardAdmin({
         </div>
         <button
           onClick={onDelete}
-          className="tap-scale text-[color:var(--danger)]"
+          disabled={isDeleting}
+          className="tap-scale text-[color:var(--danger)] disabled:opacity-40"
           aria-label="Remove product"
         >
-          <Trash2 className="h-4 w-4" />
+          {isDeleting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Trash2 className="h-4 w-4" />
+          )}
         </button>
       </div>
       <div className="mt-2 flex items-center gap-2">
@@ -1100,11 +1147,13 @@ function ConfigRow({
   description,
   value,
   onSave,
+  isSaving,
 }: {
   configKey: string;
   description: string | null;
   value: unknown;
   onSave: (raw: string) => void;
+  isSaving: boolean;
 }) {
   const [raw, setRaw] = useState(JSON.stringify(value));
   return (
@@ -1124,8 +1173,10 @@ function ConfigRow({
           />
           <button
             onClick={() => onSave(raw)}
-            className="tap-scale min-h-11 rounded-full accent-gradient px-4 py-2 text-xs font-semibold"
+            disabled={isSaving}
+            className="tap-scale flex min-h-11 items-center justify-center gap-1.5 rounded-full accent-gradient px-4 py-2 text-xs font-semibold disabled:opacity-50"
           >
+            {isSaving && <Loader2 className="h-3 w-3 animate-spin" />}
             Save
           </button>
         </div>
@@ -1249,13 +1300,17 @@ function NotificationComposer({
             allowRemove={Boolean(imageUrl)}
           />
         </div>
-        <div className="ml-auto flex gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
           <button
             type="button"
             onClick={async () => {
               setTesting(true);
               try {
-                await onTest({ title: title.trim() || "Test notification", body: body.trim() || "Hello from MyTown", deep_link: deepLink || null });
+                await onTest({
+                  title: title.trim() || "Test notification",
+                  body: body.trim() || "Hello from MyTown",
+                  deep_link: deepLink || null,
+                });
               } finally {
                 setTesting(false);
               }
@@ -1302,15 +1357,7 @@ function NotificationComposer({
   );
 }
 
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  children: ReactNode;
-}) {
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
     <label className="block">
       <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">

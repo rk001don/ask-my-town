@@ -105,20 +105,23 @@ export const getServiceFeeConfig = createServerFn({ method: "GET" }).handler(asy
 // Products
 // =============================================================================
 export const getProducts = createServerFn({ method: "GET" })
-  .inputValidator((data: { categorySlug?: string; locationId?: string }) =>
-    z
-      .object({
-        categorySlug: z.string().max(80).optional(),
-        locationId: z.string().uuid().optional(),
-      })
-      .parse(data),
+  .inputValidator(
+    (data: { categorySlug?: string; locationId?: string; tag?: string; limit?: number }) =>
+      z
+        .object({
+          categorySlug: z.string().max(80).optional(),
+          locationId: z.string().uuid().optional(),
+          tag: z.string().trim().max(80).optional(),
+          limit: z.number().int().min(1).max(100).optional(),
+        })
+        .parse(data),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     let query = supabaseAdmin
       .from("products")
       .select(
-        "id, category_id, name, description, image_url, price, currency, show_price, payment_mode, is_veg, is_service, is_available, schedulable, sort_order, tags",
+        "id, category_id, name, description, image_url, price, currency, show_price, payment_mode, is_veg, is_service, is_available, schedulable, sort_order, tags, categories(name)",
       )
       .eq("is_available", true)
       .order("sort_order", { ascending: true });
@@ -135,6 +138,12 @@ export const getProducts = createServerFn({ method: "GET" })
     }
     if (data.locationId) {
       query = query.or(`location_id.is.null,location_id.eq.${data.locationId}`);
+    }
+    if (data.tag) {
+      query = query.contains("tags", [data.tag]);
+    }
+    if (data.limit) {
+      query = query.limit(data.limit);
     }
     const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
@@ -691,6 +700,15 @@ export const trackOrder = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    const bucket = `track_order:${data.orderId ?? data.phone ?? "unknown"}`;
+    const { data: allowed, error: rlErr } = await supabaseAdmin.rpc("mytown_check_rate_limit", {
+      p_bucket: bucket,
+      p_max_hits: 20,
+      p_window_seconds: 60,
+    });
+    if (rlErr) throw new Error(rlErr.message);
+    if (!allowed) throw new Error("Too many lookups. Please wait a moment and try again.");
+
     let query = supabaseAdmin
       .from("orders")
       .select(
@@ -715,87 +733,4 @@ export const trackOrder = createServerFn({ method: "GET" })
     const { data: rows, error } = await query;
     if (error) throw new Error(error.message);
     return { orders: rows ?? [] };
-  });
-
-// =============================================================================
-// Employee auth + board
-// =============================================================================
-export const employeeLogin = createServerFn({ method: "POST" })
-  .inputValidator((data: { pin: string }) =>
-    z
-      .object({
-        pin: z
-          .string()
-          .trim()
-          .regex(/^\d{4,8}$/, "PIN must be 4-8 digits"),
-      })
-      .parse(data),
-  )
-  .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    // pgcrypto crypt(): verify by re-hashing pin with stored salt.
-    const { data: match, error } = await supabaseAdmin.rpc("mytown_verify_employee_pin", {
-      p_pin: data.pin,
-    });
-    if (error) {
-      // fall back: manual crypt via SQL query is not exposed; if rpc missing, we compare in JS-less way.
-      throw new Error(error.message);
-    }
-    const row = match as unknown as { id: string; name: string } | null;
-    if (!row) return { ok: false as const };
-    const { setEmployeeCookie } = await import("./employee-session.server");
-    setEmployeeCookie(row.id, row.name);
-    return { ok: true as const, name: row.name };
-  });
-
-export const employeeLogout = createServerFn({ method: "POST" }).handler(async () => {
-  const { clearEmployeeCookie } = await import("./employee-session.server");
-  clearEmployeeCookie();
-  return { ok: true as const };
-});
-
-export const employeeSession = createServerFn({ method: "GET" }).handler(async () => {
-  const { readEmployeeSession } = await import("./employee-session.server");
-  const s = readEmployeeSession();
-  return s ? { signedIn: true as const, name: s.name, id: s.sub } : { signedIn: false as const };
-});
-
-export const listEmployeeOrders = createServerFn({ method: "GET" }).handler(async () => {
-  const { readEmployeeSession } = await import("./employee-session.server");
-  const s = readEmployeeSession();
-  if (!s) throw new Error("Unauthorized");
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data, error } = await supabaseAdmin
-    .from("orders")
-    .select(
-      "id, status, notes, created_at, updated_at, customer:customers(name,phone,address,landmark), items:order_items(item_name,quantity,notes,is_freeform)",
-    )
-    .order("created_at", { ascending: false })
-    .limit(200);
-  if (error) throw new Error(error.message);
-  return { orders: data ?? [] };
-});
-
-export const updateOrderStatus = createServerFn({ method: "POST" })
-  .inputValidator((data: { orderId: string; status: z.infer<typeof OrderStatus> }) =>
-    z.object({ orderId: z.string().min(3).max(20), status: OrderStatus }).parse(data),
-  )
-  .handler(async ({ data }) => {
-    const { readEmployeeSession } = await import("./employee-session.server");
-    const s = readEmployeeSession();
-    if (!s) throw new Error("Unauthorized");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const now = new Date().toISOString();
-    const { error } = await supabaseAdmin
-      .from("orders")
-      .update({
-        status: data.status,
-        updated_at: now,
-        assigned_employee_id: s.sub,
-        confirmed_at: data.status === "confirmed" ? now : undefined,
-        completed_at: data.status === "completed" ? now : undefined,
-      })
-      .eq("id", data.orderId);
-    if (error) throw new Error(error.message);
-    return { ok: true as const };
   });

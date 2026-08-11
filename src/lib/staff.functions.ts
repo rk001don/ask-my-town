@@ -13,6 +13,13 @@ const OrderStatus = z.enum([
   "cancelled",
 ]);
 
+const ORDER_NEXT_STATUS: Record<string, string> = {
+  received: "confirmed",
+  confirmed: "arranging",
+  arranging: "on_the_way",
+  on_the_way: "completed",
+};
+
 async function assertStaff(
   supabase: {
     rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
@@ -98,6 +105,23 @@ export const updateStaffOrderStatus = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await assertStaff(context.supabase as never, context.userId, true);
+
+    if (data.status !== "cancelled") {
+      const { data: current, error: fetchErr } = await context.supabase
+        .from("orders")
+        .select("status")
+        .eq("id", data.orderId)
+        .maybeSingle();
+      if (fetchErr) throw new Error(fetchErr.message);
+      if (!current) throw new Error("Order not found");
+      const expected = ORDER_NEXT_STATUS[current.status];
+      if (expected !== data.status) {
+        throw new Error(
+          `Cannot move from "${current.status}" to "${data.status}". Next valid status is "${expected ?? "none"}".`,
+        );
+      }
+    }
+
     const now = new Date().toISOString();
     const patch: {
       status: typeof data.status;
@@ -147,7 +171,12 @@ export const updateStaffOrderStatus = createServerFn({ method: "POST" })
 export const cancelStaffOrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { orderId: string; reason: string }) =>
-    z.object({ orderId: z.string().trim().min(3).max(20), reason: z.string().trim().min(3).max(500) }).parse(data),
+    z
+      .object({
+        orderId: z.string().trim().min(3).max(20),
+        reason: z.string().trim().min(3).max(500),
+      })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
     await assertStaff(context.supabase as never, context.userId, true);

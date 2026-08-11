@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { AppHeader } from "@/components/AppHeader";
-import { EmptyState } from "@/components/States";
+import { EmptyState, ErrorState } from "@/components/States";
 import { clearCart, useCart } from "@/lib/cart-store";
 import { createOrder, getLocations } from "@/lib/api.functions";
 import { linkCustomerToMe } from "@/lib/auth.functions";
@@ -17,6 +17,7 @@ import { Loader2 } from "lucide-react";
 export const Route = createFileRoute("/checkout")({
   head: () => ({ meta: [{ title: "Your details — MyTown" }] }),
   component: Checkout,
+  errorComponent: ({ reset }) => <ErrorState onRetry={reset} />,
 });
 
 const RECENT_KEY = "mytown.customer.v1";
@@ -82,7 +83,9 @@ function Checkout() {
     try {
       const raw = localStorage.getItem(RECENT_KEY);
       if (raw) return { notes: "", ...JSON.parse(raw) };
-    } catch {}
+    } catch {
+      /* localStorage unavailable (private browsing, quota) -- fall through to blank form */
+    }
     return { name: "", phone: "", address: "", landmark: "", notes: "" };
   })();
 
@@ -175,7 +178,9 @@ function Checkout() {
             landmark: form.landmark?.trim() ?? "",
           }),
         );
-      } catch {}
+      } catch {
+        /* localStorage unavailable (private browsing, quota) -- non-fatal, order already placed */
+      }
       try {
         const { data: sess } = await supabase.auth.getSession();
         if (sess.session) {
@@ -293,7 +298,7 @@ function Checkout() {
                         type="button"
                         disabled={closed}
                         onClick={() => setWindowLabel(w.label)}
-                        className={`rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
+                        className={`min-h-11 rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
                           active
                             ? "accent-gradient text-black border-transparent"
                             : closed

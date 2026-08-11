@@ -14,6 +14,7 @@ import { ORDER_STATUS_STEPS, STATUS_COPY, type OrderStatus } from "@/lib/constan
 import { getLocations } from "@/lib/api.functions";
 import { formatTimeRange12h } from "@/lib/time";
 import { AppHeader } from "@/components/AppHeader";
+import { ErrorState } from "@/components/States";
 import { toast } from "sonner";
 import { Loader2, LogOut, RefreshCw, Phone, MapPin, ShieldAlert, Paperclip, X } from "lucide-react";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
@@ -23,6 +24,7 @@ export const Route = createFileRoute("/staff")({
     meta: [{ title: "Staff console — MyTown" }, { name: "robots", content: "noindex" }],
   }),
   component: StaffPage,
+  errorComponent: ({ reset }) => <ErrorState onRetry={reset} />,
 });
 
 const BOARD_STATUSES: OrderStatus[] = [
@@ -63,12 +65,14 @@ function StaffOrderCard({
   onAdvance,
   onCancel,
   windowRanges,
+  isAdvancing,
 }: {
   order: StaffOrderRow;
   onOpenAttachment: (filePath: string) => void;
   onAdvance: (orderId: string, nextStatus: OrderStatus) => void;
   onCancel: (orderId: string) => void;
   windowRanges: Record<string, string>;
+  isAdvancing: boolean;
 }) {
   const idx = ORDER_STATUS_STEPS.findIndex((st) => st.key === o.status);
   // A cancelled order isn't on the step ladder (idx === -1) — it must never
@@ -152,8 +156,10 @@ function StaffOrderCard({
       {nextStep && (
         <button
           onClick={() => onAdvance(o.id, nextStep)}
-          className="tap-scale mt-2 w-full rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold text-[color:var(--on-accent)]"
+          disabled={isAdvancing}
+          className="tap-scale mt-2 flex w-full items-center justify-center gap-1.5 rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold text-[color:var(--on-accent)] disabled:opacity-50"
         >
+          {isAdvancing && <Loader2 className="h-3 w-3 animate-spin" />}
           Mark {STATUS_COPY[nextStep]?.label ?? nextStep}
         </button>
       )}
@@ -277,6 +283,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
   const [previewLoading, setPreviewLoading] = useState(false);
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [advancingOrderId, setAdvancingOrderId] = useState<string | null>(null);
 
   async function openAttachment(filePath: string) {
     setPreviewLoading(true);
@@ -333,12 +340,16 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
   }, [ordersQ.data]);
 
   async function setStatus(orderId: string, next: OrderStatus) {
+    if (advancingOrderId) return;
+    setAdvancingOrderId(orderId);
     try {
       await updateFn({ data: { orderId, status: next } });
       toast.success(`Marked ${STATUS_COPY[next]?.label ?? next}`);
       qc.invalidateQueries({ queryKey: ["staff-orders"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setAdvancingOrderId(null);
     }
   }
 
@@ -464,6 +475,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                         onAdvance={setStatus}
                         onCancel={setCancelOrderId}
                         windowRanges={windowRanges}
+                        isAdvancing={advancingOrderId === o.id}
                       />
                     ))}
                   </div>
@@ -519,6 +531,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                     onAdvance={setStatus}
                     onCancel={setCancelOrderId}
                     windowRanges={windowRanges}
+                    isAdvancing={advancingOrderId === o.id}
                   />
                 ))}
               {BOARD_STATUSES.filter((s) =>
