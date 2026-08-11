@@ -87,7 +87,7 @@ function Home() {
           >
             <ShoppingBag className="h-5 w-5" />
             {cartCount > 0 && (
-              <span className="absolute right-0 top-0 min-w-[18px] rounded-full accent-gradient px-1 text-center text-[11px] font-bold">
+              <span className="absolute -right-1 -top-1 min-w-[18px] rounded-full accent-gradient px-1 text-center text-[11px] font-bold leading-[18px]">
                 {cartCount}
               </span>
             )}
@@ -107,9 +107,53 @@ function Home() {
         </Link>
       </div>
 
-      {/* Hero — compact, same content, but the dead decorative space is now
-          an actual interactive quick-jump row instead of two oversized blurs */}
-      <section className="px-4 pt-4">
+      {/* Popular picks — the first thing users see, enabling quick orders */}
+      {(popularQ.isLoading || (popularQ.data?.length ?? 0) > 0) && (
+        <section className="pt-4">
+          <div className="flex items-baseline justify-between px-4">
+            <h2 className="text-display text-lg font-semibold">Popular picks</h2>
+            <Link
+              to="/explore"
+              className="text-xs font-semibold text-[color:var(--accent-primary)]"
+            >
+              See all
+            </Link>
+          </div>
+          {popularQ.isLoading ? (
+            <div className="mt-3 px-4">
+              <CardSkeleton />
+            </div>
+          ) : (
+            <div className="mt-3 grid grid-cols-2 items-stretch gap-3 px-4 md:grid-cols-3 lg:grid-cols-4">
+              {(popularQ.data ?? []).map((p) => (
+                <ProductCard key={p.id} product={p} categoryName={p.categories?.name} view="grid" />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Need Anything — the app's central differentiator */}
+      <section className="px-4 pt-5">
+        <button
+          onClick={() => openAskSheet()}
+          className="tap-scale card-surface flex w-full items-center gap-3 p-4 text-left"
+        >
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full accent-gradient">
+            <Sparkles className="h-5 w-5 text-[color:var(--on-accent)]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold">Don't see it? Just ask.</div>
+            <div className="text-xs text-[color:var(--text-secondary)]">
+              Tell us what you need — medicine, a repair, tickets, anything local.
+            </div>
+          </div>
+          <ArrowRight className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
+        </button>
+      </section>
+
+      {/* Hero — brand presence with category quick-jump */}
+      <section className="px-4 pt-5">
         <div className="gradient-hero card-surface relative overflow-hidden p-4">
           <div
             className="absolute -right-10 -top-10 h-32 w-32 rounded-full"
@@ -147,54 +191,6 @@ function Home() {
           </div>
         </div>
       </section>
-
-      {/* Need Anything — the app's central differentiator, previously reachable
-          only via the floating AskFAB. Gives it a real home-page presence
-          without duplicating the sheet itself. */}
-      <section className="px-4 pt-6">
-        <button
-          onClick={() => openAskSheet()}
-          className="tap-scale card-surface flex w-full items-center gap-3 p-4 text-left"
-        >
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full accent-gradient">
-            <Sparkles className="h-5 w-5 text-[color:var(--on-accent)]" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold">Don't see it? Just ask.</div>
-            <div className="text-xs text-[color:var(--text-secondary)]">
-              Tell us what you need — medicine, a repair, tickets, anything local.
-            </div>
-          </div>
-          <ArrowRight className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
-        </button>
-      </section>
-
-      {/* Popular picks — pulled live from products tagged "popular" so this
-          section always reflects real availability and pricing. */}
-      {(popularQ.isLoading || (popularQ.data?.length ?? 0) > 0) && (
-        <section className="mt-8">
-          <div className="flex items-baseline justify-between px-4">
-            <h2 className="text-display text-lg font-semibold">Popular picks</h2>
-            <Link
-              to="/explore"
-              className="text-xs font-semibold text-[color:var(--accent-primary)]"
-            >
-              See all
-            </Link>
-          </div>
-          {popularQ.isLoading ? (
-            <div className="mt-3 px-4">
-              <CardSkeleton />
-            </div>
-          ) : (
-            <div className="mt-3 grid grid-cols-2 items-stretch gap-3 px-4 md:grid-cols-3 lg:grid-cols-4">
-              {(popularQ.data ?? []).map((p) => (
-                <ProductCard key={p.id} product={p} categoryName={p.categories?.name} view="grid" />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
 
       {/* Categories grid */}
       <section className="mt-8">

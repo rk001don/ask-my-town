@@ -84,7 +84,7 @@ export function AppHeader({
             <ShoppingBag className="h-5 w-5" />
             {cartCount > 0 && (
               <span
-                className={`absolute right-0 top-0 min-w-[18px] rounded-full accent-gradient px-1 text-center text-[11px] font-bold ${bump ? "badge-bounce" : ""}`}
+                className={`absolute -right-1 -top-1 min-w-[18px] rounded-full accent-gradient px-1 text-center text-[11px] font-bold leading-[18px] ${bump ? "badge-bounce" : ""}`}
               >
                 {cartCount}
               </span>

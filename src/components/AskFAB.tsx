@@ -120,7 +120,7 @@ export function AskFAB({ liftForCart = false }: { liftForCart?: boolean }) {
             // it instead of overlapping. 9.5rem matches the content bottom
             // padding AppShell already reserves for "nav + cart bar" together.
             bottom: liftForCart
-              ? "calc(9.5rem + env(safe-area-inset-bottom))"
+              ? "calc(10.5rem + env(safe-area-inset-bottom))"
               : "calc(5.5rem + env(safe-area-inset-bottom))",
           }}
         >
