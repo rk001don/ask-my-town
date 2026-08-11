@@ -134,9 +134,7 @@ function Category() {
         <div className="space-y-6 p-4 pb-24">
           {hasProducts && (
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-[color:var(--text-secondary)]">
-                Grid is optimized for quick food ordering. Switch any time.
-              </p>
+              <p className="text-xs text-[color:var(--text-secondary)]">Switch view anytime</p>
               <div
                 className="flex shrink-0 rounded-full border border-[color:var(--border-strong)] bg-black/20 p-1"
                 aria-label="Catalog view"

@@ -6,6 +6,6 @@
     </linearGradient>
   </defs>
   <rect width="64" height="64" rx="16" fill="url(#mtGrad)"/>
-  <path d="M32 12c-8.28 0-15 6.7-15 14.95C17 38.2 32 54 32 54s15-15.8 15-27.05C47 18.7 40.28 12 32 12z" fill="#12131a"/>
-  <circle cx="32" cy="26.5" r="6.4" fill="url(#mtGrad)"/>
+  <path d="M16 46V18l16 16 16-16v28" fill="none" stroke="#14151c" stroke-width="8.5"
+        stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
