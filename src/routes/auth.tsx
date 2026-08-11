@@ -56,7 +56,7 @@ function AuthPage() {
   // Bounce away if already signed in.
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) nav({ to: search.redirect ?? "/my-orders" });
+      if (data.session) nav({ to: search.redirect ?? "/activity" });
     });
   }, [nav, search.redirect]);
 
@@ -76,7 +76,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back!");
-        nav({ to: search.redirect ?? "/my-orders" });
+        nav({ to: search.redirect ?? "/activity" });
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
@@ -107,7 +107,7 @@ function AuthPage() {
         });
         if (error) throw error;
         toast.success("Account created!");
-        nav({ to: search.redirect ?? "/my-orders" });
+        nav({ to: search.redirect ?? "/activity" });
       } else {
         const phoneDigits = pinPhone.replace(/\D/g, "").slice(-10);
         const { error } = await supabase.auth.signInWithPassword({
@@ -116,7 +116,7 @@ function AuthPage() {
         });
         if (error) throw new Error("Incorrect phone or PIN");
         toast.success("Welcome back!");
-        nav({ to: search.redirect ?? "/my-orders" });
+        nav({ to: search.redirect ?? "/activity" });
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
@@ -133,7 +133,7 @@ function AuthPage() {
       });
       if (result.error) throw new Error(String(result.error));
       if (result.redirected) return;
-      nav({ to: search.redirect ?? "/my-orders" });
+      nav({ to: search.redirect ?? "/activity" });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Google sign-in failed");
       setGoogleBusy(false);

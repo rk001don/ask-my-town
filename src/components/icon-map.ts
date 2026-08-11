@@ -48,6 +48,11 @@ import {
   Croissant,
   IceCream2,
   Cake,
+  FileText,
+  Moon,
+  CookingPot,
+  Drumstick,
+  Soup,
 } from "lucide-react";
 
 const map: Record<string, LucideIcon> = {
@@ -98,6 +103,11 @@ const map: Record<string, LucideIcon> = {
   croissant: Croissant,
   "ice-cream": IceCream2,
   cake: Cake,
+  "file-text": FileText,
+  moon: Moon,
+  "cooking-pot": CookingPot,
+  drumstick: Drumstick,
+  soup: Soup,
 };
 
 export function iconFor(key?: string | null): LucideIcon {

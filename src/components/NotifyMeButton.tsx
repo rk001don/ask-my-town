@@ -3,6 +3,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { Bell, BellRing, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { getVapidPublicKey, subscribeToOrderPush } from "@/lib/api.functions";
+import { registerDevice } from "@/lib/notifications.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -14,6 +16,7 @@ function urlBase64ToUint8Array(base64String: string) {
 export function NotifyMeButton({ orderId }: { orderId: string }) {
   const getKeyFn = useServerFn(getVapidPublicKey);
   const subscribeFn = useServerFn(subscribeToOrderPush);
+  const registerDeviceFn = useServerFn(registerDevice);
   const [state, setState] = useState<"idle" | "loading" | "subscribed" | "unsupported">("idle");
 
   useEffect(() => {
@@ -59,6 +62,24 @@ export function NotifyMeButton({ orderId }: { orderId: string }) {
           auth: json.keys!.auth!,
         },
       });
+      // If they're signed in, this same grant should cover every future
+      // order and broadcast too -- not just this one -- so it doesn't ask
+      // again next time. Best-effort: a guest checkout (no session) simply
+      // skips this and keeps the per-order subscription above.
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session) {
+        try {
+          await registerDeviceFn({
+            data: {
+              endpoint: json.endpoint!,
+              p256dh: json.keys!.p256dh!,
+              auth: json.keys!.auth!,
+            },
+          });
+        } catch {
+          // Non-fatal -- the per-order subscription above already succeeded.
+        }
+      }
       setState("subscribed");
       toast.success("You'll get a notification when your order updates");
     } catch (err) {

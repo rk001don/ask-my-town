@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AppHeader } from "@/components/AppHeader";
 import { trackOrder } from "@/lib/api.functions";
-import { getMyOrders } from "@/lib/auth.functions";
+import { cancelMyOrder, getMyOrders } from "@/lib/auth.functions";
 import { EmptyState, ErrorState, CardSkeleton } from "@/components/States";
 import {
   CUSTOMER_ORDER_STEPS,
@@ -13,8 +13,11 @@ import {
 import { isValidIndianPhone } from "@/lib/phone";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, Check, Sparkles } from "lucide-react";
+import { CancelOrderDialog } from "@/components/CancelOrderDialog";
+import { NotificationOptIn } from "@/components/NotificationOptIn";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/activity")({
   head: () => ({
@@ -62,14 +65,36 @@ function Activity() {
 
 function MyActivity() {
   const fetchOrders = useServerFn(getMyOrders);
+  const cancelOrderFn = useServerFn(cancelMyOrder);
+  const qc = useQueryClient();
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   const { data, isLoading, error } = useQuery({
     queryKey: ["my-orders"],
     queryFn: () => fetchOrders(),
   });
 
+  async function confirmCancellation(reason: string) {
+    if (!cancelOrderId) return;
+    setCancelling(true);
+    try {
+      await cancelOrderFn({ data: { orderId: cancelOrderId, reason: reason || undefined } });
+      toast.success("Order cancelled");
+      setCancelOrderId(null);
+      qc.invalidateQueries({ queryKey: ["my-orders"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Cancellation failed");
+    } finally {
+      setCancelling(false);
+    }
+  }
+
   return (
     <div>
       <AppHeader title="Orders" showBack={false} />
+      <div className="px-4 pt-2">
+        <NotificationOptIn />
+      </div>
       {isLoading && (
         <div className="space-y-3 p-4">
           {Array.from({ length: 2 }).map((_, i) => (
@@ -84,10 +109,18 @@ function MyActivity() {
       {data && data.length > 0 && (
         <ul className="space-y-3 p-4 pb-8">
           {data.map((o) => (
-            <OrderCard key={o.id} order={o as unknown as Order} />
+            <OrderCard key={o.id} order={o as unknown as Order} onCancel={setCancelOrderId} />
           ))}
         </ul>
       )}
+      <CancelOrderDialog
+        open={cancelOrderId !== null}
+        orderId={cancelOrderId}
+        reasonOptional
+        busy={cancelling}
+        onOpenChange={(open) => !open && setCancelOrderId(null)}
+        onConfirm={confirmCancellation}
+      />
     </div>
   );
 }
@@ -201,7 +234,7 @@ function GuestTracker() {
   );
 }
 
-function OrderCard({ order }: { order: Order }) {
+function OrderCard({ order, onCancel }: { order: Order; onCancel?: (orderId: string) => void }) {
   const status = order.status as OrderStatus;
   const displayStatus = customerFacingStatus(status);
   const idx = CUSTOMER_ORDER_STEPS.findIndex((s) => s.key === displayStatus);
@@ -245,7 +278,7 @@ function OrderCard({ order }: { order: Order }) {
           <li className="text-xs text-[color:var(--text-muted)]">+{order.items.length - 3} more</li>
         )}
       </ul>
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <Link
           to="/order/$orderId"
           params={{ orderId: order.id }}
@@ -253,6 +286,15 @@ function OrderCard({ order }: { order: Order }) {
         >
           View details
         </Link>
+        {onCancel && status === "received" && (
+          <button
+            type="button"
+            onClick={() => onCancel(order.id)}
+            className="tap-scale rounded-full border border-[color:var(--danger)]/60 px-4 py-1.5 text-xs font-semibold text-[color:var(--danger)]"
+          >
+            Cancel order
+          </button>
+        )}
         {idx >= CUSTOMER_ORDER_STEPS.length - 1 && (
           <span className="inline-flex items-center gap-1 text-xs text-[color:var(--success)]">
             <Check className="h-3.5 w-3.5" /> Done

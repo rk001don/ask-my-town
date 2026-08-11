@@ -69,7 +69,7 @@ export function AppHeader({
           </Link>
         )}
         <Link
-          to={signedIn ? "/my-orders" : "/auth"}
+          to={signedIn ? "/activity" : "/auth"}
           aria-label={signedIn ? "My orders" : "Sign in"}
           className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
         >

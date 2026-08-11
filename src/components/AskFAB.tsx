@@ -14,7 +14,7 @@ export function openAskSheet(prefill?: string) {
 
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024; // 5MB
 
-export function AskFAB() {
+export function AskFAB({ liftForCart = false }: { liftForCart?: boolean }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [attachmentPath, setAttachmentPath] = useState<string | null>(null);
@@ -115,7 +115,13 @@ export function AskFAB() {
             // edge -- a plain "right: 1rem" only happened to look close on some
             // widths and drifted on others, which is what read as "misaligned."
             right: "max(4vw, calc(50vw - 240px))",
-            bottom: "calc(5.5rem + env(safe-area-inset-bottom))",
+            // When the floating cart bar is showing it occupies the same
+            // corner (bottom 4.8rem, ~5rem tall) -- lift the FAB to sit above
+            // it instead of overlapping. 9.5rem matches the content bottom
+            // padding AppShell already reserves for "nav + cart bar" together.
+            bottom: liftForCart
+              ? "calc(9.5rem + env(safe-area-inset-bottom))"
+              : "calc(5.5rem + env(safe-area-inset-bottom))",
           }}
         >
           <Sparkles className="h-5 w-5" />

@@ -71,13 +71,6 @@ function Home() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Link
-            to="/search"
-            aria-label="Search"
-            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
-          >
-            <SearchIcon className="h-5 w-5" />
-          </Link>
           <a
             href={waLink()}
             target="_blank"
@@ -101,6 +94,18 @@ function Home() {
           </Link>
         </div>
       </header>
+
+      {/* Real tappable search bar, not just an icon -- this is the first
+          thing people scan for on a food-ordering-style home screen. */}
+      <div className="px-4 pt-3">
+        <Link
+          to="/search"
+          className="tap-scale flex min-h-11 items-center gap-2.5 rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated)] px-4 py-2.5 text-[14px] text-[color:var(--text-muted)]"
+        >
+          <SearchIcon className="h-4 w-4 shrink-0" />
+          Search for idli, medicines, help…
+        </Link>
+      </div>
 
       {/* Hero — compact, same content, but the dead decorative space is now
           an actual interactive quick-jump row instead of two oversized blurs */}
@@ -137,12 +142,6 @@ function Home() {
                 className="tap-scale inline-flex min-h-11 items-center gap-1.5 rounded-full accent-gradient px-4 py-2 text-[13px] font-semibold"
               >
                 Browse all <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-              <Link
-                to="/search"
-                className="tap-scale inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] bg-black/20 px-4 py-2 text-[13px] font-semibold"
-              >
-                <SearchIcon className="h-3.5 w-3.5" /> Search
               </Link>
             </div>
           </div>
