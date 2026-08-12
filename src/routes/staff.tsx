@@ -9,9 +9,8 @@ import {
   listStaffOrders,
   updateStaffOrderStatus,
   getAttachmentSignedUrl,
-  listMyDeliveryBatches,
-  claimDeliveryBatch,
-  releaseDeliveryBatch,
+  assignOrdersToMe,
+  unassignOrder,
 } from "@/lib/staff.functions";
 import { ORDER_STATUS_STEPS, STATUS_COPY, type OrderStatus } from "@/lib/constants";
 import { getLocations } from "@/lib/api.functions";
@@ -35,6 +34,7 @@ import {
   Truck,
   UserPlus,
   UserMinus,
+  Users,
 } from "lucide-react";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 
@@ -57,11 +57,14 @@ const BOARD_STATUSES: OrderStatus[] = [
 type StaffOrderRow = {
   id: string;
   status: OrderStatus;
+  created_at?: string | null;
   requested_date?: string | null;
   requested_window?: string | null;
   service_fee_estimate?: number | null;
   service_fee_final?: number | null;
   cancellation_reason?: string | null;
+  assigned_staff_id?: string | null;
+  assigned_staff_email?: string | null;
   customer: {
     name: string;
     phone: string;
@@ -78,6 +81,17 @@ type StaffOrderRow = {
   }[];
 };
 
+// First-come-first-served is the whole point: this is the one signal that
+// tells a rider who's been waiting longest, at a glance, without having to
+// read every timestamp.
+function waitingSince(createdAt?: string | null): { label: string; level: "ok" | "warn" | "late" } {
+  if (!createdAt) return { label: "", level: "ok" };
+  const mins = Math.max(0, Math.round((Date.now() - new Date(createdAt).getTime()) / 60000));
+  const label = mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  const level = mins < 15 ? "ok" : mins < 30 ? "warn" : "late";
+  return { label, level };
+}
+
 function StaffOrderCard({
   order: o,
   onOpenAttachment,
@@ -85,6 +99,12 @@ function StaffOrderCard({
   onCancel,
   windowRanges,
   isAdvancing,
+  currentEmail,
+  onAssign,
+  onUnassign,
+  isAssigning,
+  nearbyCount,
+  onClaimNearby,
 }: {
   order: StaffOrderRow;
   onOpenAttachment: (filePath: string) => void;
@@ -92,6 +112,12 @@ function StaffOrderCard({
   onCancel: (orderId: string) => void;
   windowRanges: Record<string, string>;
   isAdvancing: boolean;
+  currentEmail: string | null;
+  onAssign: (orderId: string) => void;
+  onUnassign: (orderId: string) => void;
+  isAssigning: boolean;
+  nearbyCount: number;
+  onClaimNearby: () => void;
 }) {
   const idx = ORDER_STATUS_STEPS.findIndex((st) => st.key === o.status);
   // A cancelled order isn't on the step ladder (idx === -1) — it must never
@@ -112,6 +138,18 @@ function StaffOrderCard({
     cancelled: "var(--danger)",
   };
 
+  const waiting = waitingSince(o.created_at);
+  const showWaiting = o.status !== "completed" && o.status !== "cancelled" && waiting.label;
+  const waitingColor =
+    waiting.level === "late"
+      ? "var(--danger)"
+      : waiting.level === "warn"
+        ? "var(--warning)"
+        : "var(--text-secondary)";
+
+  const assignedToMe = !!o.assigned_staff_id && o.assigned_staff_email === currentEmail;
+  const assignedToOther = !!o.assigned_staff_id && !assignedToMe;
+
   return (
     <div className="card-surface rounded-2xl p-4">
       <div className="flex items-center justify-between gap-2">
@@ -124,13 +162,23 @@ function StaffOrderCard({
             {o.id.slice(0, 8)}
           </span>
         </div>
-        {o.requested_window && (
-          <span className="flex items-center gap-1 flex-shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px]">
-            <Clock className="h-2.5 w-2.5" />
-            {o.requested_window}
-            {windowRanges[o.requested_window] ? ` (${windowRanges[o.requested_window]})` : ""}
-          </span>
-        )}
+        <div className="flex flex-shrink-0 items-center gap-1.5">
+          {showWaiting && (
+            <span
+              className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"
+              style={{ background: `${waitingColor}22`, color: waitingColor }}
+            >
+              <Clock className="h-2.5 w-2.5" />
+              Waiting {waiting.label}
+            </span>
+          )}
+          {o.requested_window && (
+            <span className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px]">
+              {o.requested_window}
+              {windowRanges[o.requested_window] ? ` (${windowRanges[o.requested_window]})` : ""}
+            </span>
+          )}
+        </div>
       </div>
       {o.status === "cancelled" && (
         <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-[color:var(--danger)]/40 bg-[color:var(--danger)]/10 px-2.5 py-1.5 text-[11px] text-[color:var(--danger)]">
@@ -152,6 +200,52 @@ function StaffOrderCard({
           {o.customer?.landmark ? ` · ${o.customer.landmark}` : ""}
         </span>
       </div>
+
+      {/* Who's delivering this -- the thing that was completely missing
+          before: no way to see or claim ownership of an individual order. */}
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {assignedToMe ? (
+          <button
+            onClick={() => onUnassign(o.id)}
+            disabled={isAssigning}
+            className="tap-scale flex items-center gap-1.5 rounded-full bg-[color:var(--success)]/15 px-2.5 py-1 text-[11px] font-semibold text-[color:var(--success)] disabled:opacity-50"
+          >
+            {isAssigning ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <UserMinus className="h-3 w-3" />
+            )}
+            Assigned to you — release
+          </button>
+        ) : assignedToOther ? (
+          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] text-[color:var(--text-secondary)]">
+            Assigned to {o.assigned_staff_email ?? "another staffer"}
+          </span>
+        ) : (
+          <button
+            onClick={() => onAssign(o.id)}
+            disabled={isAssigning}
+            className="tap-scale flex items-center gap-1.5 rounded-full accent-gradient px-2.5 py-1 text-[11px] font-semibold disabled:opacity-50"
+          >
+            {isAssigning ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <UserPlus className="h-3 w-3" />
+            )}
+            Assign to me
+          </button>
+        )}
+        {nearbyCount > 0 && (
+          <button
+            onClick={onClaimNearby}
+            disabled={isAssigning}
+            className="tap-scale flex items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] px-2.5 py-1 text-[11px] font-semibold disabled:opacity-50"
+          >
+            <Users className="h-3 w-3" />+{nearbyCount} more here — claim all
+          </button>
+        )}
+      </div>
+
       {priced.length > 0 && (
         <div className="mt-2 space-y-0.5 rounded-xl bg-white/5 p-2 text-xs">
           <div className="flex justify-between text-[color:var(--text-secondary)]">
@@ -326,14 +420,12 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
   const updateFn = useServerFn(updateStaffOrderStatus);
   const cancelFn = useServerFn(cancelStaffOrder);
   const signedUrlFn = useServerFn(getAttachmentSignedUrl);
-  const batchesFn = useServerFn(listMyDeliveryBatches);
-  const claimBatchFn = useServerFn(claimDeliveryBatch);
-  const releaseBatchFn = useServerFn(releaseDeliveryBatch);
-  const [claimingBatchId, setClaimingBatchId] = useState<string | null>(null);
+  const assignToMeFn = useServerFn(assignOrdersToMe);
+  const unassignFn = useServerFn(unassignOrder);
+  const [assigningId, setAssigningId] = useState<string | null>(null);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [mobileFilter, setMobileFilter] = useState<"active" | OrderStatus>("active");
-  const [groupByWindow, setGroupByWindow] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -353,13 +445,6 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
 
   const locationsFn = useServerFn(getLocations);
   const rolesQ = useQuery({ queryKey: ["my-roles"], queryFn: () => rolesFn(), staleTime: 60_000 });
-  const isOpsOrAdmin = rolesQ.data?.roles.some((r) => r === "admin" || r === "ops") ?? false;
-  const batchesQ = useQuery({
-    queryKey: ["staff-my-batches"],
-    queryFn: () => batchesFn(),
-    enabled: isOpsOrAdmin,
-    refetchInterval: 20_000,
-  });
   const locationsQ = useQuery({
     queryKey: ["locations"],
     queryFn: () => locationsFn(),
@@ -400,6 +485,30 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
     return g;
   }, [ordersQ.data]);
 
+  // Same-address bundling: orderId -> ids of other unassigned, still-active
+  // orders sharing the exact same delivery address, so a rider can spot "3
+  // more orders at this hostel" and grab the whole drop in one trip instead
+  // of four separate ones.
+  const nearbyGroups = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    const data = ordersQ.data;
+    if (!data || data.aggregateOnly) return map;
+    const byAddress = new Map<string, string[]>();
+    for (const o of data.orders ?? []) {
+      if (o.assigned_staff_id) continue;
+      if (!["received", "confirmed", "arranging"].includes(o.status ?? "")) continue;
+      const key = (o.customer?.address ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+      if (!key) continue;
+      if (!byAddress.has(key)) byAddress.set(key, []);
+      byAddress.get(key)!.push(o.id);
+    }
+    for (const ids of byAddress.values()) {
+      if (ids.length < 2) continue;
+      for (const id of ids) map[id] = ids.filter((x) => x !== id);
+    }
+    return map;
+  }, [ordersQ.data]);
+
   async function setStatus(orderId: string, next: OrderStatus) {
     if (advancingOrderId) return;
     setAdvancingOrderId(orderId);
@@ -414,32 +523,41 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
     }
   }
 
-  async function claimBatch(id: string) {
-    if (claimingBatchId) return;
-    setClaimingBatchId(id);
+  async function assignToMe(orderIds: string[]) {
+    if (assigningId) return;
+    setAssigningId(orderIds[0]);
     try {
-      await claimBatchFn({ data: { id } });
-      toast.success("Trip claimed — it's yours to deliver");
-      qc.invalidateQueries({ queryKey: ["staff-my-batches"] });
+      const { claimed } = await assignToMeFn({ data: { orderIds } });
+      if (claimed.length === 0) {
+        toast.error("Someone already claimed that.");
+      } else if (claimed.length < orderIds.length) {
+        toast.success(
+          `Assigned ${claimed.length} of ${orderIds.length} — the rest were already taken.`,
+        );
+      } else {
+        toast.success(
+          orderIds.length > 1 ? `${claimed.length} orders assigned to you` : "Assigned to you",
+        );
+      }
+      qc.invalidateQueries({ queryKey: ["staff-orders"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't claim this trip");
-      qc.invalidateQueries({ queryKey: ["staff-my-batches"] });
+      toast.error(err instanceof Error ? err.message : "Couldn't assign");
     } finally {
-      setClaimingBatchId(null);
+      setAssigningId(null);
     }
   }
 
-  async function releaseBatch(id: string) {
-    if (claimingBatchId) return;
-    setClaimingBatchId(id);
+  async function unassign(orderId: string) {
+    if (assigningId) return;
+    setAssigningId(orderId);
     try {
-      await releaseBatchFn({ data: { id } });
-      toast.success("Trip released");
-      qc.invalidateQueries({ queryKey: ["staff-my-batches"] });
+      await unassignFn({ data: { orderId } });
+      toast.success("Released");
+      qc.invalidateQueries({ queryKey: ["staff-orders"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't release this trip");
+      toast.error(err instanceof Error ? err.message : "Couldn't release");
     } finally {
-      setClaimingBatchId(null);
+      setAssigningId(null);
     }
   }
 
@@ -519,80 +637,6 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
         </div>
       </div>
 
-      {isOpsOrAdmin && (
-        <div className="px-4 pt-4">
-          <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[color:var(--text-secondary)]">
-            <Truck className="h-3.5 w-3.5" />
-            My deliveries
-          </div>
-          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
-            {batchesQ.isLoading && (
-              <div className="glass min-w-[220px] rounded-2xl p-3">
-                <Loader2 className="h-4 w-4 animate-spin" />
-              </div>
-            )}
-            {!batchesQ.isLoading && (batchesQ.data ?? []).length === 0 && (
-              <div className="glass rounded-2xl p-3 text-xs text-[color:var(--text-tertiary)]">
-                No delivery trips scheduled yet.
-              </div>
-            )}
-            {(batchesQ.data ?? []).map((b) => {
-              const mine = b.assigned_staff_email === email;
-              const unclaimed = !b.assigned_staff_id;
-              const dateLabel = new Date(`${b.scheduled_date}T00:00:00`).toLocaleDateString(
-                undefined,
-                { weekday: "short", day: "numeric", month: "short" },
-              );
-              return (
-                <div key={b.id} className="glass min-w-[220px] shrink-0 rounded-2xl p-3">
-                  <div className="text-sm font-semibold capitalize">
-                    {dateLabel} · {b.window_label}
-                  </div>
-                  <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
-                    {b.orderCount} order{b.orderCount === 1 ? "" : "s"} · {b.pendingCount} pending
-                  </div>
-                  <div className="mt-1 text-[11px] text-[color:var(--text-tertiary)]">
-                    {unclaimed
-                      ? "Unclaimed"
-                      : mine
-                        ? "Claimed by you"
-                        : `Claimed by ${b.assigned_staff_email ?? "another staffer"}`}
-                  </div>
-                  {unclaimed && (
-                    <button
-                      onClick={() => claimBatch(b.id)}
-                      disabled={claimingBatchId === b.id}
-                      className="tap-scale mt-2 flex w-full items-center justify-center gap-1.5 rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
-                    >
-                      {claimingBatchId === b.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <UserPlus className="h-3 w-3" />
-                      )}
-                      Claim this trip
-                    </button>
-                  )}
-                  {mine && (
-                    <button
-                      onClick={() => releaseBatch(b.id)}
-                      disabled={claimingBatchId === b.id}
-                      className="tap-scale mt-2 flex w-full items-center justify-center gap-1.5 rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
-                    >
-                      {claimingBatchId === b.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <UserMinus className="h-3 w-3" />
-                      )}
-                      Release
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {ordersQ.data?.aggregateOnly ? (
         <div className="mx-auto max-w-2xl px-4 py-6">
           <div className="glass rounded-2xl p-4">
@@ -647,6 +691,12 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                         onCancel={setCancelOrderId}
                         windowRanges={windowRanges}
                         isAdvancing={advancingOrderId === o.id}
+                        currentEmail={email}
+                        onAssign={(id) => assignToMe([id])}
+                        onUnassign={unassign}
+                        isAssigning={assigningId === o.id}
+                        nearbyCount={nearbyGroups[o.id]?.length ?? 0}
+                        onClaimNearby={() => assignToMe([o.id, ...(nearbyGroups[o.id] ?? [])])}
                       />
                     ))}
                     {list.length === 0 && (
@@ -693,34 +743,9 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
               })}
             </div>
 
-            {/* Simple flat list stays the default; grouping by delivery
-                window is opt-in for whoever's planning a trip and wants to
-                see which orders can go out together, same idea as admin's
-                delivery batches but scoped to what's actually in front of
-                you right now. */}
-            <div className="flex items-center gap-2 px-4 pt-3">
-              <button
-                onClick={() => setGroupByWindow(false)}
-                className="tap-scale rounded-full px-3 py-1.5 text-xs font-semibold"
-                style={{
-                  color: !groupByWindow ? "var(--on-accent)" : "var(--text-secondary)",
-                  background: !groupByWindow ? "var(--accent-primary)" : "var(--bg-elevated)",
-                }}
-              >
-                Simple
-              </button>
-              <button
-                onClick={() => setGroupByWindow(true)}
-                className="tap-scale rounded-full px-3 py-1.5 text-xs font-semibold"
-                style={{
-                  color: groupByWindow ? "var(--on-accent)" : "var(--text-secondary)",
-                  background: groupByWindow ? "var(--accent-primary)" : "var(--bg-elevated)",
-                }}
-              >
-                By delivery window
-              </button>
-            </div>
-
+            {/* One simple list, oldest order first -- no separate "batch"
+                screen to understand, no toggle to pick. Whoever's waited
+                longest is at the top. */}
             {(() => {
               const filteredOrders = BOARD_STATUSES.filter((s) =>
                 mobileFilter === "active" ? s !== "completed" : s === mobileFilter,
@@ -744,76 +769,25 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                 );
               }
 
-              if (!groupByWindow) {
-                return (
-                  <div className="space-y-3 px-4 pb-6 pt-3">
-                    {filteredOrders.map((o) => (
-                      <StaffOrderCard
-                        key={o.id}
-                        order={o}
-                        onOpenAttachment={openAttachment}
-                        onAdvance={setStatus}
-                        onCancel={setCancelOrderId}
-                        windowRanges={windowRanges}
-                        isAdvancing={advancingOrderId === o.id}
-                      />
-                    ))}
-                  </div>
-                );
-              }
-
-              const groupMap = new Map<string, typeof filteredOrders>();
-              for (const o of filteredOrders) {
-                const key = `${o.requested_date ?? "￿"}__${o.requested_window ?? "￿"}`;
-                if (!groupMap.has(key)) groupMap.set(key, []);
-                groupMap.get(key)!.push(o);
-              }
-              const sortedGroups = [...groupMap.entries()].sort(([a], [b]) => a.localeCompare(b));
-
               return (
-                <div className="space-y-4 px-4 pb-6 pt-3">
-                  {sortedGroups.map(([key, orders]) => {
-                    const [date, window] = key.split("__");
-                    const label =
-                      date === "￿"
-                        ? "No delivery window set"
-                        : new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
-                            weekday: "short",
-                            day: "numeric",
-                            month: "short",
-                          });
-                    return (
-                      <div key={key}>
-                        <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[color:var(--text-secondary)]">
-                          <Clock className="h-3.5 w-3.5" />
-                          {label}
-                          {window !== "￿" && (
-                            <span className="capitalize">
-                              · {window}
-                              {windowRanges[window] ? ` (${windowRanges[window]})` : ""}
-                            </span>
-                          )}
-                          <span className="font-normal normal-case text-[color:var(--text-tertiary)]">
-                            — {orders.length} order{orders.length === 1 ? "" : "s"}, deliverable
-                            together
-                          </span>
-                        </div>
-                        <div className="space-y-3">
-                          {orders.map((o) => (
-                            <StaffOrderCard
-                              key={o.id}
-                              order={o}
-                              onOpenAttachment={openAttachment}
-                              onAdvance={setStatus}
-                              onCancel={setCancelOrderId}
-                              windowRanges={windowRanges}
-                              isAdvancing={advancingOrderId === o.id}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="space-y-3 px-4 pb-6 pt-3">
+                  {filteredOrders.map((o) => (
+                    <StaffOrderCard
+                      key={o.id}
+                      order={o}
+                      onOpenAttachment={openAttachment}
+                      onAdvance={setStatus}
+                      onCancel={setCancelOrderId}
+                      windowRanges={windowRanges}
+                      isAdvancing={advancingOrderId === o.id}
+                      currentEmail={email}
+                      onAssign={(id) => assignToMe([id])}
+                      onUnassign={unassign}
+                      isAssigning={assigningId === o.id}
+                      nearbyCount={nearbyGroups[o.id]?.length ?? 0}
+                      onClaimNearby={() => assignToMe([o.id, ...(nearbyGroups[o.id] ?? [])])}
+                    />
+                  ))}
                 </div>
               );
             })()}

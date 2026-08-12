@@ -73,9 +73,11 @@ export const listStaffOrders = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("orders")
       .select(
-        "id, status, notes, created_at, updated_at, requested_date, requested_window, service_fee_estimate, service_fee_final, cancellation_reason, customer:customers(name,phone,address,landmark), items:order_items(item_name,quantity,notes,is_freeform,unit_price,attachments:order_attachments(id,file_path,file_type))",
+        "id, status, notes, created_at, updated_at, requested_date, requested_window, service_fee_estimate, service_fee_final, cancellation_reason, assigned_staff_id, assigned_staff_email, customer:customers(name,phone,address,landmark), items:order_items(item_name,quantity,notes,is_freeform,unit_price,attachments:order_attachments(id,file_path,file_type))",
       )
-      .order("created_at", { ascending: false })
+      // Oldest first -- whoever's been waiting longest gets served first,
+      // same first-come-first-served principle every delivery queue runs on.
+      .order("created_at", { ascending: true })
       .limit(200);
     if (error) throw new Error(error.message);
     return { aggregateOnly: false as const, orders: data ?? [] };
@@ -215,90 +217,58 @@ export const cancelStaffOrder = createServerFn({ method: "POST" })
   });
 
 // ============================================================================
-// Delivery batch self-claim -- lets any ops/admin staff claim an unassigned
-// trip as themselves, without needing an admin to hand-assign one.
+// Order self-assignment -- any ops/admin staff can claim an order as
+// themselves directly (no separate "delivery batch" concept to manage).
 // ============================================================================
 
-export const listMyDeliveryBatches = createServerFn({ method: "GET" })
+export const assignOrdersToMe = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    await assertStaff(context.supabase as never, context.userId, true);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: batches, error } = await supabaseAdmin
-      .from("delivery_batches")
-      .select(
-        "id, window_label, scheduled_date, scheduled_at, status, assigned_staff_id, assigned_staff_email",
-      )
-      .neq("status", "cancelled")
-      .order("scheduled_at", { ascending: true })
-      .limit(50);
-    if (error) throw new Error(error.message);
-    if (!batches || batches.length === 0) return [];
-
-    const { data: orders, error: ordersErr } = await supabaseAdmin
-      .from("orders")
-      .select("delivery_batch_id, status")
-      .in(
-        "delivery_batch_id",
-        batches.map((b) => b.id),
-      );
-    if (ordersErr) throw new Error(ordersErr.message);
-
-    return batches.map((b) => {
-      const rows = (orders ?? []).filter((o) => o.delivery_batch_id === b.id);
-      return {
-        ...b,
-        orderCount: rows.length,
-        pendingCount: rows.filter((o) => o.status !== "completed" && o.status !== "cancelled")
-          .length,
-      };
-    });
-  });
-
-export const claimDeliveryBatch = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((data: { id: string }) => z.object({ id: z.string().uuid() }).parse(data))
+  .inputValidator((data: { orderIds: string[] }) =>
+    z.object({ orderIds: z.array(z.string().trim().min(3).max(20)).min(1).max(20) }).parse(data),
+  )
   .handler(async ({ data, context }) => {
     await assertStaff(context.supabase as never, context.userId, true);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const email = (context.claims as { email?: string } | undefined)?.email ?? null;
 
-    // Atomic claim: the WHERE clause is what stops two riders tapping
-    // "Claim" on the same trip at nearly the same moment from both winning.
+    // Atomic per-order claim: the WHERE clause is what stops two staff
+    // tapping "Assign to me" on the same order at nearly the same moment
+    // from both winning. Claiming several at once (the "nearby orders"
+    // bundle) just runs this same atomic update for each id.
     const { data: claimed, error } = await supabaseAdmin
-      .from("delivery_batches")
+      .from("orders")
       .update({
         assigned_staff_id: context.userId,
         assigned_staff_email: email,
         assigned_at: new Date().toISOString(),
       })
-      .eq("id", data.id)
+      .in("id", data.orderIds)
       .is("assigned_staff_id", null)
-      .select("id")
-      .maybeSingle();
+      .select("id");
     if (error) throw new Error(error.message);
-    if (!claimed) throw new Error("Someone already claimed this trip.");
-    return { ok: true as const };
+    return { claimed: (claimed ?? []).map((o) => o.id) };
   });
 
-export const releaseDeliveryBatch = createServerFn({ method: "POST" })
+export const unassignOrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { id: string }) => z.object({ id: z.string().uuid() }).parse(data))
+  .inputValidator((data: { orderId: string }) =>
+    z.object({ orderId: z.string().trim().min(3).max(20) }).parse(data),
+  )
   .handler(async ({ data, context }) => {
     const roles = await assertStaff(context.supabase as never, context.userId, true);
     const isAdmin = roles.some((r) => r === "admin");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     let query = supabaseAdmin
-      .from("delivery_batches")
+      .from("orders")
       .update({ assigned_staff_id: null, assigned_staff_email: null, assigned_at: null })
-      .eq("id", data.id);
+      .eq("id", data.orderId);
     // Admin can free up anyone's claim (e.g. a rider's phone died); a
     // regular ops staffer can only release their own.
     if (!isAdmin) query = query.eq("assigned_staff_id", context.userId);
 
     const { data: released, error } = await query.select("id").maybeSingle();
     if (error) throw new Error(error.message);
-    if (!released) throw new Error("This trip isn't assigned to you.");
+    if (!released) throw new Error("This order isn't assigned to you.");
     return { ok: true as const };
   });
