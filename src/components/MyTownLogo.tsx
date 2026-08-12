@@ -10,7 +10,7 @@ export function MyTownLogo({ className = "h-10 w-10", showWordmark = false }: My
   return (
     <div className="flex items-center gap-2.5">
       <img
-        src="/mytown-icon.svg"
+        src="/mytown-icon.svg?v=3"
         alt="MyTown"
         width={64}
         height={64}

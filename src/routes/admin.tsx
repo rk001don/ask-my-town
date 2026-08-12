@@ -27,7 +27,9 @@ import {
   listCampaigns,
   sendCampaignNow,
   sendTestNotification,
+  getNotificationReach,
 } from "@/lib/notifications-admin.functions";
+import { NotificationOptIn } from "@/components/NotificationOptIn";
 import { Loader2, ShieldAlert, LogOut, Plus, Trash2, Search, ArrowUpDown, X } from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
@@ -109,6 +111,7 @@ function AdminBoard({ email }: { email: string }) {
   const listCampaignsFn = useServerFn(listCampaigns);
   const sendCampaignNowFn = useServerFn(sendCampaignNow);
   const sendTestNotificationFn = useServerFn(sendTestNotification);
+  const notificationReachFn = useServerFn(getNotificationReach);
 
   const rolesQ = useQuery({ queryKey: ["my-roles"], queryFn: () => rolesFn(), staleTime: 60_000 });
   const isAdmin = rolesQ.data?.isAdmin ?? false;
@@ -136,6 +139,11 @@ function AdminBoard({ email }: { email: string }) {
   const campaignsQ = useQuery({
     queryKey: ["admin-campaigns"],
     queryFn: () => listCampaignsFn(),
+    enabled: isAdmin,
+  });
+  const reachQ = useQuery({
+    queryKey: ["admin-notification-reach"],
+    queryFn: () => notificationReachFn(),
     enabled: isAdmin,
   });
 
@@ -339,6 +347,7 @@ function AdminBoard({ email }: { email: string }) {
         );
       }
       qc.invalidateQueries({ queryKey: ["admin-campaigns"] });
+      qc.invalidateQueries({ queryKey: ["admin-notification-reach"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Couldn't send campaign");
       qc.invalidateQueries({ queryKey: ["admin-campaigns"] });
@@ -677,10 +686,41 @@ function AdminBoard({ email }: { email: string }) {
         <section className="mb-8">
           <h2 className="text-lg font-semibold">Notification center</h2>
           <p className="mb-3 mt-1 text-xs text-[color:var(--text-secondary)]">
-            Draft campaigns, send a test push to your own registered device first, then hit "Send
-            now" to broadcast to every opted-in device for the chosen audience. Scheduling a time
-            doesn't send it automatically yet — come back and press "Send now" when it's time.
+            "Send test to my device" only pushes to your own account below — it won't reach anyone
+            else. To actually broadcast: hit <span className="font-semibold">Save</span>, then find
+            the campaign in the list below and press{" "}
+            <span className="font-semibold">"Send now"</span> on it. Scheduling a time doesn't send
+            it automatically yet — you still come back and press Send now.
           </p>
+
+          {/* Register this admin's own device -- the #1 cause of "no devices
+              registered" on the test button is simply that nobody has ever
+              opted this account in from anywhere in the app. */}
+          <div className="mb-3">
+            <NotificationOptIn />
+          </div>
+
+          {/* Reachability, up front, before anyone wonders why a send says
+              "0 devices" -- if it's genuinely 0, that's real information,
+              not a bug. */}
+          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {(
+              [
+                ["Everyone", reachQ.data?.everyone],
+                ["Customers", reachQ.data?.customers],
+                ["Staff", reachQ.data?.staff],
+                ["Admins", reachQ.data?.admins],
+              ] as const
+            ).map(([label, count]) => (
+              <div key={label} className="glass rounded-xl p-3 text-center">
+                <div className="text-lg font-bold">{reachQ.isLoading ? "…" : (count ?? 0)}</div>
+                <div className="text-[11px] text-[color:var(--text-tertiary)]">
+                  {label} opted in
+                </div>
+              </div>
+            ))}
+          </div>
+
           <NotificationComposer onSave={saveCampaign} onTest={sendTest} />
           <div className="mt-4 space-y-2">
             {(campaignsQ.data ?? []).map((campaign) => {

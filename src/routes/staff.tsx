@@ -324,6 +324,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [mobileFilter, setMobileFilter] = useState<"active" | OrderStatus>("active");
+  const [groupByWindow, setGroupByWindow] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -572,38 +573,131 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                 );
               })}
             </div>
-            <div className="space-y-3 px-4 pb-6 pt-3">
-              {BOARD_STATUSES.filter((s) =>
-                mobileFilter === "active" ? s !== "completed" : s === mobileFilter,
-              )
-                .flatMap((s) =>
-                  ((grouped[s] as unknown as StaffOrderRow[]) ?? []).map((o) => ({
-                    ...o,
-                    status: s,
-                  })),
-                )
-                .map((o) => (
-                  <StaffOrderCard
-                    key={o.id}
-                    order={o}
-                    onOpenAttachment={openAttachment}
-                    onAdvance={setStatus}
-                    onCancel={setCancelOrderId}
-                    windowRanges={windowRanges}
-                    isAdvancing={advancingOrderId === o.id}
-                  />
-                ))}
-              {BOARD_STATUSES.filter((s) =>
-                mobileFilter === "active" ? s !== "completed" : s === mobileFilter,
-              ).flatMap((s) => (grouped[s] as unknown as StaffOrderRow[]) ?? []).length === 0 && (
-                <div className="card-surface flex flex-col items-center gap-2 p-8 text-center">
-                  <Package className="h-8 w-8 text-[color:var(--text-muted)]" />
-                  <div className="text-sm text-[color:var(--text-tertiary)]">
-                    No orders here right now.
-                  </div>
-                </div>
-              )}
+
+            {/* Simple flat list stays the default; grouping by delivery
+                window is opt-in for whoever's planning a trip and wants to
+                see which orders can go out together, same idea as admin's
+                delivery batches but scoped to what's actually in front of
+                you right now. */}
+            <div className="flex items-center gap-2 px-4 pt-3">
+              <button
+                onClick={() => setGroupByWindow(false)}
+                className="tap-scale rounded-full px-3 py-1.5 text-xs font-semibold"
+                style={{
+                  color: !groupByWindow ? "var(--on-accent)" : "var(--text-secondary)",
+                  background: !groupByWindow ? "var(--accent-primary)" : "var(--bg-elevated)",
+                }}
+              >
+                Simple
+              </button>
+              <button
+                onClick={() => setGroupByWindow(true)}
+                className="tap-scale rounded-full px-3 py-1.5 text-xs font-semibold"
+                style={{
+                  color: groupByWindow ? "var(--on-accent)" : "var(--text-secondary)",
+                  background: groupByWindow ? "var(--accent-primary)" : "var(--bg-elevated)",
+                }}
+              >
+                By delivery window
+              </button>
             </div>
+
+            {(() => {
+              const filteredOrders = BOARD_STATUSES.filter((s) =>
+                mobileFilter === "active" ? s !== "completed" : s === mobileFilter,
+              ).flatMap((s) =>
+                ((grouped[s] as unknown as StaffOrderRow[]) ?? []).map((o) => ({
+                  ...o,
+                  status: s,
+                })),
+              );
+
+              if (filteredOrders.length === 0) {
+                return (
+                  <div className="px-4 pb-6 pt-3">
+                    <div className="card-surface flex flex-col items-center gap-2 p-8 text-center">
+                      <Package className="h-8 w-8 text-[color:var(--text-muted)]" />
+                      <div className="text-sm text-[color:var(--text-tertiary)]">
+                        No orders here right now.
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (!groupByWindow) {
+                return (
+                  <div className="space-y-3 px-4 pb-6 pt-3">
+                    {filteredOrders.map((o) => (
+                      <StaffOrderCard
+                        key={o.id}
+                        order={o}
+                        onOpenAttachment={openAttachment}
+                        onAdvance={setStatus}
+                        onCancel={setCancelOrderId}
+                        windowRanges={windowRanges}
+                        isAdvancing={advancingOrderId === o.id}
+                      />
+                    ))}
+                  </div>
+                );
+              }
+
+              const groupMap = new Map<string, typeof filteredOrders>();
+              for (const o of filteredOrders) {
+                const key = `${o.requested_date ?? "￿"}__${o.requested_window ?? "￿"}`;
+                if (!groupMap.has(key)) groupMap.set(key, []);
+                groupMap.get(key)!.push(o);
+              }
+              const sortedGroups = [...groupMap.entries()].sort(([a], [b]) => a.localeCompare(b));
+
+              return (
+                <div className="space-y-4 px-4 pb-6 pt-3">
+                  {sortedGroups.map(([key, orders]) => {
+                    const [date, window] = key.split("__");
+                    const label =
+                      date === "￿"
+                        ? "No delivery window set"
+                        : new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                          });
+                    return (
+                      <div key={key}>
+                        <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[color:var(--text-secondary)]">
+                          <Clock className="h-3.5 w-3.5" />
+                          {label}
+                          {window !== "￿" && (
+                            <span className="capitalize">
+                              · {window}
+                              {windowRanges[window] ? ` (${windowRanges[window]})` : ""}
+                            </span>
+                          )}
+                          <span className="font-normal normal-case text-[color:var(--text-tertiary)]">
+                            — {orders.length} order{orders.length === 1 ? "" : "s"}, deliverable
+                            together
+                          </span>
+                        </div>
+                        <div className="space-y-3">
+                          {orders.map((o) => (
+                            <StaffOrderCard
+                              key={o.id}
+                              order={o}
+                              onOpenAttachment={openAttachment}
+                              onAdvance={setStatus}
+                              onCancel={setCancelOrderId}
+                              windowRanges={windowRanges}
+                              isAdvancing={advancingOrderId === o.id}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </>
       )}

@@ -106,9 +106,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
-      { rel: "icon", href: "/mytown-icon.svg", type: "image/svg+xml", sizes: "any" },
-      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      // Versioned so a redeploy actually invalidates the browser's favicon
+      // cache -- Chrome in particular keeps the old favicon.ico for a long
+      // time even across hard refreshes if the URL doesn't change.
+      { rel: "icon", href: "/favicon.ico?v=3", sizes: "48x48" },
+      { rel: "icon", href: "/mytown-icon.svg?v=3", type: "image/svg+xml", sizes: "any" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png?v=3" },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
