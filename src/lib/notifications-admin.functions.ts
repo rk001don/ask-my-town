@@ -241,6 +241,44 @@ export const sendCampaignNow = createServerFn({ method: "POST" })
     }
   });
 
+// Lets the admin see *before* sending whether anyone is actually reachable,
+// instead of finding out only after a send comes back with 0 recipients.
+export const getNotificationReach = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: devices, error } = await supabaseAdmin.from("push_devices").select("user_id");
+    if (error) throw new Error(error.message);
+    const { data: roleRows, error: roleErr } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id, role");
+    if (roleErr) throw new Error(roleErr.message);
+
+    const staffAdminIds = new Set(roleRows?.map((r) => r.user_id) ?? []);
+    const adminIds = new Set(
+      (roleRows ?? []).filter((r) => r.role === "admin").map((r) => r.user_id),
+    );
+    const staffIds = new Set(
+      (roleRows ?? [])
+        .filter((r) => r.role === "ops" || r.role === "warden_viewer")
+        .map((r) => r.user_id),
+    );
+
+    let everyone = 0;
+    let customers = 0;
+    let staff = 0;
+    let admins = 0;
+    for (const d of devices ?? []) {
+      everyone += 1;
+      const uid = d.user_id ?? "";
+      if (!staffAdminIds.has(uid)) customers += 1;
+      if (staffIds.has(uid)) staff += 1;
+      if (adminIds.has(uid)) admins += 1;
+    }
+    return { everyone, customers, staff, admins };
+  });
+
 export const sendTestNotification = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { title: string; body: string; deep_link?: string | null }) =>

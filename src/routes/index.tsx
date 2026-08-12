@@ -73,13 +73,13 @@ function Home() {
     <div className="rise">
       {/* Brand header */}
       <header className="flex items-center justify-between px-4 pt-5">
-        <div className="flex items-center gap-3">
+        <Link to="/" aria-label="MyTown home" className="tap-scale flex items-center gap-3">
           <MyTownLogo className="h-11 w-11" />
           <div>
             <div className="text-display text-lg font-semibold leading-none">{APP_NAME}</div>
             <div className="text-[11px] text-[color:var(--text-muted)]">Serving {TOWN_NAME}</div>
           </div>
-        </div>
+        </Link>
         <div className="flex items-center gap-1">
           <a
             href={waLink()}

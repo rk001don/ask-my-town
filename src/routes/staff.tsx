@@ -9,6 +9,9 @@ import {
   listStaffOrders,
   updateStaffOrderStatus,
   getAttachmentSignedUrl,
+  listMyDeliveryBatches,
+  claimDeliveryBatch,
+  releaseDeliveryBatch,
 } from "@/lib/staff.functions";
 import { ORDER_STATUS_STEPS, STATUS_COPY, type OrderStatus } from "@/lib/constants";
 import { getLocations } from "@/lib/api.functions";
@@ -30,6 +33,8 @@ import {
   CheckCircle2,
   XCircle,
   Truck,
+  UserPlus,
+  UserMinus,
 } from "lucide-react";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 
@@ -321,9 +326,14 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
   const updateFn = useServerFn(updateStaffOrderStatus);
   const cancelFn = useServerFn(cancelStaffOrder);
   const signedUrlFn = useServerFn(getAttachmentSignedUrl);
+  const batchesFn = useServerFn(listMyDeliveryBatches);
+  const claimBatchFn = useServerFn(claimDeliveryBatch);
+  const releaseBatchFn = useServerFn(releaseDeliveryBatch);
+  const [claimingBatchId, setClaimingBatchId] = useState<string | null>(null);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [mobileFilter, setMobileFilter] = useState<"active" | OrderStatus>("active");
+  const [groupByWindow, setGroupByWindow] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -343,6 +353,13 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
 
   const locationsFn = useServerFn(getLocations);
   const rolesQ = useQuery({ queryKey: ["my-roles"], queryFn: () => rolesFn(), staleTime: 60_000 });
+  const isOpsOrAdmin = rolesQ.data?.roles.some((r) => r === "admin" || r === "ops") ?? false;
+  const batchesQ = useQuery({
+    queryKey: ["staff-my-batches"],
+    queryFn: () => batchesFn(),
+    enabled: isOpsOrAdmin,
+    refetchInterval: 20_000,
+  });
   const locationsQ = useQuery({
     queryKey: ["locations"],
     queryFn: () => locationsFn(),
@@ -394,6 +411,35 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
       toast.error(err instanceof Error ? err.message : "Update failed");
     } finally {
       setAdvancingOrderId(null);
+    }
+  }
+
+  async function claimBatch(id: string) {
+    if (claimingBatchId) return;
+    setClaimingBatchId(id);
+    try {
+      await claimBatchFn({ data: { id } });
+      toast.success("Trip claimed — it's yours to deliver");
+      qc.invalidateQueries({ queryKey: ["staff-my-batches"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't claim this trip");
+      qc.invalidateQueries({ queryKey: ["staff-my-batches"] });
+    } finally {
+      setClaimingBatchId(null);
+    }
+  }
+
+  async function releaseBatch(id: string) {
+    if (claimingBatchId) return;
+    setClaimingBatchId(id);
+    try {
+      await releaseBatchFn({ data: { id } });
+      toast.success("Trip released");
+      qc.invalidateQueries({ queryKey: ["staff-my-batches"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't release this trip");
+    } finally {
+      setClaimingBatchId(null);
     }
   }
 
@@ -472,6 +518,80 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
           </button>
         </div>
       </div>
+
+      {isOpsOrAdmin && (
+        <div className="px-4 pt-4">
+          <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[color:var(--text-secondary)]">
+            <Truck className="h-3.5 w-3.5" />
+            My deliveries
+          </div>
+          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+            {batchesQ.isLoading && (
+              <div className="glass min-w-[220px] rounded-2xl p-3">
+                <Loader2 className="h-4 w-4 animate-spin" />
+              </div>
+            )}
+            {!batchesQ.isLoading && (batchesQ.data ?? []).length === 0 && (
+              <div className="glass rounded-2xl p-3 text-xs text-[color:var(--text-tertiary)]">
+                No delivery trips scheduled yet.
+              </div>
+            )}
+            {(batchesQ.data ?? []).map((b) => {
+              const mine = b.assigned_staff_email === email;
+              const unclaimed = !b.assigned_staff_id;
+              const dateLabel = new Date(`${b.scheduled_date}T00:00:00`).toLocaleDateString(
+                undefined,
+                { weekday: "short", day: "numeric", month: "short" },
+              );
+              return (
+                <div key={b.id} className="glass min-w-[220px] shrink-0 rounded-2xl p-3">
+                  <div className="text-sm font-semibold capitalize">
+                    {dateLabel} · {b.window_label}
+                  </div>
+                  <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
+                    {b.orderCount} order{b.orderCount === 1 ? "" : "s"} · {b.pendingCount} pending
+                  </div>
+                  <div className="mt-1 text-[11px] text-[color:var(--text-tertiary)]">
+                    {unclaimed
+                      ? "Unclaimed"
+                      : mine
+                        ? "Claimed by you"
+                        : `Claimed by ${b.assigned_staff_email ?? "another staffer"}`}
+                  </div>
+                  {unclaimed && (
+                    <button
+                      onClick={() => claimBatch(b.id)}
+                      disabled={claimingBatchId === b.id}
+                      className="tap-scale mt-2 flex w-full items-center justify-center gap-1.5 rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                    >
+                      {claimingBatchId === b.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <UserPlus className="h-3 w-3" />
+                      )}
+                      Claim this trip
+                    </button>
+                  )}
+                  {mine && (
+                    <button
+                      onClick={() => releaseBatch(b.id)}
+                      disabled={claimingBatchId === b.id}
+                      className="tap-scale mt-2 flex w-full items-center justify-center gap-1.5 rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                    >
+                      {claimingBatchId === b.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <UserMinus className="h-3 w-3" />
+                      )}
+                      Release
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {ordersQ.data?.aggregateOnly ? (
         <div className="mx-auto max-w-2xl px-4 py-6">
@@ -572,38 +692,131 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                 );
               })}
             </div>
-            <div className="space-y-3 px-4 pb-6 pt-3">
-              {BOARD_STATUSES.filter((s) =>
-                mobileFilter === "active" ? s !== "completed" : s === mobileFilter,
-              )
-                .flatMap((s) =>
-                  ((grouped[s] as unknown as StaffOrderRow[]) ?? []).map((o) => ({
-                    ...o,
-                    status: s,
-                  })),
-                )
-                .map((o) => (
-                  <StaffOrderCard
-                    key={o.id}
-                    order={o}
-                    onOpenAttachment={openAttachment}
-                    onAdvance={setStatus}
-                    onCancel={setCancelOrderId}
-                    windowRanges={windowRanges}
-                    isAdvancing={advancingOrderId === o.id}
-                  />
-                ))}
-              {BOARD_STATUSES.filter((s) =>
-                mobileFilter === "active" ? s !== "completed" : s === mobileFilter,
-              ).flatMap((s) => (grouped[s] as unknown as StaffOrderRow[]) ?? []).length === 0 && (
-                <div className="card-surface flex flex-col items-center gap-2 p-8 text-center">
-                  <Package className="h-8 w-8 text-[color:var(--text-muted)]" />
-                  <div className="text-sm text-[color:var(--text-tertiary)]">
-                    No orders here right now.
-                  </div>
-                </div>
-              )}
+
+            {/* Simple flat list stays the default; grouping by delivery
+                window is opt-in for whoever's planning a trip and wants to
+                see which orders can go out together, same idea as admin's
+                delivery batches but scoped to what's actually in front of
+                you right now. */}
+            <div className="flex items-center gap-2 px-4 pt-3">
+              <button
+                onClick={() => setGroupByWindow(false)}
+                className="tap-scale rounded-full px-3 py-1.5 text-xs font-semibold"
+                style={{
+                  color: !groupByWindow ? "var(--on-accent)" : "var(--text-secondary)",
+                  background: !groupByWindow ? "var(--accent-primary)" : "var(--bg-elevated)",
+                }}
+              >
+                Simple
+              </button>
+              <button
+                onClick={() => setGroupByWindow(true)}
+                className="tap-scale rounded-full px-3 py-1.5 text-xs font-semibold"
+                style={{
+                  color: groupByWindow ? "var(--on-accent)" : "var(--text-secondary)",
+                  background: groupByWindow ? "var(--accent-primary)" : "var(--bg-elevated)",
+                }}
+              >
+                By delivery window
+              </button>
             </div>
+
+            {(() => {
+              const filteredOrders = BOARD_STATUSES.filter((s) =>
+                mobileFilter === "active" ? s !== "completed" : s === mobileFilter,
+              ).flatMap((s) =>
+                ((grouped[s] as unknown as StaffOrderRow[]) ?? []).map((o) => ({
+                  ...o,
+                  status: s,
+                })),
+              );
+
+              if (filteredOrders.length === 0) {
+                return (
+                  <div className="px-4 pb-6 pt-3">
+                    <div className="card-surface flex flex-col items-center gap-2 p-8 text-center">
+                      <Package className="h-8 w-8 text-[color:var(--text-muted)]" />
+                      <div className="text-sm text-[color:var(--text-tertiary)]">
+                        No orders here right now.
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (!groupByWindow) {
+                return (
+                  <div className="space-y-3 px-4 pb-6 pt-3">
+                    {filteredOrders.map((o) => (
+                      <StaffOrderCard
+                        key={o.id}
+                        order={o}
+                        onOpenAttachment={openAttachment}
+                        onAdvance={setStatus}
+                        onCancel={setCancelOrderId}
+                        windowRanges={windowRanges}
+                        isAdvancing={advancingOrderId === o.id}
+                      />
+                    ))}
+                  </div>
+                );
+              }
+
+              const groupMap = new Map<string, typeof filteredOrders>();
+              for (const o of filteredOrders) {
+                const key = `${o.requested_date ?? "￿"}__${o.requested_window ?? "￿"}`;
+                if (!groupMap.has(key)) groupMap.set(key, []);
+                groupMap.get(key)!.push(o);
+              }
+              const sortedGroups = [...groupMap.entries()].sort(([a], [b]) => a.localeCompare(b));
+
+              return (
+                <div className="space-y-4 px-4 pb-6 pt-3">
+                  {sortedGroups.map(([key, orders]) => {
+                    const [date, window] = key.split("__");
+                    const label =
+                      date === "￿"
+                        ? "No delivery window set"
+                        : new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                          });
+                    return (
+                      <div key={key}>
+                        <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[color:var(--text-secondary)]">
+                          <Clock className="h-3.5 w-3.5" />
+                          {label}
+                          {window !== "￿" && (
+                            <span className="capitalize">
+                              · {window}
+                              {windowRanges[window] ? ` (${windowRanges[window]})` : ""}
+                            </span>
+                          )}
+                          <span className="font-normal normal-case text-[color:var(--text-tertiary)]">
+                            — {orders.length} order{orders.length === 1 ? "" : "s"}, deliverable
+                            together
+                          </span>
+                        </div>
+                        <div className="space-y-3">
+                          {orders.map((o) => (
+                            <StaffOrderCard
+                              key={o.id}
+                              order={o}
+                              onOpenAttachment={openAttachment}
+                              onAdvance={setStatus}
+                              onCancel={setCancelOrderId}
+                              windowRanges={windowRanges}
+                              isAdvancing={advancingOrderId === o.id}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </>
       )}
