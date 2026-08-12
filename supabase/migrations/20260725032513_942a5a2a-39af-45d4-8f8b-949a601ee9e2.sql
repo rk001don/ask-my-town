@@ -1,14 +1,17 @@
 DROP POLICY IF EXISTS "Customers: staff can read all" ON public.customers;
+DROP POLICY IF EXISTS "Customers: admin/ops can read all" ON public.customers;
 CREATE POLICY "Customers: admin/ops can read all" ON public.customers
   FOR SELECT TO authenticated
   USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'ops'));
 
 DROP POLICY IF EXISTS "Orders: staff can read all" ON public.orders;
+DROP POLICY IF EXISTS "Orders: admin/ops can read all" ON public.orders;
 CREATE POLICY "Orders: admin/ops can read all" ON public.orders
   FOR SELECT TO authenticated
   USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'ops'));
 
 DROP POLICY IF EXISTS "Order items: staff can read all" ON public.order_items;
+DROP POLICY IF EXISTS "Order items: admin/ops can read all" ON public.order_items;
 CREATE POLICY "Order items: admin/ops can read all" ON public.order_items
   FOR SELECT TO authenticated
   USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'ops'));
@@ -36,6 +39,7 @@ REVOKE ALL ON FUNCTION public.mytown_warden_daily_counts(UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.mytown_warden_daily_counts(UUID) TO authenticated;
 
 DROP POLICY IF EXISTS "Orders: staff can update status" ON public.orders;
+DROP POLICY IF EXISTS "Orders: admin/ops can update status" ON public.orders;
 CREATE POLICY "Orders: admin/ops can update status" ON public.orders
   FOR UPDATE TO authenticated
   USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'ops'))
