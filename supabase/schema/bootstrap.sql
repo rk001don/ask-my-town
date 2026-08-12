@@ -796,16 +796,19 @@ ALTER TABLE public.order_items ADD COLUMN IF NOT EXISTS unit_price NUMERIC(10,2)
 -- Source: 20260725032513_942a5a2a-39af-45d4-8f8b-949a601ee9e2.sql
 -- ====================================================================
 DROP POLICY IF EXISTS "Customers: staff can read all" ON public.customers;
+DROP POLICY IF EXISTS "Customers: admin/ops can read all" ON public.customers;
 CREATE POLICY "Customers: admin/ops can read all" ON public.customers
   FOR SELECT TO authenticated
   USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'ops'));
 
 DROP POLICY IF EXISTS "Orders: staff can read all" ON public.orders;
+DROP POLICY IF EXISTS "Orders: admin/ops can read all" ON public.orders;
 CREATE POLICY "Orders: admin/ops can read all" ON public.orders
   FOR SELECT TO authenticated
   USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'ops'));
 
 DROP POLICY IF EXISTS "Order items: staff can read all" ON public.order_items;
+DROP POLICY IF EXISTS "Order items: admin/ops can read all" ON public.order_items;
 CREATE POLICY "Order items: admin/ops can read all" ON public.order_items
   FOR SELECT TO authenticated
   USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'ops'));
@@ -833,6 +836,7 @@ REVOKE ALL ON FUNCTION public.mytown_warden_daily_counts(UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.mytown_warden_daily_counts(UUID) TO authenticated;
 
 DROP POLICY IF EXISTS "Orders: staff can update status" ON public.orders;
+DROP POLICY IF EXISTS "Orders: admin/ops can update status" ON public.orders;
 CREATE POLICY "Orders: admin/ops can update status" ON public.orders
   FOR UPDATE TO authenticated
   USING (public.has_role(auth.uid(), 'admin') OR public.has_role(auth.uid(), 'ops'))
@@ -1208,7 +1212,7 @@ ON CONFLICT DO NOTHING;
 -- ====================================================================
 -- Source: 20260802073614_3e8477ce-514c-4f7c-a885-097166bedca9.sql
 -- ====================================================================
-CREATE TABLE public.order_push_subscriptions (
+CREATE TABLE IF NOT EXISTS public.order_push_subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id TEXT NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
   endpoint TEXT NOT NULL,

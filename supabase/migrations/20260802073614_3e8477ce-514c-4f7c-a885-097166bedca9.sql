@@ -1,4 +1,4 @@
-CREATE TABLE public.order_push_subscriptions (
+CREATE TABLE IF NOT EXISTS public.order_push_subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   order_id TEXT NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
   endpoint TEXT NOT NULL,
