@@ -147,6 +147,9 @@ export type Database = {
       }
       delivery_batches: {
         Row: {
+          assigned_at: string | null
+          assigned_staff_email: string | null
+          assigned_staff_id: string | null
           created_at: string
           id: string
           location_id: string
@@ -157,6 +160,9 @@ export type Database = {
           window_label: string
         }
         Insert: {
+          assigned_at?: string | null
+          assigned_staff_email?: string | null
+          assigned_staff_id?: string | null
           created_at?: string
           id?: string
           location_id: string
@@ -167,6 +173,9 @@ export type Database = {
           window_label: string
         }
         Update: {
+          assigned_at?: string | null
+          assigned_staff_email?: string | null
+          assigned_staff_id?: string | null
           created_at?: string
           id?: string
           location_id?: string

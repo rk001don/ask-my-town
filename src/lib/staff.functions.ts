@@ -213,3 +213,92 @@ export const cancelStaffOrder = createServerFn({ method: "POST" })
 
     return { ok: true as const };
   });
+
+// ============================================================================
+// Delivery batch self-claim -- lets any ops/admin staff claim an unassigned
+// trip as themselves, without needing an admin to hand-assign one.
+// ============================================================================
+
+export const listMyDeliveryBatches = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertStaff(context.supabase as never, context.userId, true);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: batches, error } = await supabaseAdmin
+      .from("delivery_batches")
+      .select(
+        "id, window_label, scheduled_date, scheduled_at, status, assigned_staff_id, assigned_staff_email",
+      )
+      .neq("status", "cancelled")
+      .order("scheduled_at", { ascending: true })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    if (!batches || batches.length === 0) return [];
+
+    const { data: orders, error: ordersErr } = await supabaseAdmin
+      .from("orders")
+      .select("delivery_batch_id, status")
+      .in(
+        "delivery_batch_id",
+        batches.map((b) => b.id),
+      );
+    if (ordersErr) throw new Error(ordersErr.message);
+
+    return batches.map((b) => {
+      const rows = (orders ?? []).filter((o) => o.delivery_batch_id === b.id);
+      return {
+        ...b,
+        orderCount: rows.length,
+        pendingCount: rows.filter((o) => o.status !== "completed" && o.status !== "cancelled")
+          .length,
+      };
+    });
+  });
+
+export const claimDeliveryBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { id: string }) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    await assertStaff(context.supabase as never, context.userId, true);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const email = (context.claims as { email?: string } | undefined)?.email ?? null;
+
+    // Atomic claim: the WHERE clause is what stops two riders tapping
+    // "Claim" on the same trip at nearly the same moment from both winning.
+    const { data: claimed, error } = await supabaseAdmin
+      .from("delivery_batches")
+      .update({
+        assigned_staff_id: context.userId,
+        assigned_staff_email: email,
+        assigned_at: new Date().toISOString(),
+      })
+      .eq("id", data.id)
+      .is("assigned_staff_id", null)
+      .select("id")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!claimed) throw new Error("Someone already claimed this trip.");
+    return { ok: true as const };
+  });
+
+export const releaseDeliveryBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { id: string }) => z.object({ id: z.string().uuid() }).parse(data))
+  .handler(async ({ data, context }) => {
+    const roles = await assertStaff(context.supabase as never, context.userId, true);
+    const isAdmin = roles.some((r) => r === "admin");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    let query = supabaseAdmin
+      .from("delivery_batches")
+      .update({ assigned_staff_id: null, assigned_staff_email: null, assigned_at: null })
+      .eq("id", data.id);
+    // Admin can free up anyone's claim (e.g. a rider's phone died); a
+    // regular ops staffer can only release their own.
+    if (!isAdmin) query = query.eq("assigned_staff_id", context.userId);
+
+    const { data: released, error } = await query.select("id").maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!released) throw new Error("This trip isn't assigned to you.");
+    return { ok: true as const };
+  });

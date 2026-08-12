@@ -9,6 +9,9 @@ import {
   listStaffOrders,
   updateStaffOrderStatus,
   getAttachmentSignedUrl,
+  listMyDeliveryBatches,
+  claimDeliveryBatch,
+  releaseDeliveryBatch,
 } from "@/lib/staff.functions";
 import { ORDER_STATUS_STEPS, STATUS_COPY, type OrderStatus } from "@/lib/constants";
 import { getLocations } from "@/lib/api.functions";
@@ -30,6 +33,8 @@ import {
   CheckCircle2,
   XCircle,
   Truck,
+  UserPlus,
+  UserMinus,
 } from "lucide-react";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 
@@ -321,6 +326,10 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
   const updateFn = useServerFn(updateStaffOrderStatus);
   const cancelFn = useServerFn(cancelStaffOrder);
   const signedUrlFn = useServerFn(getAttachmentSignedUrl);
+  const batchesFn = useServerFn(listMyDeliveryBatches);
+  const claimBatchFn = useServerFn(claimDeliveryBatch);
+  const releaseBatchFn = useServerFn(releaseDeliveryBatch);
+  const [claimingBatchId, setClaimingBatchId] = useState<string | null>(null);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [mobileFilter, setMobileFilter] = useState<"active" | OrderStatus>("active");
@@ -344,6 +353,13 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
 
   const locationsFn = useServerFn(getLocations);
   const rolesQ = useQuery({ queryKey: ["my-roles"], queryFn: () => rolesFn(), staleTime: 60_000 });
+  const isOpsOrAdmin = rolesQ.data?.roles.some((r) => r === "admin" || r === "ops") ?? false;
+  const batchesQ = useQuery({
+    queryKey: ["staff-my-batches"],
+    queryFn: () => batchesFn(),
+    enabled: isOpsOrAdmin,
+    refetchInterval: 20_000,
+  });
   const locationsQ = useQuery({
     queryKey: ["locations"],
     queryFn: () => locationsFn(),
@@ -395,6 +411,35 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
       toast.error(err instanceof Error ? err.message : "Update failed");
     } finally {
       setAdvancingOrderId(null);
+    }
+  }
+
+  async function claimBatch(id: string) {
+    if (claimingBatchId) return;
+    setClaimingBatchId(id);
+    try {
+      await claimBatchFn({ data: { id } });
+      toast.success("Trip claimed — it's yours to deliver");
+      qc.invalidateQueries({ queryKey: ["staff-my-batches"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't claim this trip");
+      qc.invalidateQueries({ queryKey: ["staff-my-batches"] });
+    } finally {
+      setClaimingBatchId(null);
+    }
+  }
+
+  async function releaseBatch(id: string) {
+    if (claimingBatchId) return;
+    setClaimingBatchId(id);
+    try {
+      await releaseBatchFn({ data: { id } });
+      toast.success("Trip released");
+      qc.invalidateQueries({ queryKey: ["staff-my-batches"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't release this trip");
+    } finally {
+      setClaimingBatchId(null);
     }
   }
 
@@ -473,6 +518,80 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
           </button>
         </div>
       </div>
+
+      {isOpsOrAdmin && (
+        <div className="px-4 pt-4">
+          <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[color:var(--text-secondary)]">
+            <Truck className="h-3.5 w-3.5" />
+            My deliveries
+          </div>
+          <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+            {batchesQ.isLoading && (
+              <div className="glass min-w-[220px] rounded-2xl p-3">
+                <Loader2 className="h-4 w-4 animate-spin" />
+              </div>
+            )}
+            {!batchesQ.isLoading && (batchesQ.data ?? []).length === 0 && (
+              <div className="glass rounded-2xl p-3 text-xs text-[color:var(--text-tertiary)]">
+                No delivery trips scheduled yet.
+              </div>
+            )}
+            {(batchesQ.data ?? []).map((b) => {
+              const mine = b.assigned_staff_email === email;
+              const unclaimed = !b.assigned_staff_id;
+              const dateLabel = new Date(`${b.scheduled_date}T00:00:00`).toLocaleDateString(
+                undefined,
+                { weekday: "short", day: "numeric", month: "short" },
+              );
+              return (
+                <div key={b.id} className="glass min-w-[220px] shrink-0 rounded-2xl p-3">
+                  <div className="text-sm font-semibold capitalize">
+                    {dateLabel} · {b.window_label}
+                  </div>
+                  <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
+                    {b.orderCount} order{b.orderCount === 1 ? "" : "s"} · {b.pendingCount} pending
+                  </div>
+                  <div className="mt-1 text-[11px] text-[color:var(--text-tertiary)]">
+                    {unclaimed
+                      ? "Unclaimed"
+                      : mine
+                        ? "Claimed by you"
+                        : `Claimed by ${b.assigned_staff_email ?? "another staffer"}`}
+                  </div>
+                  {unclaimed && (
+                    <button
+                      onClick={() => claimBatch(b.id)}
+                      disabled={claimingBatchId === b.id}
+                      className="tap-scale mt-2 flex w-full items-center justify-center gap-1.5 rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                    >
+                      {claimingBatchId === b.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <UserPlus className="h-3 w-3" />
+                      )}
+                      Claim this trip
+                    </button>
+                  )}
+                  {mine && (
+                    <button
+                      onClick={() => releaseBatch(b.id)}
+                      disabled={claimingBatchId === b.id}
+                      className="tap-scale mt-2 flex w-full items-center justify-center gap-1.5 rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+                    >
+                      {claimingBatchId === b.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <UserMinus className="h-3 w-3" />
+                      )}
+                      Release
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {ordersQ.data?.aggregateOnly ? (
         <div className="mx-auto max-w-2xl px-4 py-6">
