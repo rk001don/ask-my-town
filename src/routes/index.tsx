@@ -117,9 +117,30 @@ function Home() {
         </Link>
       </div>
 
-      {/* Popular picks — the first thing users see, enabling quick orders */}
+      {/* Need Anything — the app's central differentiator, surfaced right
+          under search so it's the second thing anyone sees. */}
+      <section className="pt-4 px-4">
+        <button
+          onClick={() => openAskSheet()}
+          className="tap-scale card-surface flex w-full items-center gap-3 p-4 text-left"
+        >
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full accent-gradient">
+            <Sparkles className="h-5 w-5 text-[color:var(--on-accent)]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold">Don't see it? Just ask.</div>
+            <div className="text-xs text-[color:var(--text-secondary)]">
+              Tell us what you need — medicine, a repair, tickets, anything local.
+            </div>
+          </div>
+          <ArrowRight className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
+        </button>
+      </section>
+
+      {/* Popular picks — horizontal shelf (matches the Trending/Explore card
+          pattern) so it reads as a quick-scan row, not a dense grid. */}
       {(popularQ.isLoading || (popularQ.data?.length ?? 0) > 0) && (
-        <section className="pt-4">
+        <section className="pt-6">
           <div className="flex items-baseline justify-between px-4">
             <h2 className="text-display text-lg font-semibold">Popular picks</h2>
             <Link
@@ -134,37 +155,8 @@ function Home() {
               <CardSkeleton />
             </div>
           ) : (
-            <div className="mt-3 grid grid-cols-2 items-stretch gap-3 px-4 md:grid-cols-3 lg:grid-cols-4">
-              {(popularQ.data ?? []).map((p) => (
-                <ProductCard key={p.id} product={p} categoryName={p.categories?.name} view="grid" />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* Trending picks — a curated shelf into the existing catalog (self-care
-          + snacking essentials), horizontal so it reads distinctly from the
-          Popular grid above it while staying above Categories for quick
-          reordering. */}
-      {(trendingQ.isLoading || (trendingQ.data?.length ?? 0) > 0) && (
-        <section className="pt-6">
-          <div className="flex items-baseline justify-between px-4">
-            <h2 className="text-display text-lg font-semibold">Trending picks</h2>
-            <Link
-              to="/explore"
-              className="text-xs font-semibold text-[color:var(--accent-primary)]"
-            >
-              See all
-            </Link>
-          </div>
-          {trendingQ.isLoading ? (
-            <div className="mt-3 px-4">
-              <CardSkeleton />
-            </div>
-          ) : (
             <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-4 pb-1">
-              {(trendingQ.data ?? []).map((p) => (
+              {(popularQ.data ?? []).map((p) => (
                 <div key={p.id} className="w-[152px] shrink-0">
                   <ProductCard product={p} categoryName={p.categories?.name} view="grid" />
                 </div>
@@ -174,8 +166,36 @@ function Home() {
         </section>
       )}
 
+      {/* Categories grid */}
+      <section className="mt-8">
+        <div className="flex items-baseline justify-between px-4">
+          <h2 className="text-display text-lg font-semibold">Categories</h2>
+          <Link to="/explore" className="text-xs font-semibold text-[color:var(--accent-primary)]">
+            All
+          </Link>
+        </div>
+        {!mounted ? (
+          <div className="mt-3">
+            <TileSkeleton />
+          </div>
+        ) : (
+          <div className="mt-3 grid grid-cols-4 gap-3 px-4 md:grid-cols-6 lg:grid-cols-8">
+            {categories.map((c) => (
+              <CategoryTile
+                key={c.id}
+                slug={c.slug}
+                name={c.name}
+                iconKey={c.icon_key}
+                imageUrl={c.image_url}
+                compact
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
       {/* Hero — brand presence with category quick-jump */}
-      <section className="px-4 pt-5">
+      <section className="px-4 pt-8">
         <div className="gradient-hero card-surface relative overflow-hidden p-4">
           <div
             className="absolute -right-10 -top-10 h-32 w-32 rounded-full"
@@ -214,54 +234,35 @@ function Home() {
         </div>
       </section>
 
-      {/* Categories grid */}
-      <section className="mt-8">
-        <div className="flex items-baseline justify-between px-4">
-          <h2 className="text-display text-lg font-semibold">Categories</h2>
-          <Link to="/explore" className="text-xs font-semibold text-[color:var(--accent-primary)]">
-            All
-          </Link>
-        </div>
-        {!mounted ? (
-          <div className="mt-3">
-            <TileSkeleton />
+      {/* Trending picks — a curated shelf into the existing catalog (self-care
+          + snacking essentials), horizontal so it stays a quick reorder shelf
+          distinct from Popular picks above. */}
+      {(trendingQ.isLoading || (trendingQ.data?.length ?? 0) > 0) && (
+        <section className="pt-8">
+          <div className="flex items-baseline justify-between px-4">
+            <h2 className="text-display text-lg font-semibold">Trending picks</h2>
+            <Link
+              to="/explore"
+              className="text-xs font-semibold text-[color:var(--accent-primary)]"
+            >
+              See all
+            </Link>
           </div>
-        ) : (
-          <div className="mt-3 grid grid-cols-4 gap-3 px-4 md:grid-cols-6 lg:grid-cols-8">
-            {categories.map((c) => (
-              <CategoryTile
-                key={c.id}
-                slug={c.slug}
-                name={c.name}
-                iconKey={c.icon_key}
-                imageUrl={c.image_url}
-                compact
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Need Anything — the app's central differentiator, kept as a
-          fallback beneath the browsable catalog rather than competing with
-          it for the top of the page. */}
-      <section className="mt-8 px-4">
-        <button
-          onClick={() => openAskSheet()}
-          className="tap-scale card-surface flex w-full items-center gap-3 p-4 text-left"
-        >
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full accent-gradient">
-            <Sparkles className="h-5 w-5 text-[color:var(--on-accent)]" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold">Don't see it? Just ask.</div>
-            <div className="text-xs text-[color:var(--text-secondary)]">
-              Tell us what you need — medicine, a repair, tickets, anything local.
+          {trendingQ.isLoading ? (
+            <div className="mt-3 px-4">
+              <CardSkeleton />
             </div>
-          </div>
-          <ArrowRight className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
-        </button>
-      </section>
+          ) : (
+            <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-4 pb-1">
+              {(trendingQ.data ?? []).map((p) => (
+                <div key={p.id} className="w-[152px] shrink-0">
+                  <ProductCard product={p} categoryName={p.categories?.name} view="grid" />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* How it works */}
       <section className="mt-8 px-4 pb-6">
