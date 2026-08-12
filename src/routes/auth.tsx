@@ -2,7 +2,6 @@ import { createFileRoute, useNavigate, useSearch, Link } from "@tanstack/react-r
 import { useEffect, useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { signUpWithPin } from "@/lib/auth.functions";
 import { isValidIndianPhone } from "@/lib/phone";
 import { AppHeader } from "@/components/AppHeader";
@@ -128,12 +127,12 @@ function AuthPage() {
   async function google() {
     setGoogleBusy(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}${search.redirect ?? "/activity"}` },
       });
-      if (result.error) throw new Error(String(result.error));
-      if (result.redirected) return;
-      nav({ to: search.redirect ?? "/activity" });
+      if (error) throw error;
+      // Successful call navigates the browser to Google; nothing left to do here.
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Google sign-in failed");
       setGoogleBusy(false);
