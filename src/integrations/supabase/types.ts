@@ -523,7 +523,9 @@ export type Database = {
       }
       orders: {
         Row: {
-          assigned_employee_id: string | null
+          assigned_at: string | null
+          assigned_staff_email: string | null
+          assigned_staff_id: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -550,7 +552,9 @@ export type Database = {
           wallet_amount_used: number
         }
         Insert: {
-          assigned_employee_id?: string | null
+          assigned_at?: string | null
+          assigned_staff_email?: string | null
+          assigned_staff_id?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -577,7 +581,9 @@ export type Database = {
           wallet_amount_used?: number
         }
         Update: {
-          assigned_employee_id?: string | null
+          assigned_at?: string | null
+          assigned_staff_email?: string | null
+          assigned_staff_id?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null

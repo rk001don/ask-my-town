@@ -269,88 +269,15 @@ export const deleteProduct = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
-export const listDeliveryBatches = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    await assertAdmin(context.supabase as never, context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data, error } = await supabaseAdmin
-      .from("delivery_batches")
-      .select("id, location_id, window_label, scheduled_date, scheduled_at, status")
-      .order("scheduled_at", { ascending: false })
-      .limit(50);
-    if (error) throw new Error(error.message);
-    const batches = data ?? [];
-    if (batches.length === 0) return [];
-
-    // A batch is only meaningful in terms of the orders inside it, so the
-    // admin list carries counts rather than making the operator guess.
-    const { data: orders, error: ordersErr } = await supabaseAdmin
-      .from("orders")
-      .select("delivery_batch_id, status")
-      .in(
-        "delivery_batch_id",
-        batches.map((b) => b.id),
-      );
-    if (ordersErr) throw new Error(ordersErr.message);
-
-    return batches.map((b) => {
-      const rows = (orders ?? []).filter((o) => o.delivery_batch_id === b.id);
-      return {
-        ...b,
-        orderCount: rows.length,
-        pendingCount: rows.filter((o) => o.status !== "completed" && o.status !== "cancelled")
-          .length,
-        deliveredCount: rows.filter((o) => o.status === "completed").length,
-      };
-    });
-  });
-
-
-// Only the one valid next step from each status is exposed in the UI, so
-// there's no dropdown of arbitrary statuses to pick wrong.
-const BATCH_NEXT_STATUS: Record<string, string> = {
-  open: "locked",
-  locked: "dispatched",
-  dispatched: "delivered",
-};
-
-export const updateBatchStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((data: { id: string }) => z.object({ id: z.string().uuid() }).parse(data))
-  .handler(async ({ data, context }) => {
-    await assertAdmin(context.supabase as never, context.userId);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: batch, error: fetchErr } = await supabaseAdmin
-      .from("delivery_batches")
-      .select("status")
-      .eq("id", data.id)
-      .maybeSingle();
-    if (fetchErr) throw new Error(fetchErr.message);
-    if (!batch) throw new Error("Batch not found");
-    const next = BATCH_NEXT_STATUS[batch.status];
-    if (!next) throw new Error(`No further action for a batch that's already "${batch.status}".`);
-    const { error } = await supabaseAdmin
-      .from("delivery_batches")
-      .update({ status: next })
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
-    await supabaseAdmin.from("audit_log").insert({
-      staff_id: context.userId,
-      action: "batch.status_update",
-      entity_type: "delivery_batch",
-      entity_id: data.id,
-      metadata: { from: batch.status, to: next },
-    });
-    return { newStatus: next };
-  });
-
 // Catalog image upload. The bucket is private (public buckets aren't allowed
 // on this project), so images are served back through the public read-through
 // route at /api/public/catalog-image/$path and image_url stores that path.
 const CatalogImageSchema = z.object({
   fileName: z.string().trim().min(1).max(200),
-  contentType: z.string().trim().regex(/^image\/[a-zA-Z0-9.+-]+$/),
+  contentType: z
+    .string()
+    .trim()
+    .regex(/^image\/[a-zA-Z0-9.+-]+$/),
   dataBase64: z.string().min(1).max(9_000_000),
 });
 

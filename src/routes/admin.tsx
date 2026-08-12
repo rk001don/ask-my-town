@@ -14,14 +14,11 @@ import {
   updateCategory,
   listAppConfig,
   updateAppConfig,
-  listDeliveryBatches,
-  updateBatchStatus,
 } from "@/lib/admin.functions";
 import { AppHeader } from "@/components/AppHeader";
 import { ErrorState } from "@/components/States";
 import { CatalogImageUpload } from "@/components/CatalogImageUpload";
 import { toast } from "sonner";
-import { to12Hour } from "@/lib/time";
 import {
   createCampaign,
   listCampaigns,
@@ -39,21 +36,6 @@ export const Route = createFileRoute("/admin")({
   component: AdminPage,
   errorComponent: ({ reset }) => <ErrorState onRetry={reset} />,
 });
-
-const BATCH_NEXT_ACTION_LABEL: Record<string, string> = {
-  open: "Lock",
-  locked: "Mark dispatched",
-  dispatched: "Mark delivered",
-};
-
-// Each batch row states what the operator is expected to do next, so the
-// screen isn't a list of dates with unexplained buttons.
-const BATCH_NEXT_ACTION_HINT: Record<string, string> = {
-  open: "Still collecting orders for this window. Lock it once the cutoff passes.",
-  locked: "Locked and ready — hand it to a rider, then mark it dispatched.",
-  dispatched: "Rider is out. Mark delivered once every order in the trip is dropped.",
-  delivered: "Trip complete.",
-};
 
 function AdminPage() {
   const [email, setEmail] = useState<string | null>(null);
@@ -105,8 +87,6 @@ function AdminBoard({ email }: { email: string }) {
   const updateCategoryFn = useServerFn(updateCategory);
   const configFn = useServerFn(listAppConfig);
   const updateConfigFn = useServerFn(updateAppConfig);
-  const batchesFn = useServerFn(listDeliveryBatches);
-  const advanceBatchFn = useServerFn(updateBatchStatus);
   const createCampaignFn = useServerFn(createCampaign);
   const listCampaignsFn = useServerFn(listCampaigns);
   const sendCampaignNowFn = useServerFn(sendCampaignNow);
@@ -131,11 +111,6 @@ function AdminBoard({ email }: { email: string }) {
     queryFn: () => configFn(),
     enabled: isAdmin,
   });
-  const batchesQ = useQuery({
-    queryKey: ["admin-batches"],
-    queryFn: () => batchesFn(),
-    enabled: isAdmin,
-  });
   const campaignsQ = useQuery({
     queryKey: ["admin-campaigns"],
     queryFn: () => listCampaignsFn(),
@@ -154,30 +129,25 @@ function AdminBoard({ email }: { email: string }) {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [showNewProduct, setShowNewProduct] = useState(false);
   const [showNewCategory, setShowNewCategory] = useState(false);
-  const [advancingBatchId, setAdvancingBatchId] = useState<string | null>(null);
   const [savingConfigKey, setSavingConfigKey] = useState<string | null>(null);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [sendingCampaignId, setSendingCampaignId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    "dashboard" | "catalog" | "notifications" | "config" | "delivery"
-  >("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "catalog" | "notifications" | "config">(
+    "dashboard",
+  );
 
   const dashboardStats = useMemo(() => {
     const productCount = productsQ.data?.length ?? 0;
     const categoryCount = categoriesQ.data?.length ?? 0;
-    const batchCount = batchesQ.data?.length ?? 0;
-    const openBatchCount = (batchesQ.data ?? []).filter((b) => b.status !== "delivered").length;
     const campaignCount = campaignsQ.data?.length ?? 0;
     const scheduledCount = (campaignsQ.data ?? []).filter((c) => c.status === "scheduled").length;
     return {
       productCount,
       categoryCount,
-      batchCount,
-      openBatchCount,
       campaignCount,
       scheduledCount,
     };
-  }, [batchesQ.data, campaignsQ.data, categoriesQ.data, productsQ.data]);
+  }, [campaignsQ.data, categoriesQ.data, productsQ.data]);
 
   const filteredProducts = useMemo(() => {
     let rows = productsQ.data ?? [];
@@ -251,20 +221,6 @@ function AdminBoard({ email }: { email: string }) {
       toast.error(err instanceof Error ? err.message : "Couldn't remove product");
     } finally {
       setDeletingProductId(null);
-    }
-  }
-
-  async function advanceBatch(id: string) {
-    if (advancingBatchId) return;
-    setAdvancingBatchId(id);
-    try {
-      const { newStatus } = await advanceBatchFn({ data: { id } });
-      toast.success(`Batch marked ${newStatus}`);
-      qc.invalidateQueries({ queryKey: ["admin-batches"] });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't update batch");
-    } finally {
-      setAdvancingBatchId(null);
     }
   }
 
@@ -397,15 +353,12 @@ function AdminBoard({ email }: { email: string }) {
           { id: "catalog", label: "Catalog" },
           { id: "notifications", label: "Notifications" },
           { id: "config", label: "Config" },
-          { id: "delivery", label: "Delivery" },
         ].map((tab) => (
           <button
             key={tab.id}
             type="button"
             onClick={() =>
-              setActiveTab(
-                tab.id as "dashboard" | "catalog" | "notifications" | "config" | "delivery",
-              )
+              setActiveTab(tab.id as "dashboard" | "catalog" | "notifications" | "config")
             }
             className={`tap-scale min-h-11 rounded-full px-3 py-2 text-xs font-semibold transition-colors ${
               activeTab === tab.id
@@ -442,12 +395,6 @@ function AdminBoard({ email }: { email: string }) {
             </div>
             <div className="glass rounded-2xl p-4">
               <div className="text-[11px] uppercase tracking-wide text-[color:var(--text-tertiary)]">
-                Active batches
-              </div>
-              <div className="mt-2 text-2xl font-semibold">{dashboardStats.openBatchCount}</div>
-            </div>
-            <div className="glass rounded-2xl p-4">
-              <div className="text-[11px] uppercase tracking-wide text-[color:var(--text-tertiary)]">
                 Campaigns
               </div>
               <div className="mt-2 text-2xl font-semibold">{dashboardStats.campaignCount}</div>
@@ -457,12 +404,6 @@ function AdminBoard({ email }: { email: string }) {
                 Scheduled
               </div>
               <div className="mt-2 text-2xl font-semibold">{dashboardStats.scheduledCount}</div>
-            </div>
-            <div className="glass rounded-2xl p-4">
-              <div className="text-[11px] uppercase tracking-wide text-[color:var(--text-tertiary)]">
-                Total batches
-              </div>
-              <div className="mt-2 text-2xl font-semibold">{dashboardStats.batchCount}</div>
             </div>
           </div>
 
@@ -480,12 +421,6 @@ function AdminBoard({ email }: { email: string }) {
                 <span className="font-semibold text-[color:var(--text-primary)]">
                   {dashboardStats.campaignCount} campaigns, {dashboardStats.scheduledCount}{" "}
                   scheduled
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2">
-                <span>Delivery flow</span>
-                <span className="font-semibold text-[color:var(--text-primary)]">
-                  {dashboardStats.openBatchCount} open / {dashboardStats.batchCount} total
                 </span>
               </div>
             </div>
@@ -782,79 +717,6 @@ function AdminBoard({ email }: { email: string }) {
               </div>
             )}
           </div>
-        </section>
-      )}
-
-      {activeTab === "delivery" && (
-        <section>
-          <h2 className="text-lg font-semibold">Delivery batches</h2>
-          <p className="mb-3 mt-1 text-xs text-[color:var(--text-secondary)]">
-            Orders placed for the same delivery window (e.g. "tomorrow evening") are grouped into
-            one batch so a single rider can deliver them together in one trip, instead of a separate
-            trip per order. <span className="font-semibold">Open</span> means it's still accepting
-            new orders for that window; <span className="font-semibold">locked/dispatched</span>{" "}
-            means it's on its way.
-          </p>
-          {batchesQ.isLoading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <div className="space-y-2">
-              {(batchesQ.data ?? []).map((b) => (
-                <div key={b.id} className="glass rounded-2xl p-3">
-                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold capitalize">
-                        {new Date(`${b.scheduled_date}T00:00:00`).toLocaleDateString(undefined, {
-                          weekday: "short",
-                          day: "numeric",
-                          month: "short",
-                        })}{" "}
-                        · {b.window_label}
-                        {b.scheduled_at && (
-                          <span className="ml-1 text-xs font-normal text-[color:var(--text-tertiary)]">
-                            ({to12Hour(new Date(b.scheduled_at).toTimeString().slice(0, 5))})
-                          </span>
-                        )}
-                      </div>
-                      <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
-                        {b.orderCount} order{b.orderCount === 1 ? "" : "s"} in this trip ·{" "}
-                        {b.pendingCount} still to deliver · {b.deliveredCount} delivered
-                      </div>
-                      <div className="mt-1 text-[11px] text-[color:var(--text-tertiary)]">
-                        {BATCH_NEXT_ACTION_HINT[b.status] ?? "Nothing left to do for this trip."}
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-2">
-                      <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
-                        {b.status}
-                      </span>
-                      {BATCH_NEXT_ACTION_LABEL[b.status] && (
-                        <button
-                          onClick={() => advanceBatch(b.id)}
-                          disabled={
-                            (b.status === "open" && b.orderCount === 0) || advancingBatchId === b.id
-                          }
-                          className="tap-scale flex items-center gap-1.5 rounded-full accent-gradient px-3 py-1.5 text-xs font-semibold disabled:opacity-40"
-                        >
-                          {advancingBatchId === b.id && (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          )}
-                          {BATCH_NEXT_ACTION_LABEL[b.status]}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              {(batchesQ.data ?? []).length === 0 && (
-                <div className="text-sm text-[color:var(--text-tertiary)]">
-                  No batches yet — one is created automatically the first time an order is placed
-                  for a given day/window.
-                </div>
-              )}
-            </div>
-          )}
         </section>
       )}
     </div>
