@@ -158,10 +158,32 @@ function Category() {
               </div>
             </div>
           )}
+          {/* Jump-to-group chips — only worth showing once there's more than one
+              group to scroll past (e.g. Breakfast / Meals / Snacks). Reuses the
+              same horizontal-chip pattern as the home page's category quick-jump,
+              just scrolling within the page instead of navigating. */}
+          {hasProducts && groups.length > 1 && (
+            <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5">
+              {groups.map(([groupKey]) => (
+                <button
+                  key={groupKey}
+                  type="button"
+                  onClick={() =>
+                    document
+                      .getElementById(`group-${groupKey}`)
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                  }
+                  className="tap-scale flex-shrink-0 rounded-full border border-[color:var(--border-strong)] bg-black/20 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap"
+                >
+                  {GROUP_LABELS[groupKey] ?? titleize(groupKey)}
+                </button>
+              ))}
+            </div>
+          )}
           {/* Priced catalog — the primary content, always shown first when it exists */}
           {hasProducts &&
             groups.map(([groupKey, items]) => (
-              <section key={groupKey}>
+              <section key={groupKey} id={`group-${groupKey}`} className="scroll-mt-20">
                 {groups.length > 1 && (
                   <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wider text-[color:var(--text-secondary)]">
                     {GROUP_LABELS[groupKey] ?? titleize(groupKey)}
