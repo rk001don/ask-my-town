@@ -45,10 +45,8 @@ export function ProductCard({
   );
   const VisualIcon = visual.Icon;
 
-  const priceLabel =
-    product.show_price && product.price != null
-      ? `₹${Number(product.price).toFixed(0)}`
-      : "Price on request";
+  const hasPrice = product.show_price && product.price != null;
+  const priceLabel = hasPrice ? `₹${Number(product.price).toFixed(0)}` : "Price on request";
 
   const image = (
     <div
@@ -107,8 +105,18 @@ export function ProductCard({
             {product.description}
           </p>
         )}
-        <div className="mt-1 flex items-center justify-between gap-2">
-          <div className="text-[13px] font-bold text-[color:var(--text-primary)]">{priceLabel}</div>
+        <div
+          className={`flex items-center justify-between gap-2 ${view === "grid" ? "mt-auto pt-1" : "mt-1"}`}
+        >
+          <div
+            className={
+              hasPrice
+                ? "text-[15px] font-extrabold text-[color:var(--accent-primary)]"
+                : "text-[12px] font-medium text-[color:var(--text-muted)]"
+            }
+          >
+            {priceLabel}
+          </div>
           {qty === 0 ? (
             <button
               onClick={() =>

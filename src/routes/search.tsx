@@ -186,7 +186,13 @@ function SearchPage() {
                 className="tap-scale flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3"
               >
                 <span className="text-sm font-semibold">{p.name}</span>
-                <span className="text-sm font-bold text-[color:var(--accent-primary)]">
+                <span
+                  className={
+                    p.show_price && p.price != null
+                      ? "text-sm font-bold text-[color:var(--accent-primary)]"
+                      : "text-xs font-medium text-[color:var(--text-muted)]"
+                  }
+                >
                   {p.show_price && p.price != null ? `₹${p.price}` : "Price on request"}
                 </span>
               </Link>
