@@ -58,6 +58,31 @@ function titleize(slug: string) {
 
 const GROUP_ORDER = ["breakfast", "lunch", "dinner", "snack"];
 
+// "popular"/"trending" are curation flags used to build the Home/Explore
+// shelves (see getProducts({tag})) -- they describe *which* products are
+// spotlighted elsewhere, not what subgroup a product belongs to here. Some
+// catalog rows have one of these listed before their real subgroup tag
+// (e.g. ["popular","restaurant"]), which used to make tags[0] pick the flag
+// itself, dropping the product into a stray "Popular" heading instead of
+// its actual group. Skip flags when choosing the group key so grouping
+// reflects the product's real category regardless of tag order.
+const CURATION_FLAGS = new Set(["popular", "trending"]);
+
+// A handful of catalog rows use "local-assistance" as a synonym for the
+// "local-service" group -- both titleize to the same visible "Local
+// Assistance" heading, which without this alias renders as two separate,
+// identically-labelled sections back to back on the Local Assistance
+// category page. Fold them into one group.
+const GROUP_KEY_ALIASES: Record<string, string> = {
+  "local-assistance": "local-service",
+};
+
+function groupKeyFor(tags: string[] | null | undefined): string {
+  const tag = tags?.find((t) => !CURATION_FLAGS.has(t));
+  if (!tag) return "other";
+  return GROUP_KEY_ALIASES[tag] ?? tag;
+}
+
 const GROUP_LABELS: Record<string, string> = {
   tiffin: "Breakfast tiffin",
   meals: "Meals",
@@ -108,7 +133,7 @@ function Category() {
   const groups = useMemo(() => {
     const map = new Map<string, ProductRow[]>();
     for (const p of products as ProductRow[]) {
-      const g = p.tags?.[0] ?? "other";
+      const g = groupKeyFor(p.tags);
       if (!map.has(g)) map.set(g, []);
       map.get(g)!.push(p);
     }

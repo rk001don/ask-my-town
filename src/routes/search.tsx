@@ -182,6 +182,7 @@ function SearchPage() {
               <Link
                 to="/c/$slug"
                 params={{ slug: p.category_slug ?? "" }}
+                onClick={() => saveRecent(debounced.trim())}
                 className="tap-scale flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3"
               >
                 <span className="text-sm font-semibold">{p.name}</span>
