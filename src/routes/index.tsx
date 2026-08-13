@@ -138,8 +138,15 @@ function Home() {
       </section>
 
       {/* Popular picks — horizontal shelf (matches the Trending/Explore card
-          pattern) so it reads as a quick-scan row, not a dense grid. */}
-      {(popularQ.isLoading || (popularQ.data?.length ?? 0) > 0) && (
+          pattern) so it reads as a quick-scan row, not a dense grid.
+          Gated on `mounted` (not just isLoading) for the same reason as
+          Categories below: the loader already resolves this data during SSR,
+          so the server render shows real cards while the client's first
+          hydration pass — before the query cache rehydrates — briefly sees
+          isLoading again, causing a hydration mismatch. Forcing the skeleton
+          until mount keeps the very first client render identical to the
+          server's, matching React's hydration requirement. */}
+      {(!mounted || popularQ.isLoading || (popularQ.data?.length ?? 0) > 0) && (
         <section className="pt-6">
           <div className="flex items-baseline justify-between px-4">
             <h2 className="text-display text-lg font-semibold">Popular picks</h2>
@@ -150,7 +157,7 @@ function Home() {
               See all
             </Link>
           </div>
-          {popularQ.isLoading ? (
+          {!mounted || popularQ.isLoading ? (
             <div className="mt-3 px-4">
               <CardSkeleton />
             </div>
@@ -236,8 +243,9 @@ function Home() {
 
       {/* Trending picks — a curated shelf into the existing catalog (self-care
           + snacking essentials), horizontal so it stays a quick reorder shelf
-          distinct from Popular picks above. */}
-      {(trendingQ.isLoading || (trendingQ.data?.length ?? 0) > 0) && (
+          distinct from Popular picks above. Same `mounted` gate as Popular
+          picks above, to avoid the hydration mismatch described there. */}
+      {(!mounted || trendingQ.isLoading || (trendingQ.data?.length ?? 0) > 0) && (
         <section className="pt-8">
           <div className="flex items-baseline justify-between px-4">
             <h2 className="text-display text-lg font-semibold">Trending picks</h2>
@@ -248,7 +256,7 @@ function Home() {
               See all
             </Link>
           </div>
-          {trendingQ.isLoading ? (
+          {!mounted || trendingQ.isLoading ? (
             <div className="mt-3 px-4">
               <CardSkeleton />
             </div>
