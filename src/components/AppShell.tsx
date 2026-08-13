@@ -125,10 +125,10 @@ function MobileCartBar() {
       className="fixed inset-x-0 z-[var(--z-overlay)] px-3 md:hidden"
       style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom))" }}
     >
-      <div className="relative mx-auto max-w-[480px]">
+      <div className="mx-auto flex max-w-[480px] items-center gap-2">
         <Link
           to="/cart"
-          className="tap-scale accent-gradient flex items-center justify-between gap-3 rounded-2xl py-3.5 pr-3.5 pl-4 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)]"
+          className="tap-scale accent-gradient flex flex-1 items-center justify-between gap-3 rounded-2xl px-4 py-3.5 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)]"
         >
           <div className="flex min-w-0 items-center gap-2.5 text-[color:var(--on-accent)]">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/15">
@@ -146,15 +146,11 @@ function MobileCartBar() {
           </span>
         </Link>
         <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setDismissed(true);
-          }}
+          onClick={() => setDismissed(true)}
           aria-label="Dismiss"
-          className="tap-scale absolute -top-2.5 -right-2.5 grid h-7 w-7 place-items-center rounded-full bg-white text-black shadow-[0_2px_8px_rgba(0,0,0,0.45)]"
+          className="tap-scale grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[color:var(--bg-elevated-2)] text-[color:var(--text-primary)] shadow-[0_8px_20px_-4px_rgba(0,0,0,0.5)]"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4.5 w-4.5" />
         </button>
       </div>
     </div>

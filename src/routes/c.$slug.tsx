@@ -1,5 +1,6 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
+import { createFileRoute, notFound, useSearch } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { z } from "zod";
 import { getProducts, getSubcategories } from "@/lib/api.functions";
 import { AppHeader } from "@/components/AppHeader";
 import { ItemCard } from "@/components/ItemCard";
@@ -9,6 +10,10 @@ import { EmptyState, ErrorState, CardSkeleton } from "@/components/States";
 import { Grid2X2, List, Sparkles } from "lucide-react";
 import { CATALOG_VIEW_KEY, type CatalogView } from "@/lib/catalog-display";
 import { useEffect, useMemo, useState } from "react";
+
+const categorySearchSchema = z.object({
+  highlight: z.string().optional(),
+});
 
 const subOpts = (slug: string) =>
   queryOptions({
@@ -30,6 +35,7 @@ export const Route = createFileRoute("/c/$slug")({
     ]);
     if (!sub.parent) throw notFound();
   },
+  validateSearch: (s) => categorySearchSchema.parse(s),
   head: ({ params }) => ({
     meta: [
       { title: `${titleize(params.slug)} — MyTown` },
@@ -115,15 +121,35 @@ const GROUP_LABELS: Record<string, string> = {
 
 function Category() {
   const { slug } = Route.useParams();
+  const { highlight } = useSearch({ from: "/c/$slug" });
   const { data: sub } = useSuspenseQuery(subOpts(slug));
   const { data: products } = useSuspenseQuery(prodOpts(slug));
   const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<CatalogView>("grid");
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
   useEffect(() => {
     setMounted(true);
     const saved = window.localStorage.getItem(CATALOG_VIEW_KEY);
     if (saved === "grid" || saved === "list") setView(saved);
   }, []);
+
+  // Coming from search: land on the actual dish the customer tapped, not
+  // just the generic category page it lives in -- scroll to it and give it
+  // a moment of visual emphasis so it's obvious which of many cards matched.
+  useEffect(() => {
+    if (!highlight || !mounted) return;
+    const t = requestAnimationFrame(() => {
+      document
+        .getElementById(`product-${highlight}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    setHighlightedId(highlight);
+    const fade = setTimeout(() => setHighlightedId(null), 2200);
+    return () => {
+      cancelAnimationFrame(t);
+      clearTimeout(fade);
+    };
+  }, [highlight, mounted]);
 
   function chooseView(next: CatalogView) {
     setView(next);
@@ -241,6 +267,8 @@ function Category() {
                   {items.map((p) => (
                     <ProductCard
                       key={p.id}
+                      id={`product-${p.id}`}
+                      highlighted={p.id === highlightedId}
                       product={p}
                       categoryName={sub.parent!.name}
                       categoryIcon={sub.parent!.icon_key}

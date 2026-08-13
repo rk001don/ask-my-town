@@ -22,14 +22,7 @@ export const Route = createFileRoute("/search")({
   errorComponent: ({ reset }) => <ErrorState onRetry={reset} />,
 });
 
-const TRENDING = [
-  "Home-cooked meals",
-  "Medicines",
-  "Groceries",
-  "Bus tickets",
-  "Plumber",
-  "AC service",
-];
+const TRENDING = ["Home-cooked meals", "Medicines", "Groceries", "Bus tickets"];
 const RECENTS_KEY = "mytown.search.recent.v1";
 
 function SearchPage() {
@@ -182,6 +175,7 @@ function SearchPage() {
               <Link
                 to="/c/$slug"
                 params={{ slug: p.category_slug ?? "" }}
+                search={{ highlight: p.id }}
                 onClick={() => saveRecent(debounced.trim())}
                 className="tap-scale flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3"
               >
