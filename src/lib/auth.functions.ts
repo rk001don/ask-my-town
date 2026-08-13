@@ -18,7 +18,7 @@ function syntheticEmailForPhone(phone: string): string {
 const PinSignupSchema = z.object({
   phone: z.string().trim(),
   pin: z.string().regex(/^\d{6}$/, "PIN must be exactly 6 digits"),
-  name: z.string().trim().min(2).max(80).optional(),
+  name: z.string().trim().min(2, "Enter your name").max(80),
 });
 
 export const signUpWithPin = createServerFn({ method: "POST" })
@@ -68,7 +68,7 @@ export const signUpWithPin = createServerFn({ method: "POST" })
         .update({ user_id: created.user!.id })
         .eq("id", existingCustomer.id)
         .is("user_id", null);
-    } else if (!existingCustomer && data.name) {
+    } else if (!existingCustomer) {
       await supabaseAdmin.from("customers").insert({
         name: data.name,
         phone,
