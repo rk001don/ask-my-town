@@ -837,7 +837,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
               />
               <button
                 onClick={() => setPreviewUrl(null)}
-                className="tap-scale absolute -top-3 -right-3 grid h-8 w-8 place-items-center rounded-full bg-white text-black"
+                className="tap-scale absolute -top-3 -right-3 grid h-9 w-9 place-items-center rounded-full bg-white text-black"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />

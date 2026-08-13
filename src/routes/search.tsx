@@ -117,7 +117,7 @@ function SearchPage() {
             <button
               onClick={() => setQ("")}
               aria-label="Clear"
-              className="tap-scale absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-[color:var(--text-muted)]"
+              className="tap-scale absolute right-1 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full text-[color:var(--text-muted)]"
             >
               <X className="h-4 w-4" />
             </button>

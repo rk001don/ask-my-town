@@ -152,7 +152,7 @@ function CartRow({ it }: { it: ReturnType<typeof useCart>["items"][number] }) {
             <button
               onClick={() => removeItem(it.key)}
               aria-label="Remove"
-              className="tap-scale rounded-full p-1.5 text-[color:var(--text-muted)] hover:text-[color:var(--danger)]"
+              className="tap-scale grid h-9 w-9 place-items-center rounded-full text-[color:var(--text-muted)] hover:text-[color:var(--danger)]"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -176,7 +176,7 @@ function CartRow({ it }: { it: ReturnType<typeof useCart>["items"][number] }) {
                   <button
                     onClick={() => decrementItem(it.key)}
                     aria-label="Decrease"
-                    className="tap-scale grid h-8 w-8 place-items-center"
+                    className="tap-scale grid h-9 w-9 place-items-center"
                   >
                     <Minus className="h-4 w-4" />
                   </button>
@@ -186,7 +186,7 @@ function CartRow({ it }: { it: ReturnType<typeof useCart>["items"][number] }) {
                   <button
                     onClick={() => incrementItem(it.key)}
                     aria-label="Increase"
-                    className="tap-scale grid h-8 w-8 place-items-center"
+                    className="tap-scale grid h-9 w-9 place-items-center"
                   >
                     <Plus className="h-4 w-4" />
                   </button>

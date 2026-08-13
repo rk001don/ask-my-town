@@ -850,7 +850,11 @@ function NewCategoryForm({
     <div className="glass mb-3 space-y-3 rounded-2xl p-4">
       <div className="flex items-center justify-between">
         <div className="text-sm font-semibold">New category</div>
-        <button onClick={onCancel} className="tap-scale" aria-label="Cancel">
+        <button
+          onClick={onCancel}
+          className="tap-scale grid h-9 w-9 place-items-center rounded-full hover:bg-white/5"
+          aria-label="Cancel"
+        >
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -917,7 +921,11 @@ function NewProductForm({
     <div className="glass mb-3 space-y-3 rounded-2xl p-4">
       <div className="flex items-center justify-between">
         <div className="text-sm font-semibold">New product</div>
-        <button onClick={onCancel} className="tap-scale" aria-label="Cancel">
+        <button
+          onClick={onCancel}
+          className="tap-scale grid h-9 w-9 place-items-center rounded-full hover:bg-white/5"
+          aria-label="Cancel"
+        >
           <X className="h-4 w-4" />
         </button>
       </div>

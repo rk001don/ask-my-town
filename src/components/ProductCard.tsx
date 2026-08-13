@@ -123,7 +123,7 @@ export function ProductCard({
                   iconKey: categoryIcon ?? product.categories?.icon_key ?? undefined,
                 })
               }
-              className="tap-scale rounded-full accent-gradient px-4 py-1.5 text-sm font-semibold"
+              className="tap-scale rounded-full accent-gradient px-4 py-2 text-sm font-semibold"
             >
               {product.is_service ? "Ask" : "Add"}
             </button>
@@ -132,7 +132,7 @@ export function ProductCard({
               <button
                 onClick={() => decrementItem(key)}
                 aria-label="Decrease"
-                className="tap-scale grid h-8 w-8 place-items-center text-[color:var(--accent-primary)]"
+                className="tap-scale grid h-9 w-9 place-items-center text-[color:var(--accent-primary)]"
               >
                 <Minus className="h-4 w-4" />
               </button>
@@ -142,7 +142,7 @@ export function ProductCard({
               <button
                 onClick={() => incrementItem(key)}
                 aria-label="Increase"
-                className="tap-scale grid h-8 w-8 place-items-center text-[color:var(--accent-primary)]"
+                className="tap-scale grid h-9 w-9 place-items-center text-[color:var(--accent-primary)]"
               >
                 <Plus className="h-4 w-4" />
               </button>
