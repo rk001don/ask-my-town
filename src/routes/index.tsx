@@ -117,24 +117,46 @@ function Home() {
         </Link>
       </div>
 
-      {/* Need Anything — the app's central differentiator, surfaced right
-          under search so it's the second thing anyone sees. */}
-      <section className="pt-4 px-4">
-        <button
-          onClick={() => openAskSheet()}
-          className="tap-scale card-surface flex w-full items-center gap-3 p-4 text-left"
-        >
-          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full accent-gradient">
-            <Sparkles className="h-5 w-5 text-[color:var(--on-accent)]" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-semibold">Don't see it? Just ask.</div>
-            <div className="text-xs text-[color:var(--text-secondary)]">
-              Tell us what you need — medicine, a repair, tickets, anything local.
+      {/* Hero — brand tagline + category quick-jump, surfaced right under
+          search so it's the second thing anyone sees (the "Need Anything?
+          MyTown!" identity card). */}
+      <section className="px-4 pt-4">
+        <div className="gradient-hero card-surface relative overflow-hidden p-4">
+          <div
+            className="absolute -right-10 -top-10 h-32 w-32 rounded-full"
+            style={{
+              background: "radial-gradient(circle, oklch(0.82 0.16 70 / 0.3), transparent 65%)",
+            }}
+          />
+          <div className="relative">
+            <h1 className="text-display text-[20px] leading-[1.15] font-bold">{APP_TAGLINE}</h1>
+            <p className="mt-1 text-[13px] text-[color:var(--text-secondary)]">{APP_SUBTEXT}</p>
+
+            {categories.length > 0 && (
+              <div className="no-scrollbar -mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-0.5">
+                {categories.slice(0, 6).map((c) => (
+                  <Link
+                    key={c.id}
+                    to="/c/$slug"
+                    params={{ slug: c.slug }}
+                    className="tap-scale flex-shrink-0 rounded-full border border-[color:var(--border-strong)] bg-black/20 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap"
+                  >
+                    {c.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-3 flex gap-2">
+              <Link
+                to="/explore"
+                className="tap-scale inline-flex min-h-11 items-center gap-1.5 rounded-full accent-gradient px-4 py-2 text-[13px] font-semibold"
+              >
+                Browse all <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
           </div>
-          <ArrowRight className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
-        </button>
+        </div>
       </section>
 
       {/* Popular picks — horizontal shelf (matches the Trending/Explore card
@@ -201,46 +223,6 @@ function Home() {
         )}
       </section>
 
-      {/* Hero — brand presence with category quick-jump */}
-      <section className="px-4 pt-8">
-        <div className="gradient-hero card-surface relative overflow-hidden p-4">
-          <div
-            className="absolute -right-10 -top-10 h-32 w-32 rounded-full"
-            style={{
-              background: "radial-gradient(circle, oklch(0.82 0.16 70 / 0.3), transparent 65%)",
-            }}
-          />
-          <div className="relative">
-            <h1 className="text-display text-[20px] leading-[1.15] font-bold">{APP_TAGLINE}</h1>
-            <p className="mt-1 text-[13px] text-[color:var(--text-secondary)]">{APP_SUBTEXT}</p>
-
-            {categories.length > 0 && (
-              <div className="no-scrollbar -mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-0.5">
-                {categories.slice(0, 6).map((c) => (
-                  <Link
-                    key={c.id}
-                    to="/c/$slug"
-                    params={{ slug: c.slug }}
-                    className="tap-scale flex-shrink-0 rounded-full border border-[color:var(--border-strong)] bg-black/20 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap"
-                  >
-                    {c.name}
-                  </Link>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-3 flex gap-2">
-              <Link
-                to="/explore"
-                className="tap-scale inline-flex min-h-11 items-center gap-1.5 rounded-full accent-gradient px-4 py-2 text-[13px] font-semibold"
-              >
-                Browse all <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Trending picks — a curated shelf into the existing catalog (self-care
           + snacking essentials), horizontal so it stays a quick reorder shelf
           distinct from Popular picks above. Same `mounted` gate as Popular
@@ -271,6 +253,28 @@ function Home() {
           )}
         </section>
       )}
+
+      {/* Secondary catch-all CTA — kept below the main shelves so it doesn't
+          compete with Popular/Categories/Trending for the first scroll, but
+          still visible before someone reaches the end of the page. Mirrors
+          the same dashed-fallback pattern used on category pages. */}
+      <section className="px-4 pt-8">
+        <button
+          onClick={() => openAskSheet()}
+          className="tap-scale card-surface flex w-full items-center gap-3 p-4 text-left"
+        >
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full accent-gradient">
+            <Sparkles className="h-5 w-5 text-[color:var(--on-accent)]" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold">Don't see it? Just ask.</div>
+            <div className="text-xs text-[color:var(--text-secondary)]">
+              Tell us what you need — medicine, a repair, tickets, anything local.
+            </div>
+          </div>
+          <ArrowRight className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
+        </button>
+      </section>
 
       {/* How it works */}
       <section className="mt-8 px-4 pb-6">
