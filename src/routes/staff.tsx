@@ -35,6 +35,7 @@ import {
   UserPlus,
   UserMinus,
   Users,
+  AlertTriangle,
 } from "lucide-react";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 
@@ -645,7 +646,24 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
         </div>
       </div>
 
-      {ordersQ.data?.aggregateOnly ? (
+      {ordersQ.isError ? (
+        // A failed fetch must not render the same as "no orders right now" --
+        // that's the difference between a rider correctly seeing an empty
+        // queue and a rider not seeing real waiting orders because the
+        // request failed silently.
+        <div className="mx-auto max-w-sm px-4 pt-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-[color:var(--danger)]" />
+          <p className="mt-3 text-sm text-[color:var(--danger)]">
+            Couldn't load orders. Check your connection and try again.
+          </p>
+          <button
+            onClick={() => ordersQ.refetch()}
+            className="tap-scale mt-3 min-h-11 rounded-full border border-[color:var(--border-strong)] px-4 py-2 text-sm font-semibold"
+          >
+            Try again
+          </button>
+        </div>
+      ) : ordersQ.data?.aggregateOnly ? (
         <div className="mx-auto max-w-2xl px-4 py-6">
           <div className="glass rounded-2xl p-4">
             <div className="text-sm font-semibold">Daily delivery counts</div>
