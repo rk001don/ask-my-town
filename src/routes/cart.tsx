@@ -89,16 +89,18 @@ function Cart() {
       </div>
 
       <div
-        className="glass fixed bottom-0 left-1/2 z-[var(--z-header)] w-full max-w-[520px] -translate-x-1/2 border-t border-[color:var(--border-subtle)] p-4 md:max-w-2xl"
+        className="glass fixed inset-x-0 bottom-0 z-[var(--z-header)] border-t border-[color:var(--border-subtle)] p-4 md:left-56"
         style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
       >
-        <button
-          type="button"
-          onClick={() => navigate({ to: "/checkout" })}
-          className="tap-scale flex min-h-12 w-full items-center justify-center gap-2 rounded-xl accent-gradient px-4 py-3.5 text-[15px] font-bold"
-        >
-          Continue to delivery <ArrowRight className="h-4 w-4" />
-        </button>
+        <div className="mx-auto w-full max-w-[520px] md:max-w-2xl">
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/checkout" })}
+            className="tap-scale flex min-h-12 w-full items-center justify-center gap-2 rounded-xl accent-gradient px-4 py-3.5 text-[15px] font-bold"
+          >
+            Continue to delivery <ArrowRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       <div className="h-24" />
     </div>

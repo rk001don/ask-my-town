@@ -324,10 +324,20 @@ function StaffPage() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setSession(data.user ? { email: data.user.email ?? null } : null);
-      setChecking(false);
-    });
+    // getSession() reads the local session and never touches the network --
+    // matches admin.tsx and AppHeader.tsx. Every real staff action is still
+    // re-validated server-side (assertStaff), so this is just deciding which
+    // screen to show, not a security boundary. getUser() forces a round trip
+    // to revalidate server-side, which left this page stuck on the loading
+    // skeleton forever whenever that call failed (no .catch(), so `checking`
+    // never flipped back to false on a flaky connection).
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session?.user ? { email: data.session.user.email ?? null } : null);
+        setChecking(false);
+      })
+      .catch(() => setChecking(false));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s?.user ? { email: s.user.email ?? null } : null);
     });

@@ -86,6 +86,10 @@ function AuthPage() {
 
   async function submitPin(e: React.FormEvent) {
     e.preventDefault();
+    if (mode === "signup" && pinName.trim().length < 2) {
+      toast.error("Enter your name");
+      return;
+    }
     if (!isValidIndianPhone(pinPhone)) {
       toast.error("Enter a valid 10-digit mobile number");
       return;
@@ -98,7 +102,7 @@ function AuthPage() {
     try {
       if (mode === "signup") {
         const { email: syntheticEmail } = await signUpWithPin({
-          data: { phone: pinPhone, pin: pinCode, name: pinName.trim() || undefined },
+          data: { phone: pinPhone, pin: pinCode, name: pinName.trim() },
         });
         const { error } = await supabase.auth.signInWithPassword({
           email: syntheticEmail,
@@ -281,8 +285,10 @@ function AuthPage() {
                   <input
                     value={pinName}
                     onChange={(e) => setPinName(e.target.value)}
+                    required
+                    minLength={2}
                     className="mt-1 w-full rounded-2xl border border-[color:var(--border-subtle)] bg-black/20 px-4 py-3 outline-none focus:border-[color:var(--accent-primary)]"
-                    placeholder="Optional"
+                    placeholder="e.g. Karthik Kumar"
                   />
                 </label>
               )}

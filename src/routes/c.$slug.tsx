@@ -56,6 +56,8 @@ function titleize(slug: string) {
     .join(" ");
 }
 
+const GROUP_ORDER = ["breakfast", "lunch", "dinner", "snack"];
+
 const GROUP_LABELS: Record<string, string> = {
   tiffin: "Breakfast tiffin",
   meals: "Meals",
@@ -110,7 +112,22 @@ function Category() {
       if (!map.has(g)) map.set(g, []);
       map.get(g)!.push(p);
     }
-    return [...map.entries()];
+    // Untagged items land in a catch-all "other" bucket keyed by wherever
+    // they first appear in the query result -- without an explicit order
+    // that could put "Other" ahead of "Breakfast"/"Lunch". Pin known
+    // meal-time groups to a sensible sequence and always sink "other" last.
+    const entries = [...map.entries()];
+    entries.sort(([a], [b]) => {
+      if (a === "other") return 1;
+      if (b === "other") return -1;
+      const ai = GROUP_ORDER.indexOf(a);
+      const bi = GROUP_ORDER.indexOf(b);
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+      return 0;
+    });
+    return entries;
   }, [products]);
 
   if (!sub.parent) return null;

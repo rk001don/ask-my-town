@@ -42,10 +42,13 @@ function AdminPage() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setEmail(data.session?.user?.email ?? null);
-      setChecking(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setEmail(data.session?.user?.email ?? null);
+        setChecking(false);
+      })
+      .catch(() => setChecking(false));
   }, []);
 
   if (checking) {

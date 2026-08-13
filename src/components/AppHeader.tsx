@@ -51,7 +51,9 @@ export function AppHeader({
           </button>
         )}
         {title ? (
-          <h1 className="text-display truncate text-lg font-semibold">{title}</h1>
+          <h1 className="text-display line-clamp-2 text-base leading-tight font-semibold">
+            {title}
+          </h1>
         ) : (
           <Link to="/" aria-label="MyTown home" className="tap-scale rounded-2xl">
             <MyTownLogo className="h-9 w-9" />
