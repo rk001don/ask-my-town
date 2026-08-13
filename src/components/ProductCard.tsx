@@ -28,11 +28,15 @@ export function ProductCard({
   categoryName,
   categoryIcon,
   view = "list",
+  id,
+  highlighted = false,
 }: {
   product: ProductRow;
   categoryName?: string;
   categoryIcon?: string | null;
   view?: CatalogView;
+  id?: string;
+  highlighted?: boolean;
 }) {
   const qty = useProductQuantity(product.id);
   const key = productKeyFor(product.id);
@@ -77,11 +81,12 @@ export function ProductCard({
 
   return (
     <div
-      className={
+      id={id}
+      className={`scroll-mt-20 ${
         view === "grid"
           ? "card-surface rise flex h-full min-h-[250px] flex-col gap-3 p-3"
           : "card-surface rise flex items-start gap-3 p-3"
-      }
+      } ${highlighted ? "ring-2 ring-[color:var(--accent-primary)] transition-shadow duration-500" : ""}`}
     >
       {image}
       {product.is_veg != null && (
