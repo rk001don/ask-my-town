@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -79,8 +79,15 @@ function AdminPage() {
           <ShieldAlert className="mx-auto h-10 w-10 text-[color:var(--warning)]" />
           <h2 className="mt-3 text-display text-xl font-semibold">Sign in required</h2>
           <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
-            Sign in with your staff account at <span className="font-mono">/auth</span> first.
+            Sign in with your admin account to open the console.
           </p>
+          <Link
+            to="/auth"
+            search={{ redirect: "/admin" }}
+            className="tap-scale mt-4 inline-flex min-h-11 items-center justify-center rounded-full accent-gradient px-5 py-2 text-sm font-semibold text-[color:var(--on-accent)]"
+          >
+            Sign in
+          </Link>
         </div>
       </div>
     );
@@ -341,8 +348,14 @@ function AdminBoard({ email }: { email: string }) {
           <h2 className="mt-3 text-display text-xl font-semibold">Admin access required</h2>
           <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
             Signed in as <span className="font-mono">{email}</span>, but this account isn't an
-            admin.
+            admin. Ask an admin to grant access.
           </p>
+          <button
+            onClick={() => supabase.auth.signOut().then(() => window.location.assign("/auth"))}
+            className="tap-scale mt-4 rounded-full border border-[color:var(--border-strong)] px-4 py-2 text-sm font-semibold"
+          >
+            Sign out
+          </button>
         </div>
       </div>
     );
@@ -404,7 +417,7 @@ function AdminBoard({ email }: { email: string }) {
             />
           )}
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div className="glass rounded-2xl p-4">
               <div className="text-[11px] uppercase tracking-wide text-[color:var(--text-tertiary)]">
                 Products
@@ -428,25 +441,6 @@ function AdminBoard({ email }: { email: string }) {
                 Scheduled
               </div>
               <div className="mt-2 text-2xl font-semibold">{dashboardStats.scheduledCount}</div>
-            </div>
-          </div>
-
-          <div className="glass rounded-2xl p-4">
-            <h3 className="text-sm font-semibold">Quick status</h3>
-            <div className="mt-3 space-y-2 text-sm text-[color:var(--text-secondary)]">
-              <div className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2">
-                <span>Catalog coverage</span>
-                <span className="font-semibold text-[color:var(--text-primary)]">
-                  {dashboardStats.productCount} products / {dashboardStats.categoryCount} categories
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-3 rounded-xl bg-white/5 px-3 py-2">
-                <span>Notification pipeline</span>
-                <span className="font-semibold text-[color:var(--text-primary)]">
-                  {dashboardStats.campaignCount} campaigns, {dashboardStats.scheduledCount}{" "}
-                  scheduled
-                </span>
-              </div>
             </div>
           </div>
         </section>
@@ -961,6 +955,7 @@ function NewProductForm({
             type="checkbox"
             checked={showPrice}
             onChange={(e) => setShowPrice(e.target.checked)}
+            className="h-3.5 w-3.5 accent-[color:var(--accent-primary)]"
           />
           Show price
         </label>
@@ -969,6 +964,7 @@ function NewProductForm({
             type="checkbox"
             checked={isService}
             onChange={(e) => setIsService(e.target.checked)}
+            className="h-3.5 w-3.5 accent-[color:var(--accent-primary)]"
           />
           Service (no quantity stepper)
         </label>
@@ -977,6 +973,7 @@ function NewProductForm({
             type="checkbox"
             checked={schedulable}
             onChange={(e) => setSchedulable(e.target.checked)}
+            className="h-3.5 w-3.5 accent-[color:var(--accent-primary)]"
           />
           Schedulable ahead
         </label>
@@ -1056,6 +1053,7 @@ function ProductRow({
           type="checkbox"
           defaultChecked={product.show_price}
           onChange={(e) => onPatch({ show_price: e.target.checked })}
+          className="h-4 w-4 accent-[color:var(--accent-primary)]"
         />
       </td>
       <td className="p-3">
@@ -1063,6 +1061,7 @@ function ProductRow({
           type="checkbox"
           defaultChecked={product.is_service}
           onChange={(e) => onPatch({ is_service: e.target.checked })}
+          className="h-4 w-4 accent-[color:var(--accent-primary)]"
         />
       </td>
       <td className="p-3">
@@ -1070,6 +1069,7 @@ function ProductRow({
           type="checkbox"
           defaultChecked={product.schedulable}
           onChange={(e) => onPatch({ schedulable: e.target.checked })}
+          className="h-4 w-4 accent-[color:var(--accent-primary)]"
         />
       </td>
       <td className="p-3">
@@ -1077,6 +1077,7 @@ function ProductRow({
           type="checkbox"
           defaultChecked={product.is_available}
           onChange={(e) => onPatch({ is_available: e.target.checked })}
+          className="h-4 w-4 accent-[color:var(--accent-primary)]"
         />
       </td>
       <td className="p-3">
@@ -1157,6 +1158,7 @@ function ProductCardAdmin({
             type="checkbox"
             defaultChecked={product.show_price}
             onChange={(e) => onPatch({ show_price: e.target.checked })}
+            className="h-3.5 w-3.5 accent-[color:var(--accent-primary)]"
           />
           Show price
         </label>
@@ -1165,6 +1167,7 @@ function ProductCardAdmin({
             type="checkbox"
             defaultChecked={product.is_service}
             onChange={(e) => onPatch({ is_service: e.target.checked })}
+            className="h-3.5 w-3.5 accent-[color:var(--accent-primary)]"
           />
           Service
         </label>
@@ -1173,6 +1176,7 @@ function ProductCardAdmin({
             type="checkbox"
             defaultChecked={product.schedulable}
             onChange={(e) => onPatch({ schedulable: e.target.checked })}
+            className="h-3.5 w-3.5 accent-[color:var(--accent-primary)]"
           />
           Schedulable
         </label>
@@ -1181,6 +1185,7 @@ function ProductCardAdmin({
             type="checkbox"
             defaultChecked={product.is_available}
             onChange={(e) => onPatch({ is_available: e.target.checked })}
+            className="h-3.5 w-3.5 accent-[color:var(--accent-primary)]"
           />
           Available
         </label>
@@ -1239,7 +1244,7 @@ function ConfigRow({
                 type="checkbox"
                 checked={boolValue}
                 onChange={(e) => setBoolValue(e.target.checked)}
-                className="h-5 w-5"
+                className="h-5 w-5 accent-[color:var(--accent-primary)]"
               />
               {boolValue ? "On" : "Off"}
             </label>

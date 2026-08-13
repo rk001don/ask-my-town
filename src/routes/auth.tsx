@@ -4,6 +4,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { signUpWithPin } from "@/lib/auth.functions";
 import { isValidIndianPhone } from "@/lib/phone";
+import { friendlyAuthError } from "@/lib/auth-errors";
 import { AppHeader } from "@/components/AppHeader";
 import { toast } from "sonner";
 import { Loader2, LogIn, KeyRound } from "lucide-react";
@@ -12,35 +13,6 @@ const searchSchema = z.object({
   redirect: z.string().optional(),
   mode: z.enum(["signin", "signup"]).optional(),
 });
-
-// Supabase Auth's SDK errors are written for developers ("email rate limit
-// exceeded", "Invalid login credentials", raw "AuthApiError: ..." text) and
-// were going straight into the toast the customer sees. This maps the
-// common ones to something a customer can actually act on, and otherwise
-// falls back to a plain generic message instead of leaking SDK internals.
-function friendlyAuthError(err: unknown): string {
-  const raw = err instanceof Error ? err.message : "";
-  const msg = raw.toLowerCase();
-  if (msg.includes("already registered") || msg.includes("already exists")) {
-    return "An account with this email already exists. Try signing in instead.";
-  }
-  if (msg.includes("invalid login credentials")) {
-    return "Incorrect email or password.";
-  }
-  if (msg.includes("rate limit")) {
-    return "Too many attempts. Please wait a few minutes and try again.";
-  }
-  if (msg.includes("email") && msg.includes("invalid")) {
-    return "Enter a valid email address.";
-  }
-  if (msg.includes("password") && msg.includes("character")) {
-    return "Password must be at least 6 characters.";
-  }
-  if (msg.includes("failed to fetch") || msg.includes("network")) {
-    return "Network issue — check your connection and try again.";
-  }
-  return raw || "Something went wrong. Please try again.";
-}
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -248,7 +220,7 @@ function AuthPage() {
                 type="button"
                 onClick={google}
                 disabled={googleBusy}
-                className="tap-scale flex w-full items-center justify-center gap-2 rounded-full border border-[color:var(--border-strong)] bg-white/5 px-4 py-3 font-semibold"
+                className="tap-scale flex w-full items-center justify-center gap-2 rounded-full border border-[color:var(--border-strong)] bg-white/5 px-4 py-3 font-semibold disabled:opacity-50"
               >
                 {googleBusy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -310,7 +282,7 @@ function AuthPage() {
                 <button
                   type="submit"
                   disabled={busy}
-                  className="tap-scale mt-2 flex w-full items-center justify-center gap-2 rounded-full accent-gradient px-4 py-3 font-semibold text-[color:var(--on-accent)]"
+                  className="tap-scale mt-2 flex w-full items-center justify-center gap-2 rounded-full accent-gradient px-4 py-3 font-semibold text-[color:var(--on-accent)] disabled:opacity-50"
                 >
                   {busy ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -375,7 +347,7 @@ function AuthPage() {
               <button
                 type="submit"
                 disabled={pinBusy}
-                className="tap-scale flex w-full items-center justify-center gap-2 rounded-full accent-gradient px-4 py-3 font-semibold text-[color:var(--on-accent)]"
+                className="tap-scale flex w-full items-center justify-center gap-2 rounded-full accent-gradient px-4 py-3 font-semibold text-[color:var(--on-accent)] disabled:opacity-50"
               >
                 {pinBusy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
