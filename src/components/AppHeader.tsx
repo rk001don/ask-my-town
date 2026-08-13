@@ -51,7 +51,7 @@ export function AppHeader({
           </button>
         )}
         {title ? (
-          <h1 className="text-display line-clamp-2 text-lg leading-tight font-semibold">
+          <h1 className="text-display line-clamp-2 text-base leading-tight font-semibold">
             {title}
           </h1>
         ) : (
