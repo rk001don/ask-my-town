@@ -11,7 +11,7 @@ import { MyTownLogo } from "@/components/MyTownLogo";
 import { getCategories, getProducts } from "@/lib/api.functions";
 import { CategoryTile } from "@/components/CategoryTile";
 import { ProductCard } from "@/components/ProductCard";
-import { TileSkeleton, CardSkeleton, ErrorState } from "@/components/States";
+import { TileSkeleton, ShelfSkeleton, ErrorState } from "@/components/States";
 import { openAskSheet } from "@/components/AskFAB";
 import { APP_NAME, APP_TAGLINE, APP_SUBTEXT, TOWN_NAME, waLink } from "@/lib/constants";
 import { useCartCount } from "@/lib/cart-store";
@@ -180,8 +180,8 @@ function Home() {
             </Link>
           </div>
           {!mounted || popularQ.isLoading ? (
-            <div className="mt-3 px-4">
-              <CardSkeleton />
+            <div className="mt-3">
+              <ShelfSkeleton />
             </div>
           ) : (
             <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-4 pb-1">
@@ -239,8 +239,8 @@ function Home() {
             </Link>
           </div>
           {!mounted || trendingQ.isLoading ? (
-            <div className="mt-3 px-4">
-              <CardSkeleton />
+            <div className="mt-3">
+              <ShelfSkeleton />
             </div>
           ) : (
             <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-4 pb-1">

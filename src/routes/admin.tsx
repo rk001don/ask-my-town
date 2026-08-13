@@ -27,7 +27,17 @@ import {
   getNotificationReach,
 } from "@/lib/notifications-admin.functions";
 import { NotificationOptIn } from "@/components/NotificationOptIn";
-import { Loader2, ShieldAlert, LogOut, Plus, Trash2, Search, ArrowUpDown, X } from "lucide-react";
+import {
+  Loader2,
+  ShieldAlert,
+  LogOut,
+  Plus,
+  Trash2,
+  Search,
+  ArrowUpDown,
+  X,
+  AlertTriangle,
+} from "lucide-react";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -383,6 +393,17 @@ function AdminBoard({ email }: { email: string }) {
             </p>
           </div>
 
+          {(productsQ.isError || categoriesQ.isError || campaignsQ.isError) && (
+            <SectionError
+              message="Some dashboard numbers couldn't load — the counts below may be incomplete."
+              onRetry={() => {
+                if (productsQ.isError) productsQ.refetch();
+                if (categoriesQ.isError) categoriesQ.refetch();
+                if (campaignsQ.isError) campaignsQ.refetch();
+              }}
+            />
+          )}
+
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <div className="glass rounded-2xl p-4">
               <div className="text-[11px] uppercase tracking-wide text-[color:var(--text-tertiary)]">
@@ -494,6 +515,11 @@ function AdminBoard({ email }: { email: string }) {
 
             {productsQ.isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
+            ) : productsQ.isError ? (
+              <SectionError
+                message="Couldn't load products."
+                onRetry={() => productsQ.refetch()}
+              />
             ) : filteredProducts.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-[color:var(--border-strong)] p-6 text-center text-sm text-[color:var(--text-tertiary)]">
                 No products match that search/filter.
@@ -566,6 +592,11 @@ function AdminBoard({ email }: { email: string }) {
             <h2 className="mb-3 text-lg font-semibold">Categories</h2>
             {categoriesQ.isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
+            ) : categoriesQ.isError ? (
+              <SectionError
+                message="Couldn't load categories."
+                onRetry={() => categoriesQ.refetch()}
+              />
             ) : (
               <div className="space-y-2">
                 {(categoriesQ.data ?? []).map((c) => (
@@ -603,6 +634,8 @@ function AdminBoard({ email }: { email: string }) {
           </p>
           {configQ.isLoading ? (
             <Loader2 className="h-5 w-5 animate-spin" />
+          ) : configQ.isError ? (
+            <SectionError message="Couldn't load config." onRetry={() => configQ.refetch()} />
           ) : (
             <div className="space-y-3">
               {(configQ.data ?? []).map((c) => (
@@ -615,6 +648,11 @@ function AdminBoard({ email }: { email: string }) {
                   isSaving={savingConfigKey === c.key}
                 />
               ))}
+              {(configQ.data ?? []).length === 0 && (
+                <div className="text-sm text-[color:var(--text-tertiary)]">
+                  No config values yet.
+                </div>
+              )}
             </div>
           )}
         </section>
@@ -641,25 +679,42 @@ function AdminBoard({ email }: { email: string }) {
           {/* Reachability, up front, before anyone wonders why a send says
               "0 devices" -- if it's genuinely 0, that's real information,
               not a bug. */}
-          <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {(
-              [
-                ["Everyone", reachQ.data?.everyone],
-                ["Customers", reachQ.data?.customers],
-                ["Staff", reachQ.data?.staff],
-                ["Admins", reachQ.data?.admins],
-              ] as const
-            ).map(([label, count]) => (
-              <div key={label} className="glass rounded-xl p-3 text-center">
-                <div className="text-lg font-bold">{reachQ.isLoading ? "…" : (count ?? 0)}</div>
-                <div className="text-[11px] text-[color:var(--text-tertiary)]">
-                  {label} opted in
+          {reachQ.isError ? (
+            <div className="mb-4">
+              <SectionError
+                message="Couldn't load reach counts."
+                onRetry={() => reachQ.refetch()}
+              />
+            </div>
+          ) : (
+            <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {(
+                [
+                  ["Everyone", reachQ.data?.everyone],
+                  ["Customers", reachQ.data?.customers],
+                  ["Staff", reachQ.data?.staff],
+                  ["Admins", reachQ.data?.admins],
+                ] as const
+              ).map(([label, count]) => (
+                <div key={label} className="glass rounded-xl p-3 text-center">
+                  <div className="text-lg font-bold">{reachQ.isLoading ? "…" : (count ?? 0)}</div>
+                  <div className="text-[11px] text-[color:var(--text-tertiary)]">
+                    {label} opted in
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           <NotificationComposer onSave={saveCampaign} onTest={sendTest} />
+          {campaignsQ.isError && (
+            <div className="mt-4">
+              <SectionError
+                message="Couldn't load campaigns."
+                onRetry={() => campaignsQ.refetch()}
+              />
+            </div>
+          )}
           <div className="mt-4 space-y-2">
             {(campaignsQ.data ?? []).map((campaign) => {
               const sendable =
@@ -714,7 +769,7 @@ function AdminBoard({ email }: { email: string }) {
                 </div>
               );
             })}
-            {(campaignsQ.data ?? []).length === 0 && (
+            {!campaignsQ.isError && (campaignsQ.data ?? []).length === 0 && (
               <div className="text-sm text-[color:var(--text-tertiary)]">
                 No campaigns yet — your first announcement will appear here.
               </div>
@@ -722,6 +777,26 @@ function AdminBoard({ email }: { email: string }) {
           </div>
         </section>
       )}
+    </div>
+  );
+}
+
+// A failed admin query must never render the same as "there's nothing here
+// yet" -- an empty catalog and a broken connection look identical to a
+// customer-facing empty state, but here it's an admin deciding whether to
+// trust what they're seeing. Every data-driven section below checks
+// isError before falling through to its empty-state copy.
+function SectionError({ message, onRetry }: { message: string; onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-[color:var(--danger)]/40 bg-[color:var(--danger)]/5 p-6 text-center">
+      <AlertTriangle className="h-5 w-5 text-[color:var(--danger)]" />
+      <p className="text-sm text-[color:var(--danger)]">{message}</p>
+      <button
+        onClick={onRetry}
+        className="tap-scale min-h-9 rounded-full border border-[color:var(--border-strong)] px-4 py-1.5 text-xs font-semibold"
+      >
+        Try again
+      </button>
     </div>
   );
 }

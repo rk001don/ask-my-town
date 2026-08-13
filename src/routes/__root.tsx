@@ -115,9 +115,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+    ],
+    // The Google Fonts stylesheet is injected imperatively (rather than as a
+    // declarative `links` entry) so it never becomes a React-managed
+    // "stylesheet resource" -- React 19 auto-assigns every declarative
+    // `<link rel="stylesheet">` a load-tracked precedence and holds up
+    // hydration/commit until it loads or errors, which measured as this
+    // single external, occasionally slow/blocked request blocking the
+    // entire page (DOMContentLoaded) for 10+ seconds on a flaky connection
+    // -- `media="print"` alone does not opt back out of that tracking.
+    // Building the <link> by hand and starting it as non-blocking
+    // (media="print", flipped to "all" on load) sidesteps both the browser's
+    // and React's blocking behavior; local fallback fonts (see
+    // --font-display/--font-sans in styles.css) cover the brief gap.
+    scripts: [
       {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter+Tight:wght@400;500;600;700&display=swap",
+        children:
+          "(function(){var l=document.createElement('link');l.rel='stylesheet';l.media='print';l.href='https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter+Tight:wght@400;500;600;700&display=swap';l.onload=function(){l.media='all';};document.head.appendChild(l);})();",
       },
     ],
   }),

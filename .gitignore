@@ -23,6 +23,9 @@ dist-ssr
 # Vercel
 .vercel/
 
+# Claude Code local state (settings, agent worktrees -- may contain .env copies)
+.claude/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -4,7 +4,7 @@ import { getCategories, getProducts } from "@/lib/api.functions";
 import { AppHeader } from "@/components/AppHeader";
 import { CategoryTile } from "@/components/CategoryTile";
 import { ProductCard } from "@/components/ProductCard";
-import { TileSkeleton, CardSkeleton, ErrorState } from "@/components/States";
+import { TileSkeleton, ShelfSkeleton, ErrorState } from "@/components/States";
 import { useEffect, useState } from "react";
 
 export const opts = queryOptions({
@@ -59,8 +59,8 @@ function Explore() {
             Trending picks
           </h3>
           {!mounted || trendingQ.isLoading ? (
-            <div className="mt-3 px-4">
-              <CardSkeleton />
+            <div className="mt-3">
+              <ShelfSkeleton />
             </div>
           ) : (
             <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-4 pb-1">
