@@ -13,6 +13,35 @@ const searchSchema = z.object({
   mode: z.enum(["signin", "signup"]).optional(),
 });
 
+// Supabase Auth's SDK errors are written for developers ("email rate limit
+// exceeded", "Invalid login credentials", raw "AuthApiError: ..." text) and
+// were going straight into the toast the customer sees. This maps the
+// common ones to something a customer can actually act on, and otherwise
+// falls back to a plain generic message instead of leaking SDK internals.
+function friendlyAuthError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : "";
+  const msg = raw.toLowerCase();
+  if (msg.includes("already registered") || msg.includes("already exists")) {
+    return "An account with this email already exists. Try signing in instead.";
+  }
+  if (msg.includes("invalid login credentials")) {
+    return "Incorrect email or password.";
+  }
+  if (msg.includes("rate limit")) {
+    return "Too many attempts. Please wait a few minutes and try again.";
+  }
+  if (msg.includes("email") && msg.includes("invalid")) {
+    return "Enter a valid email address.";
+  }
+  if (msg.includes("password") && msg.includes("character")) {
+    return "Password must be at least 6 characters.";
+  }
+  if (msg.includes("failed to fetch") || msg.includes("network")) {
+    return "Network issue — check your connection and try again.";
+  }
+  return raw || "Something went wrong. Please try again.";
+}
+
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
@@ -52,11 +81,23 @@ function AuthPage() {
   const [pinName, setPinName] = useState("");
   const [pinBusy, setPinBusy] = useState(false);
 
-  // Bounce away if already signed in.
+  // Bounce away if already signed in. Gated behind `checkingSession` (same
+  // pattern as activity.tsx/admin.tsx/staff.tsx) so an already-authenticated
+  // visitor -- e.g. back-navigating to /auth, or a stale bookmark -- sees a
+  // brief skeleton instead of a flash of the full sign-in form before the
+  // redirect fires.
+  const [checkingSession, setCheckingSession] = useState(true);
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) nav({ to: search.redirect ?? "/" });
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (data.session) {
+          nav({ to: search.redirect ?? "/" });
+          return; // stay on the skeleton; navigation is already in flight
+        }
+        setCheckingSession(false);
+      })
+      .catch(() => setCheckingSession(false));
   }, [nav, search.redirect]);
 
   async function submit(e: React.FormEvent) {
@@ -78,7 +119,7 @@ function AuthPage() {
         nav({ to: search.redirect ?? "/" });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
+      toast.error(friendlyAuthError(err));
     } finally {
       setBusy(false);
     }
@@ -122,7 +163,7 @@ function AuthPage() {
         nav({ to: search.redirect ?? "/" });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
+      toast.error(friendlyAuthError(err));
     } finally {
       setPinBusy(false);
     }
@@ -138,9 +179,20 @@ function AuthPage() {
       if (error) throw error;
       // Successful call navigates the browser to Google; nothing left to do here.
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Google sign-in failed");
+      toast.error(friendlyAuthError(err));
       setGoogleBusy(false);
     }
+  }
+
+  if (checkingSession) {
+    return (
+      <div>
+        <AppHeader title="Sign in" showCart={false} showSearch={false} />
+        <div className="px-5 pt-4 pb-24">
+          <div className="skeleton h-64 rounded-3xl" />
+        </div>
+      </div>
+    );
   }
 
   return (
