@@ -128,7 +128,7 @@ function MobileCartBar() {
       <div className="mx-auto flex max-w-[480px] items-center gap-2">
         <Link
           to="/cart"
-          className="tap-scale accent-gradient flex flex-1 items-center justify-between gap-3 rounded-2xl px-4 py-3.5 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)]"
+          className="tap-scale accent-gradient flex items-center justify-between gap-3 rounded-2xl px-4 py-3.5 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)]"
         >
           <div className="flex min-w-0 items-center gap-2.5 text-[color:var(--on-accent)]">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/15">
@@ -145,12 +145,15 @@ function MobileCartBar() {
             View cart <ArrowRight className="h-3.5 w-3.5" />
           </span>
         </Link>
+        {/* Same corner-badge treatment as the header's cart-count badge
+            (-right-1 -top-1, ring matching the page background) -- attached
+            to the bar it belongs to, not a separate floating control. */}
         <button
           onClick={() => setDismissed(true)}
           aria-label="Dismiss"
-          className="tap-scale grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[color:var(--bg-elevated-2)] text-[color:var(--text-primary)] shadow-[0_8px_20px_-4px_rgba(0,0,0,0.5)]"
+          className="tap-scale absolute -top-1.5 -right-1.5 grid h-6 w-6 place-items-center rounded-full bg-white text-black shadow-[0_2px_6px_rgba(0,0,0,0.4)] ring-2 ring-[color:var(--bg-base)]"
         >
-          <X className="h-4.5 w-4.5" />
+          <X className="h-3 w-3" />
         </button>
       </div>
     </div>
