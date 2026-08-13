@@ -127,14 +127,21 @@ export function AskFAB({ hideMobileTrigger = false }: { hideMobileTrigger?: bool
         </button>
       )}
       {/* Desktop (md+): bottom nav is hidden (sidebar replaces it), so the FAB
-          becomes a normal corner FAB again -- simple right/bottom inset within
-          the content column (made a containing block for this in AppShell). */}
+          becomes a normal corner FAB again. True viewport-fixed (no transform
+          hack on an ancestor -- that previously turned "fixed" into "absolute
+          relative to the full scrollable column," which is why this button
+          used to sink to wherever the page content happened to end instead of
+          staying pinned to the visible corner). The right offset is computed
+          the same way the content column's own centering works -- sidebar
+          (14rem) + max-w-4xl (56rem) = 70rem -- so the button still hugs the
+          column's visual edge on wide screens instead of floating in the
+          empty gutter at the raw viewport edge. */}
       {!open && !hide && (
         <button
           onClick={() => setOpen(true)}
           aria-label="Ask MyTown"
           className="fixed z-[var(--z-nav)] tap-scale accent-gradient shadow-[var(--shadow-glow)] hidden items-center gap-2 rounded-full px-5 py-3 font-semibold md:flex"
-          style={{ right: "1.5rem", bottom: "1.5rem" }}
+          style={{ right: "max(1.5rem, calc((100vw - 70rem) / 2 + 1.5rem))", bottom: "1.5rem" }}
         >
           <Sparkles className="h-4 w-4" />
           Ask MyTown
