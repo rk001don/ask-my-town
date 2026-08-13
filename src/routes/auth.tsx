@@ -55,7 +55,7 @@ function AuthPage() {
   // Bounce away if already signed in.
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) nav({ to: search.redirect ?? "/activity" });
+      if (data.session) nav({ to: search.redirect ?? "/" });
     });
   }, [nav, search.redirect]);
 
@@ -75,7 +75,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back!");
-        nav({ to: search.redirect ?? "/activity" });
+        nav({ to: search.redirect ?? "/" });
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
@@ -106,7 +106,7 @@ function AuthPage() {
         });
         if (error) throw error;
         toast.success("Account created!");
-        nav({ to: search.redirect ?? "/activity" });
+        nav({ to: search.redirect ?? "/" });
       } else {
         const phoneDigits = pinPhone.replace(/\D/g, "").slice(-10);
         const { error } = await supabase.auth.signInWithPassword({
@@ -115,7 +115,7 @@ function AuthPage() {
         });
         if (error) throw new Error("Incorrect phone or PIN");
         toast.success("Welcome back!");
-        nav({ to: search.redirect ?? "/activity" });
+        nav({ to: search.redirect ?? "/" });
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");
@@ -129,7 +129,7 @@ function AuthPage() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: `${window.location.origin}${search.redirect ?? "/activity"}` },
+        options: { redirectTo: `${window.location.origin}${search.redirect ?? "/"}` },
       });
       if (error) throw error;
       // Successful call navigates the browser to Google; nothing left to do here.
