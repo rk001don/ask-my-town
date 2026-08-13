@@ -104,7 +104,9 @@ export function ProductCard({
         </span>
       )}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="min-w-0 text-[14px] font-semibold leading-tight">{product.name}</div>
+        <div className="min-w-0 break-words text-[14px] font-semibold leading-tight">
+          {product.name}
+        </div>
         {product.description && (
           <p className="line-clamp-2 text-[12px] text-[color:var(--text-secondary)]">
             {product.description}

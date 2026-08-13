@@ -130,23 +130,23 @@ function MobileCartBar() {
           to the cart, and the X sits at the far-right edge inside the same
           padding as a subtle dark circle -- part of the bar, not a separate
           floating control beside or on top of it. */}
-      <div className="accent-gradient mx-auto flex max-w-[480px] items-center gap-1.5 rounded-2xl py-2.5 pr-2.5 pl-4 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)]">
+      <div className="accent-gradient mx-auto flex max-w-[480px] items-center gap-1.5 rounded-2xl py-2 pr-2 pl-3 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)]">
         <Link
           to="/cart"
-          className="tap-scale flex min-w-0 flex-1 items-center justify-between gap-3"
+          className="tap-scale flex min-w-0 flex-1 items-center justify-between gap-2"
         >
           <div className="flex min-w-0 items-center gap-2.5 text-[color:var(--on-accent)]">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/15">
-              <ShoppingBag className="h-4.5 w-4.5" />
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-black/15">
+              <ShoppingBag className="h-4 w-4" />
             </span>
             <div className="min-w-0">
               <div className="truncate text-sm font-bold leading-tight">
                 {cartCount} item{cartCount === 1 ? "" : "s"} · ₹{total}
               </div>
-              <div className="text-[11px] font-medium opacity-80">Tap to review your order</div>
+              <div className="truncate text-[11px] font-medium opacity-80">Tap to review</div>
             </div>
           </div>
-          <span className="flex shrink-0 items-center gap-1 rounded-full bg-black/15 px-3.5 py-2 text-xs font-bold text-[color:var(--on-accent)]">
+          <span className="flex shrink-0 items-center gap-1 rounded-full bg-black/15 px-3 py-1.5 text-xs font-bold text-[color:var(--on-accent)]">
             View cart <ArrowRight className="h-3.5 w-3.5" />
           </span>
         </Link>

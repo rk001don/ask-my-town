@@ -137,7 +137,7 @@ function CartRow({ it }: { it: ReturnType<typeof useCart>["items"][number] }) {
                   You asked
                 </div>
               )}
-              <div className="line-clamp-2 text-[14px] font-semibold leading-tight">
+              <div className="line-clamp-2 break-words text-[14px] font-semibold leading-tight">
                 {it.itemName}
               </div>
               {!it.isFreeform && it.category && (

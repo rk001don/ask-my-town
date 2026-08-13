@@ -73,7 +73,7 @@ export function ItemCard({
         </button>
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-2 p-3">
-        <div className="min-h-[2.5rem] text-[14px] font-semibold leading-tight line-clamp-2">
+        <div className="min-h-[2.5rem] break-words text-[14px] font-semibold leading-tight line-clamp-2">
           {itemName}
         </div>
         <p
