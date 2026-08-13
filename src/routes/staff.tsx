@@ -158,9 +158,7 @@ function StaffOrderCard({
             className="h-2 w-2 flex-shrink-0 rounded-full"
             style={{ background: statusColor[o.status] ?? "var(--text-muted)" }}
           />
-          <span className="truncate font-mono text-xs text-[color:var(--text-muted)]">
-            {o.id.slice(0, 8)}
-          </span>
+          <span className="truncate font-mono text-xs text-[color:var(--text-muted)]">{o.id}</span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1.5">
           {showWaiting && (
