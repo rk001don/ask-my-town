@@ -241,10 +241,8 @@ function Checkout() {
                 setWindowLabel(null);
                 setDateIso(dateOptions[0].iso);
               }}
-              className={`flex-1 rounded-full py-2 text-sm font-semibold transition-colors ${
-                mode === "asap"
-                  ? "accent-gradient text-black"
-                  : "text-[color:var(--text-secondary)]"
+              className={`tap-scale flex-1 rounded-full py-2 text-sm font-semibold transition-colors ${
+                mode === "asap" ? "accent-gradient" : "text-[color:var(--text-secondary)]"
               }`}
             >
               Deliver Now
@@ -254,10 +252,8 @@ function Checkout() {
               role="tab"
               aria-selected={mode === "schedule"}
               onClick={() => setMode("schedule")}
-              className={`flex-1 rounded-full py-2 text-sm font-semibold transition-colors ${
-                mode === "schedule"
-                  ? "accent-gradient text-black"
-                  : "text-[color:var(--text-secondary)]"
+              className={`tap-scale flex-1 rounded-full py-2 text-sm font-semibold transition-colors ${
+                mode === "schedule" ? "accent-gradient" : "text-[color:var(--text-secondary)]"
               }`}
             >
               Schedule
@@ -276,9 +272,9 @@ function Checkout() {
                       key={d.iso}
                       type="button"
                       onClick={() => setDateIso(d.iso)}
-                      className={`rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
+                      className={`tap-scale rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
                         dateIso === d.iso
-                          ? "accent-gradient text-black border-transparent"
+                          ? "accent-gradient border-transparent"
                           : "border-[color:var(--border-strong)] text-[color:var(--text-primary)] bg-[color:var(--bg-elevated-2)]"
                       }`}
                     >
@@ -305,9 +301,9 @@ function Checkout() {
                         type="button"
                         disabled={closed}
                         onClick={() => setWindowLabel(w.label)}
-                        className={`min-h-11 rounded-full px-3.5 py-1.5 text-sm font-medium border transition-colors ${
+                        className={`min-h-11 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${closed ? "" : "tap-scale"} ${
                           active
-                            ? "accent-gradient text-black border-transparent"
+                            ? "accent-gradient border-transparent"
                             : closed
                               ? "border-[color:var(--border-subtle)] bg-transparent text-[color:var(--text-muted)] opacity-60 cursor-not-allowed"
                               : "border-[color:var(--border-strong)] text-[color:var(--text-primary)] bg-[color:var(--bg-elevated-2)]"
