@@ -45,7 +45,7 @@ export function CategoryTile({ slug, name, iconKey, imageUrl, compact }: Props) 
         )}
       </div>
       <div
-        className={`${compact ? "text-[12px]" : "text-[13px]"} font-medium leading-tight line-clamp-2`}
+        className={`${compact ? "text-[12px]" : "text-[13px]"} w-full break-words hyphens-auto font-medium leading-tight line-clamp-2`}
       >
         {name}
       </div>
