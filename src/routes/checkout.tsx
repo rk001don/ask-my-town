@@ -265,7 +265,7 @@ function Checkout() {
           </div>
 
           {mode === "schedule" && (
-            <div className="mt-3 space-y-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated-1)] p-3">
+            <div className="mt-3 space-y-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3">
               <div>
                 <div className="mb-1.5 text-xs font-semibold text-[color:var(--text-secondary)]">
                   Choose a day

@@ -62,6 +62,7 @@
   --text-primary: oklch(0.98 0.005 260);
   --text-secondary: oklch(0.82 0.015 260);
   --text-muted: oklch(0.62 0.02 260);
+  --text-tertiary: oklch(0.5 0.02 260);
 
   --accent-primary: oklch(0.82 0.16 70); /* warm amber */
   --accent-primary-strong: oklch(0.75 0.19 55);
