@@ -76,6 +76,27 @@ export function CardSkeleton({ count = 4 }: { count?: number }) {
   );
 }
 
+// Matches the horizontal scrollable shelves (Popular picks / Trending picks
+// on Home and Explore) -- CardSkeleton's 2-column grid shape doesn't match
+// that single-row layout, so using it there flashes a grid briefly before
+// the real horizontal row of cards replaces it.
+export function ShelfSkeleton({ count = 3 }: { count?: number }) {
+  return (
+    <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 pb-1">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="card-surface w-[152px] shrink-0 overflow-hidden">
+          <div className="skeleton aspect-[4/3] w-full rounded-none" />
+          <div className="space-y-2 p-3">
+            <div className="skeleton h-3 w-3/4" />
+            <div className="skeleton h-3 w-1/2" />
+            <div className="skeleton mt-2 h-8 w-full rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function TileSkeleton({ count = 8 }: { count?: number }) {
   return (
     <div className="grid grid-cols-4 gap-3 px-4">
