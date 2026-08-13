@@ -53,12 +53,12 @@ function Explore() {
           Tap a category to see options, or just ask us.
         </p>
       </div>
-      {(trendingQ.isLoading || (trendingQ.data?.length ?? 0) > 0) && (
+      {(!mounted || trendingQ.isLoading || (trendingQ.data?.length ?? 0) > 0) && (
         <div className="pb-6">
           <h3 className="px-4 text-sm font-bold uppercase tracking-wider text-[color:var(--text-secondary)]">
             Trending picks
           </h3>
-          {trendingQ.isLoading ? (
+          {!mounted || trendingQ.isLoading ? (
             <div className="mt-3 px-4">
               <CardSkeleton />
             </div>
