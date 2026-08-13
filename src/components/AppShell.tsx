@@ -1,9 +1,9 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Home, Compass, ClipboardList, Store, ShoppingBag, ArrowRight } from "lucide-react";
+import { Home, Compass, ClipboardList, Store, ShoppingBag, ArrowRight, X } from "lucide-react";
 import { AskFAB } from "@/components/AskFAB";
 import { MyTownLogo } from "@/components/MyTownLogo";
 import { useCart, useCartCount } from "@/lib/cart-store";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 const TABS = [
   { to: "/", label: "Home", icon: Home },
@@ -100,8 +100,17 @@ export function AppShell({ children }: { children: ReactNode }) {
 function MobileCartBar() {
   const cartCount = useCartCount();
   const { items } = useCart();
+  const [dismissed, setDismissed] = useState(false);
+  const prevCountRef = useRef(cartCount);
 
-  if (cartCount === 0) return null;
+  useEffect(() => {
+    // A dismissal is a "not now" for the current basket, not forever: adding
+    // another item is a new signal the customer wants to see it again.
+    if (cartCount > prevCountRef.current) setDismissed(false);
+    prevCountRef.current = cartCount;
+  }, [cartCount]);
+
+  if (cartCount === 0 || dismissed) return null;
 
   const total = items.reduce(
     (sum: number, item: { unitPrice?: number | null; quantity: number }) => {
@@ -116,25 +125,38 @@ function MobileCartBar() {
       className="fixed inset-x-0 z-[var(--z-overlay)] px-3 md:hidden"
       style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom))" }}
     >
-      <Link
-        to="/cart"
-        className="tap-scale accent-gradient mx-auto flex max-w-[480px] items-center justify-between gap-3 rounded-2xl px-4 py-3.5 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)]"
-      >
-        <div className="flex min-w-0 items-center gap-2.5 text-[color:var(--on-accent)]">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/15">
-            <ShoppingBag className="h-4.5 w-4.5" />
-          </span>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-bold leading-tight">
-              {cartCount} item{cartCount === 1 ? "" : "s"} · ₹{total}
+      <div className="relative mx-auto max-w-[480px]">
+        <Link
+          to="/cart"
+          className="tap-scale accent-gradient flex items-center justify-between gap-3 rounded-2xl py-3.5 pr-3.5 pl-4 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)]"
+        >
+          <div className="flex min-w-0 items-center gap-2.5 text-[color:var(--on-accent)]">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/15">
+              <ShoppingBag className="h-4.5 w-4.5" />
+            </span>
+            <div className="min-w-0">
+              <div className="truncate text-sm font-bold leading-tight">
+                {cartCount} item{cartCount === 1 ? "" : "s"} · ₹{total}
+              </div>
+              <div className="text-[11px] font-medium opacity-80">Tap to review your order</div>
             </div>
-            <div className="text-[11px] font-medium opacity-80">Tap to review your order</div>
           </div>
-        </div>
-        <span className="flex shrink-0 items-center gap-1 rounded-full bg-black/15 px-3.5 py-2 text-xs font-bold text-[color:var(--on-accent)]">
-          View cart <ArrowRight className="h-3.5 w-3.5" />
-        </span>
-      </Link>
+          <span className="flex shrink-0 items-center gap-1 rounded-full bg-black/15 px-3.5 py-2 text-xs font-bold text-[color:var(--on-accent)]">
+            View cart <ArrowRight className="h-3.5 w-3.5" />
+          </span>
+        </Link>
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setDismissed(true);
+          }}
+          aria-label="Dismiss"
+          className="tap-scale absolute -top-2.5 -right-2.5 grid h-7 w-7 place-items-center rounded-full bg-white text-black shadow-[0_2px_8px_rgba(0,0,0,0.45)]"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      </div>
     </div>
   );
 }

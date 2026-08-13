@@ -15,6 +15,7 @@ import {
 import { ORDER_STATUS_STEPS, STATUS_COPY, type OrderStatus } from "@/lib/constants";
 import { getLocations } from "@/lib/api.functions";
 import { formatTimeRange12h } from "@/lib/time";
+import { friendlyAuthError } from "@/lib/auth-errors";
 import { AppHeader } from "@/components/AppHeader";
 import { ErrorState } from "@/components/States";
 import { toast } from "sonner";
@@ -376,7 +377,7 @@ function StaffSignIn(_: { onDone: () => void }) {
     setBusy(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) return toast.error(friendlyAuthError(error));
     toast.success("Welcome back");
   }
 
@@ -411,7 +412,7 @@ function StaffSignIn(_: { onDone: () => void }) {
             />
             <button
               disabled={busy}
-              className="tap-scale flex w-full items-center justify-center gap-2 rounded-full accent-gradient px-4 py-3 font-semibold text-[color:var(--on-accent)]"
+              className="tap-scale flex w-full items-center justify-center gap-2 rounded-full accent-gradient px-4 py-3 font-semibold text-[color:var(--on-accent)] disabled:opacity-50"
             >
               {busy && <Loader2 className="h-4 w-4 animate-spin" />} Sign in
             </button>
@@ -837,7 +838,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
               />
               <button
                 onClick={() => setPreviewUrl(null)}
-                className="tap-scale absolute -top-3 -right-3 grid h-8 w-8 place-items-center rounded-full bg-white text-black"
+                className="tap-scale absolute -top-3 -right-3 grid h-9 w-9 place-items-center rounded-full bg-white text-black"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />

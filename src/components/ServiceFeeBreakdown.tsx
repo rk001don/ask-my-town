@@ -55,7 +55,11 @@ export function ServiceFeeBreakdown({ subtotal }: { subtotal: number }) {
             >
               <div className="flex items-center justify-between">
                 <div className="text-base font-semibold">How the service fee works</div>
-                <button onClick={() => setShowInfo(false)} className="tap-scale" aria-label="Close">
+                <button
+                  onClick={() => setShowInfo(false)}
+                  className="tap-scale grid h-9 w-9 place-items-center rounded-full hover:bg-white/5"
+                  aria-label="Close"
+                >
                   <X className="h-4 w-4" />
                 </button>
               </div>

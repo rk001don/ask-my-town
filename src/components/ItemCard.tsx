@@ -67,7 +67,7 @@ export function ItemCard({
         <button
           onClick={() => setShowNotes((v) => !v)}
           aria-label="Add note"
-          className="tap-scale absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/40 backdrop-blur-md text-white/80 hover:text-white"
+          className="tap-scale absolute right-2 top-2 grid h-9 w-9 place-items-center rounded-full bg-black/40 backdrop-blur-md text-white/80 hover:text-white"
         >
           <StickyNote className="h-4 w-4" />
         </button>
@@ -76,7 +76,13 @@ export function ItemCard({
         <div className="min-h-[2.5rem] text-[14px] font-semibold leading-tight line-clamp-2">
           {itemName}
         </div>
-        <p className="break-words text-[11px] font-semibold text-[color:var(--text-primary)]">
+        <p
+          className={
+            priceLabel
+              ? "break-words text-[14px] font-extrabold text-[color:var(--accent-primary)]"
+              : "break-words text-[11px] font-medium text-[color:var(--text-muted)]"
+          }
+        >
           {priceLabel ?? "Price confirmed after you ask"}
         </p>
         {reason && (

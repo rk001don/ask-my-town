@@ -200,7 +200,7 @@ function Home() {
         <div className="flex items-baseline justify-between px-4">
           <h2 className="text-display text-lg font-semibold">Categories</h2>
           <Link to="/explore" className="text-xs font-semibold text-[color:var(--accent-primary)]">
-            All
+            See all
           </Link>
         </div>
         {!mounted ? (
