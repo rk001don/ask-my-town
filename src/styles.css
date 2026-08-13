@@ -234,7 +234,15 @@
   }
 }
 @utility rise {
-  animation: mt-rise 320ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  /* backwards (not both/forwards): applies the "from" state during the
+     animation-delay so there's no flash-of-unstyled-content, but does NOT
+     retain the "to" state's transform after the animation ends. A lingering
+     transform -- even an identity translateY(0) -- creates a new containing
+     block for any `position: fixed` descendant, silently turning "fixed"
+     into "positioned relative to this element" instead of the viewport.
+     That broke the checkout/cart bottom action bar on desktop, the same
+     class of bug already fixed once for AppShell's old translateZ(0) hack. */
+  animation: mt-rise 320ms cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
 }
 
 @keyframes mt-sheet-in {
