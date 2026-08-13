@@ -125,7 +125,7 @@ function MobileCartBar() {
       className="fixed inset-x-0 z-[var(--z-overlay)] px-3 md:hidden"
       style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom))" }}
     >
-      <div className="relative mx-auto max-w-[480px]">
+      <div className="mx-auto flex max-w-[480px] items-center gap-2">
         <Link
           to="/cart"
           className="tap-scale accent-gradient flex items-center justify-between gap-3 rounded-2xl px-4 py-3.5 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)]"
@@ -149,11 +149,7 @@ function MobileCartBar() {
             (-right-1 -top-1, ring matching the page background) -- attached
             to the bar it belongs to, not a separate floating control. */}
         <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setDismissed(true);
-          }}
+          onClick={() => setDismissed(true)}
           aria-label="Dismiss"
           className="tap-scale absolute -top-1.5 -right-1.5 grid h-6 w-6 place-items-center rounded-full bg-white text-black shadow-[0_2px_6px_rgba(0,0,0,0.4)] ring-2 ring-[color:var(--bg-base)]"
         >
