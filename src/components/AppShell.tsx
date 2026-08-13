@@ -125,10 +125,15 @@ function MobileCartBar() {
       className="fixed inset-x-0 z-[var(--z-overlay)] px-3 md:hidden"
       style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom))" }}
     >
-      <div className="mx-auto flex max-w-[480px] items-center gap-2">
+      {/* One continuous bar. Both the tap-to-open area and the close button
+          live INSIDE it (Swiggy-style): the Link fills the bar and navigates
+          to the cart, and the X sits at the far-right edge inside the same
+          padding as a subtle dark circle -- part of the bar, not a separate
+          floating control beside or on top of it. */}
+      <div className="accent-gradient mx-auto flex max-w-[480px] items-center gap-1.5 rounded-2xl py-2.5 pr-2.5 pl-4 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)]">
         <Link
           to="/cart"
-          className="tap-scale accent-gradient flex items-center justify-between gap-3 rounded-2xl px-4 py-3.5 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)]"
+          className="tap-scale flex min-w-0 flex-1 items-center justify-between gap-3"
         >
           <div className="flex min-w-0 items-center gap-2.5 text-[color:var(--on-accent)]">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/15">
@@ -145,15 +150,12 @@ function MobileCartBar() {
             View cart <ArrowRight className="h-3.5 w-3.5" />
           </span>
         </Link>
-        {/* Same corner-badge treatment as the header's cart-count badge
-            (-right-1 -top-1, ring matching the page background) -- attached
-            to the bar it belongs to, not a separate floating control. */}
         <button
           onClick={() => setDismissed(true)}
           aria-label="Dismiss"
-          className="tap-scale absolute -top-1.5 -right-1.5 grid h-6 w-6 place-items-center rounded-full bg-white text-black shadow-[0_2px_6px_rgba(0,0,0,0.4)] ring-2 ring-[color:var(--bg-base)]"
+          className="tap-scale grid h-8 w-8 shrink-0 place-items-center rounded-full bg-black/15 text-[color:var(--on-accent)]"
         >
-          <X className="h-3 w-3" />
+          <X className="h-4 w-4" />
         </button>
       </div>
     </div>
