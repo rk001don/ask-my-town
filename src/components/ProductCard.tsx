@@ -120,6 +120,7 @@ export function ProductCard({
                   unitPrice: product.price,
                   showPrice: product.show_price,
                   isService: product.is_service,
+                  iconKey: categoryIcon ?? product.categories?.icon_key ?? undefined,
                 })
               }
               className="tap-scale rounded-full accent-gradient px-4 py-1.5 text-sm font-semibold"

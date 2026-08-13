@@ -405,22 +405,24 @@ function Checkout() {
         `}</style>
 
         <div
-          className="glass fixed bottom-0 left-1/2 z-[var(--z-header)] w-full max-w-[520px] -translate-x-1/2 md:max-w-2xl border-t border-[color:var(--border-subtle)] p-4"
+          className="glass fixed inset-x-0 bottom-0 z-[var(--z-header)] border-t border-[color:var(--border-subtle)] p-4 md:left-56"
           style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
         >
-          <StickyFeeSummary
-            priceableItems={priceableItems}
-            itemsSubtotal={itemsSubtotal}
-            totalItemCount={items.length}
-          />
-          <button
-            type="submit"
-            disabled={busy}
-            className="tap-scale flex w-full items-center justify-center gap-2 rounded-full accent-gradient py-3.5 text-[15px] font-bold disabled:opacity-60"
-          >
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-            {busy ? "Sending…" : `Send my ask (${items.reduce((n, i) => n + i.quantity, 0)})`}
-          </button>
+          <div className="mx-auto w-full max-w-[520px] md:max-w-2xl">
+            <StickyFeeSummary
+              priceableItems={priceableItems}
+              itemsSubtotal={itemsSubtotal}
+              totalItemCount={items.length}
+            />
+            <button
+              type="submit"
+              disabled={busy}
+              className="tap-scale flex w-full items-center justify-center gap-2 rounded-full accent-gradient py-3.5 text-[15px] font-bold disabled:opacity-60"
+            >
+              {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+              {busy ? "Sending…" : `Send my ask (${items.reduce((n, i) => n + i.quantity, 0)})`}
+            </button>
+          </div>
         </div>
       </form>
     </div>
