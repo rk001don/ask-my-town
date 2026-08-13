@@ -37,10 +37,22 @@ export function AppShell({ children }: { children: ReactNode }) {
     !loc.pathname.startsWith("/my-orders");
 
   const cartCount = useCartCount();
-  // The floating cart bar and the Ask FAB both live in the bottom-right
-  // corner on mobile -- when the cart bar is actually rendered, lift the FAB
-  // above it instead of letting the two collide.
-  const cartBarVisible = showFloatingCart && cartCount > 0;
+  const [cartDismissed, setCartDismissed] = useState(false);
+  const prevCartCount = useRef(cartCount);
+  useEffect(() => {
+    // Any cart change -- add, remove, or a +/- on a quantity -- is an active
+    // interaction, so bring the bar back if it had been dismissed. Symmetric
+    // for increases AND decreases (previously only an increase un-dismissed
+    // it, which is why decreasing "didn't show").
+    if (cartCount !== prevCartCount.current) setCartDismissed(false);
+    prevCartCount.current = cartCount;
+  }, [cartCount]);
+  // The floating cart bar and the Ask FAB both want the bottom-right corner
+  // on mobile. The bar owns that corner while it's showing; when it's absent
+  // -- empty cart OR dismissed -- the Ask FAB takes the corner back. This
+  // single source of truth (including !cartDismissed) is what keeps the two
+  // from colliding: dismissing the bar now actually frees the FAB again.
+  const cartBarVisible = showFloatingCart && cartCount > 0 && !cartDismissed;
 
   if (hideNav) {
     return <div className="min-h-[100dvh] w-full">{children}</div>;
@@ -86,7 +98,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </main>
         <AskFAB hideMobileTrigger={cartBarVisible} />
-        {cartBarVisible && <MobileCartBar />}
+        {cartBarVisible && <MobileCartBar onDismiss={() => setCartDismissed(true)} />}
         {showBottomNav && (
           <div className="md:hidden">
             <BottomNav pathname={loc.pathname} />
@@ -97,20 +109,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
-function MobileCartBar() {
+function MobileCartBar({ onDismiss }: { onDismiss: () => void }) {
   const cartCount = useCartCount();
   const { items } = useCart();
-  const [dismissed, setDismissed] = useState(false);
-  const prevCountRef = useRef(cartCount);
 
-  useEffect(() => {
-    // A dismissal is a "not now" for the current basket, not forever: adding
-    // another item is a new signal the customer wants to see it again.
-    if (cartCount > prevCountRef.current) setDismissed(false);
-    prevCountRef.current = cartCount;
-  }, [cartCount]);
-
-  if (cartCount === 0 || dismissed) return null;
+  if (cartCount === 0) return null;
 
   const total = items.reduce(
     (sum: number, item: { unitPrice?: number | null; quantity: number }) => {
@@ -122,7 +125,7 @@ function MobileCartBar() {
 
   return (
     <div
-      className="fixed inset-x-0 z-[var(--z-overlay)] px-3 md:hidden"
+      className="fixed inset-x-0 z-[var(--z-overlay)] px-4 md:hidden"
       style={{ bottom: "calc(5.5rem + env(safe-area-inset-bottom))" }}
     >
       {/* One continuous bar. Both the tap-to-open area and the close button
@@ -130,14 +133,14 @@ function MobileCartBar() {
           to the cart, and the X sits at the far-right edge inside the same
           padding as a subtle dark circle -- part of the bar, not a separate
           floating control beside or on top of it. */}
-      <div className="accent-gradient mx-auto flex max-w-[480px] items-center gap-1.5 rounded-2xl py-2 pr-2 pl-3 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)]">
+      <div className="accent-gradient mx-auto flex max-w-[460px] items-center gap-2 rounded-2xl py-2.5 pr-3 pl-4 shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)]">
         <Link
           to="/cart"
           className="tap-scale flex min-w-0 flex-1 items-center justify-between gap-2"
         >
-          <div className="flex min-w-0 items-center gap-2.5 text-[color:var(--on-accent)]">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-black/15">
-              <ShoppingBag className="h-4 w-4" />
+          <div className="flex min-w-0 items-center gap-3 text-[color:var(--on-accent)]">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/15">
+              <ShoppingBag className="h-4.5 w-4.5" />
             </span>
             <div className="min-w-0">
               <div className="truncate text-sm font-bold leading-tight">
@@ -146,14 +149,14 @@ function MobileCartBar() {
               <div className="truncate text-[11px] font-medium opacity-80">Tap to review</div>
             </div>
           </div>
-          <span className="flex shrink-0 items-center gap-1 rounded-full bg-black/15 px-3 py-1.5 text-xs font-bold text-[color:var(--on-accent)]">
+          <span className="flex shrink-0 items-center gap-1 rounded-full bg-black/15 px-3.5 py-2 text-xs font-bold text-[color:var(--on-accent)]">
             View cart <ArrowRight className="h-3.5 w-3.5" />
           </span>
         </Link>
         <button
-          onClick={() => setDismissed(true)}
+          onClick={onDismiss}
           aria-label="Dismiss"
-          className="tap-scale grid h-8 w-8 shrink-0 place-items-center rounded-full bg-black/15 text-[color:var(--on-accent)]"
+          className="tap-scale grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/15 text-[color:var(--on-accent)]"
         >
           <X className="h-4 w-4" />
         </button>
