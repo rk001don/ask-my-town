@@ -76,7 +76,13 @@ export function ItemCard({
         <div className="min-h-[2.5rem] text-[14px] font-semibold leading-tight line-clamp-2">
           {itemName}
         </div>
-        <p className="break-words text-[11px] font-semibold text-[color:var(--text-primary)]">
+        <p
+          className={
+            priceLabel
+              ? "break-words text-[14px] font-extrabold text-[color:var(--accent-primary)]"
+              : "break-words text-[11px] font-medium text-[color:var(--text-muted)]"
+          }
+        >
           {priceLabel ?? "Price confirmed after you ask"}
         </p>
         {reason && (

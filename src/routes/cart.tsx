@@ -144,7 +144,13 @@ function CartRow({ it }: { it: ReturnType<typeof useCart>["items"][number] }) {
                 <div className="text-[11px] text-[color:var(--text-muted)]">{it.category}</div>
               )}
               {!it.isFreeform && (
-                <div className="mt-0.5 text-[13px] font-semibold text-[color:var(--accent-primary)]">
+                <div
+                  className={
+                    it.showPrice && it.unitPrice != null
+                      ? "mt-0.5 text-[13px] font-bold text-[color:var(--accent-primary)]"
+                      : "mt-0.5 text-[12px] font-medium text-[color:var(--text-muted)]"
+                  }
+                >
                   {it.showPrice && it.unitPrice != null ? `₹${it.unitPrice}` : "Price on request"}
                 </div>
               )}
