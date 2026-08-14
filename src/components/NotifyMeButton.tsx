@@ -17,7 +17,9 @@ export function NotifyMeButton({ orderId }: { orderId: string }) {
   const getKeyFn = useServerFn(getVapidPublicKey);
   const subscribeFn = useServerFn(subscribeToOrderPush);
   const registerDeviceFn = useServerFn(registerDevice);
-  const [state, setState] = useState<"idle" | "loading" | "subscribed" | "unsupported">("idle");
+  const [state, setState] = useState<"idle" | "loading" | "subscribed" | "unsupported" | "blocked">(
+    "idle",
+  );
 
   useEffect(() => {
     if (
@@ -36,6 +38,12 @@ export function NotifyMeButton({ orderId }: { orderId: string }) {
       const existing = await reg?.pushManager.getSubscription();
       if (existing) {
         setState("subscribed");
+        return;
+      }
+      // Browser already refused permission -- requestPermission() can't
+      // re-prompt from here, so showing the button would just be a dead loop.
+      if (Notification.permission === "denied") {
+        setState("blocked");
         return;
       }
       // Permission already granted but no live subscription (e.g. granted on
@@ -58,7 +66,7 @@ export function NotifyMeButton({ orderId }: { orderId: string }) {
         if (permission !== "granted") {
           if (!silent)
             toast.error("Notifications were blocked — you can still check this page anytime.");
-          setState("idle");
+          setState(permission === "denied" ? "blocked" : "idle");
           return;
         }
       }
@@ -116,6 +124,14 @@ export function NotifyMeButton({ orderId }: { orderId: string }) {
       <div className="flex items-center gap-1.5 text-xs font-semibold text-[color:var(--success)]">
         <BellRing className="h-3.5 w-3.5" />
         Notifying you about this order
+      </div>
+    );
+  }
+
+  if (state === "blocked") {
+    return (
+      <div className="text-xs font-medium text-[color:var(--text-secondary)]">
+        Notifications are blocked — enable them in your browser's site settings.
       </div>
     );
   }
