@@ -63,9 +63,13 @@ export const signUpWithPin = createServerFn({ method: "POST" })
       .eq("phone", phone)
       .maybeSingle();
     if (existingCustomer && !existingCustomer.user_id) {
+      // The name typed on this signup form is what the customer just told
+      // us about themselves -- it should win over whatever was on file from
+      // an earlier guest order (which may be blank, or someone else's name
+      // if the phone was reused at checkout).
       await supabaseAdmin
         .from("customers")
-        .update({ user_id: created.user!.id })
+        .update({ user_id: created.user!.id, name: data.name })
         .eq("id", existingCustomer.id)
         .is("user_id", null);
     } else if (!existingCustomer) {
