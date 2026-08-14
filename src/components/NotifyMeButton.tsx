@@ -28,31 +28,51 @@ export function NotifyMeButton({ orderId }: { orderId: string }) {
       setState("unsupported");
       return;
     }
-    // If a subscription already exists for this device, reflect that instead
-    // of offering to subscribe again.
-    navigator.serviceWorker.getRegistration("/sw.js").then(async (reg) => {
+    (async () => {
+      // Already have a device subscription? Reflect "subscribed" and don't
+      // prompt again -- for a signed-in customer the account-level grant
+      // already covers every order, so a fresh order shouldn't re-ask.
+      const reg = await navigator.serviceWorker.getRegistration();
       const existing = await reg?.pushManager.getSubscription();
-      if (existing) setState("subscribed");
-    });
+      if (existing) {
+        setState("subscribed");
+        return;
+      }
+      // Permission already granted but no live subscription (e.g. granted on
+      // another screen, or the subscription lapsed): quietly create one
+      // instead of nagging with the "Notify me" button every single time.
+      if (Notification.permission === "granted") {
+        void subscribe(true);
+      }
+    })();
   }, []);
 
-  async function subscribe() {
-    setState("loading");
+  // `silent` = self-healing path from the effect above: no permission prompt
+  // is needed (already granted) and we stay quiet on success/failure so it's
+  // invisible. The interactive button path (silent=false) talks to the user.
+  async function subscribe(silent = false) {
+    if (!silent) setState("loading");
     try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        toast.error("Notifications were blocked — you can still check this page anytime.");
-        setState("idle");
-        return;
+      if (Notification.permission !== "granted") {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          if (!silent)
+            toast.error("Notifications were blocked — you can still check this page anytime.");
+          setState("idle");
+          return;
+        }
       }
       const { key } = await getKeyFn();
       if (!key) throw new Error("Notifications aren't configured yet.");
       const reg = await navigator.serviceWorker.register("/sw.js");
       await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(key),
-      });
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(key),
+        });
+      }
       const json = sub.toJSON();
       await subscribeFn({
         data: {
@@ -81,9 +101,9 @@ export function NotifyMeButton({ orderId }: { orderId: string }) {
         }
       }
       setState("subscribed");
-      toast.success("You'll get a notification when your order updates");
+      if (!silent) toast.success("You'll get a notification when your order updates");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't turn on notifications");
+      if (!silent) toast.error(err instanceof Error ? err.message : "Couldn't turn on notifications");
       setState("idle");
     }
   }
@@ -101,7 +121,7 @@ export function NotifyMeButton({ orderId }: { orderId: string }) {
 
   return (
     <button
-      onClick={subscribe}
+      onClick={() => subscribe()}
       disabled={state === "loading"}
       className="tap-scale flex items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-xs font-semibold"
     >
