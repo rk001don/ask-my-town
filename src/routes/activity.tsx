@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AppHeader } from "@/components/AppHeader";
 import { trackOrder } from "@/lib/api.functions";
@@ -15,7 +15,7 @@ import { isValidIndianPhone } from "@/lib/phone";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Check, Clock, Sparkles } from "lucide-react";
+import { Search, Check, Clock, Sparkles, LogOut } from "lucide-react";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 import { NotificationOptIn } from "@/components/NotificationOptIn";
 import { toast } from "sonner";
@@ -68,12 +68,38 @@ function MyActivity() {
   const fetchOrders = useServerFn(getMyOrders);
   const cancelOrderFn = useServerFn(cancelMyOrder);
   const qc = useQueryClient();
+  const nav = useNavigate();
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [identity, setIdentity] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
   const { data, isLoading, error } = useQuery({
     queryKey: ["my-orders"],
     queryFn: () => fetchOrders(),
   });
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      const u = data.session?.user;
+      // Prefer a real email; phone+PIN accounts use a synthetic internal
+      // email, so fall back to the phone number for those.
+      const email = u?.email && !u.email.endsWith("@customers.mytown.internal") ? u.email : null;
+      setIdentity(email ?? u?.phone ?? u?.user_metadata?.phone ?? null);
+    });
+  }, []);
+
+  async function signOut() {
+    setSigningOut(true);
+    try {
+      await supabase.auth.signOut();
+      qc.clear();
+      toast.success("Signed out");
+      nav({ to: "/" });
+    } catch {
+      setSigningOut(false);
+      toast.error("Couldn't sign out. Try again.");
+    }
+  }
 
   async function confirmCancellation(reason: string) {
     if (!cancelOrderId) return;
@@ -94,6 +120,22 @@ function MyActivity() {
     <div>
       <AppHeader title="Orders" showBack={false} />
       <div className="px-4 pt-2">
+        <div className="glass mb-3 flex items-center justify-between gap-3 rounded-2xl p-4">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">Your account</div>
+            {identity && (
+              <p className="mt-0.5 truncate text-xs text-[color:var(--text-secondary)]">{identity}</p>
+            )}
+          </div>
+          <button
+            onClick={signOut}
+            disabled={signingOut}
+            className="tap-scale flex shrink-0 items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Sign out
+          </button>
+        </div>
         <NotificationOptIn />
       </div>
       {isLoading && (
