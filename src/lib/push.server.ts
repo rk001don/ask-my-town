@@ -27,7 +27,7 @@ function getVapid() {
  */
 export async function sendPushForOrder(
   orderId: string,
-  payload: { title: string; body: string; url?: string },
+  payload: { title: string; body: string; url?: string; tag?: string },
 ) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 

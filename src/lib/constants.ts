@@ -36,6 +36,20 @@ export const STATUS_COPY: Record<OrderStatus, { label: string; blurb: string }> 
   cancelled: { label: "Cancelled", blurb: "This order was cancelled." },
 };
 
+// Push-notification titles per status. Deliberately distinct from the terse
+// board labels above: a notification is read on a lock screen with no other
+// context, so it names the milestone in full ("Out for delivery", not just
+// "Out for delivery" column). Keeps every push scannable at a glance instead
+// of five identical "MyTown order update" lines stacking up.
+export const STATUS_PUSH_TITLE: Record<OrderStatus, string> = {
+  received: "Order received",
+  confirmed: "Order confirmed",
+  arranging: "Preparing your order",
+  on_the_way: "Out for delivery",
+  completed: "Order delivered",
+  cancelled: "Order cancelled",
+};
+
 // Customer-facing lifecycle is intentionally simpler than the internal one:
 // Received -> Confirmed -> Out for delivery -> Delivered. The internal
 // "arranging" (prep) status is real and still drives the staff board, but a
