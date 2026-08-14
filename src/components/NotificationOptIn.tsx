@@ -31,20 +31,29 @@ export function NotificationOptIn() {
       setState("unsupported");
       return;
     }
-    navigator.serviceWorker.getRegistration("/sw.js").then(async (reg) => {
+    (async () => {
+      const reg = await navigator.serviceWorker.getRegistration();
       const existing = await reg?.pushManager.getSubscription();
-      if (existing) setState("subscribed");
-    });
+      if (existing) {
+        setState("subscribed");
+        return;
+      }
+      // Permission already granted elsewhere but no live subscription: heal it
+      // silently so the toggle shows "On" without making the user tap again.
+      if (Notification.permission === "granted") void subscribe(true);
+    })();
   }, []);
 
-  async function subscribe() {
-    setState("loading");
+  async function subscribe(silent = false) {
+    if (!silent) setState("loading");
     try {
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        toast.error("Notifications were blocked in your browser settings.");
-        setState("idle");
-        return;
+      if (Notification.permission !== "granted") {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          if (!silent) toast.error("Notifications were blocked in your browser settings.");
+          setState("idle");
+          return;
+        }
       }
       const { key } = await getKeyFn();
       if (!key) throw new Error("Notifications aren't configured yet.");
@@ -66,9 +75,9 @@ export function NotificationOptIn() {
         },
       });
       setState("subscribed");
-      toast.success("Notifications turned on for this device");
+      if (!silent) toast.success("Notifications turned on for this device");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't turn on notifications");
+      if (!silent) toast.error(err instanceof Error ? err.message : "Couldn't turn on notifications");
       setState("idle");
     }
   }
@@ -90,7 +99,7 @@ export function NotificationOptIn() {
         </div>
       ) : (
         <button
-          onClick={subscribe}
+          onClick={() => subscribe()}
           disabled={state === "loading"}
           className="tap-scale flex shrink-0 items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
         >
