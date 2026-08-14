@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -188,76 +208,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "delivery_batches_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "delivery_batches_rider_id_fkey"
-            columns: ["rider_id"]
-            isOneToOne: false
-            referencedRelation: "riders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      employees: {
-        Row: {
-          active: boolean
-          created_at: string
-          id: string
-          name: string
-          pin_hash: string
-        }
-        Insert: {
-          active?: boolean
-          created_at?: string
-          id?: string
-          name: string
-          pin_hash: string
-        }
-        Update: {
-          active?: boolean
-          created_at?: string
-          id?: string
-          name?: string
-          pin_hash?: string
-        }
-        Relationships: []
-      }
-      group_orders: {
-        Row: {
-          created_at: string
-          id: string
-          initiator_customer_id: string
-          location_id: string
-          status: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          initiator_customer_id: string
-          location_id: string
-          status?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          initiator_customer_id?: string
-          location_id?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "group_orders_initiator_customer_id_fkey"
-            columns: ["initiator_customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "group_orders_location_id_fkey"
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "locations"
@@ -625,13 +575,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "orders_group_order_id_fkey"
-            columns: ["group_order_id"]
-            isOneToOne: false
-            referencedRelation: "group_orders"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "orders_location_id_fkey"
             columns: ["location_id"]
             isOneToOne: false
@@ -772,50 +715,6 @@ export type Database = {
         }
         Relationships: []
       }
-      riders: {
-        Row: {
-          active: boolean
-          created_at: string
-          id: string
-          id_proof_url: string | null
-          location_id: string
-          name: string
-          phone: string
-          photo_url: string | null
-          verified: boolean
-        }
-        Insert: {
-          active?: boolean
-          created_at?: string
-          id?: string
-          id_proof_url?: string | null
-          location_id: string
-          name: string
-          phone: string
-          photo_url?: string | null
-          verified?: boolean
-        }
-        Update: {
-          active?: boolean
-          created_at?: string
-          id?: string
-          id_proof_url?: string | null
-          location_id?: string
-          name?: string
-          phone?: string
-          photo_url?: string | null
-          verified?: boolean
-        }
-        Relationships: [
-          {
-            foreignKeyName: "riders_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       search_analytics: {
         Row: {
           created_at: string
@@ -839,44 +738,6 @@ export type Database = {
           term?: string
         }
         Relationships: []
-      }
-      staff: {
-        Row: {
-          active: boolean
-          created_at: string
-          id: string
-          location_id: string | null
-          name: string
-          role: string
-          user_id: string | null
-        }
-        Insert: {
-          active?: boolean
-          created_at?: string
-          id?: string
-          location_id?: string | null
-          name: string
-          role: string
-          user_id?: string | null
-        }
-        Update: {
-          active?: boolean
-          created_at?: string
-          id?: string
-          location_id?: string | null
-          name?: string
-          role?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "staff_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "locations"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       user_roles: {
         Row: {
@@ -917,13 +778,6 @@ export type Database = {
         Returns: boolean
       }
       mytown_new_order_id: { Args: never; Returns: string }
-      mytown_verify_employee_pin: {
-        Args: { p_pin: string }
-        Returns: {
-          id: string
-          name: string
-        }[]
-      }
       mytown_warden_daily_counts: {
         Args: { p_location_id?: string }
         Returns: {
@@ -1067,6 +921,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["admin", "ops", "warden_viewer", "customer"],
@@ -1081,3 +938,4 @@ export const Constants = {
     },
   },
 } as const
+
