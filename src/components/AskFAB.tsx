@@ -40,7 +40,6 @@ export function AskFAB({ hideMobileTrigger = false }: { hideMobileTrigger?: bool
   }, [open]);
 
   const hide =
-    loc.pathname.startsWith("/employee") ||
     loc.pathname.startsWith("/staff") ||
     loc.pathname.startsWith("/admin") ||
     loc.pathname.startsWith("/order/") ||
