@@ -13,10 +13,7 @@ const TABS = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const loc = useLocation();
-  const hideNav =
-    loc.pathname.startsWith("/employee") ||
-    loc.pathname.startsWith("/staff") ||
-    loc.pathname.startsWith("/admin");
+  const hideNav = loc.pathname.startsWith("/staff") || loc.pathname.startsWith("/admin");
 
   const showFloatingCart =
     !hideNav &&
