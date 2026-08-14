@@ -2,7 +2,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { STATUS_COPY, type OrderStatus as OrderStatusType } from "@/lib/constants";
+import {
+  STATUS_COPY,
+  STATUS_PUSH_TITLE,
+  type OrderStatus as OrderStatusType,
+} from "@/lib/constants";
 
 const OrderStatus = z.enum([
   "received",
@@ -158,11 +162,18 @@ export const updateStaffOrderStatus = createServerFn({ method: "POST" })
     // notification failing must not make the status update itself fail.
     try {
       const { sendPushForOrder } = await import("@/lib/push.server");
-      const copy = STATUS_COPY[data.status as OrderStatusType];
+      const status = data.status as OrderStatusType;
+      const copy = STATUS_COPY[status];
       await sendPushForOrder(data.orderId, {
-        title: "MyTown order update",
-        body: copy?.blurb ?? `Your order is now ${data.status}.`,
+        title: STATUS_PUSH_TITLE[status] ?? "Order update",
+        // Lead the body with the order id so a customer with more than one
+        // live order can tell which is which without opening the app.
+        body: `${data.orderId} · ${copy?.blurb ?? `Your order is now ${data.status}.`}`,
         url: `/order/${data.orderId}`,
+        // One notification per order: a shared tag makes each status update
+        // replace the previous one for that order instead of stacking five
+        // separate lines in the tray. renotify (in the SW) still alerts.
+        tag: `order-${data.orderId}`,
       });
     } catch {
       /* notifications are best-effort, see comment above */
