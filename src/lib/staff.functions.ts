@@ -84,7 +84,35 @@ export const listStaffOrders = createServerFn({ method: "GET" })
       .order("created_at", { ascending: true })
       .limit(200);
     if (error) throw new Error(error.message);
-    return { aggregateOnly: false as const, orders: data ?? [] };
+    const orders = data ?? [];
+
+    // Look up real display names for whoever has claimed an order, so "Claimed
+    // by" can show a person's name instead of their email's local part. Only
+    // Google-signed-in staff carry a name in Auth metadata today (plain
+    // email/password and PIN accounts don't collect one); anyone without one
+    // falls back to the email-derived name on the client, same as before.
+    const assigneeIds = [...new Set(orders.map((o) => o.assigned_staff_id).filter((v) => !!v))];
+    let assigneeNames: Record<string, string> = {};
+    if (assigneeIds.length > 0) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({
+        page: 1,
+        perPage: 200,
+      });
+      assigneeNames = Object.fromEntries(
+        (usersData?.users ?? [])
+          .filter((u) => assigneeIds.includes(u.id))
+          .map((u) => [u.id, u.user_metadata?.full_name || u.user_metadata?.name])
+          .filter(([, name]) => !!name),
+      );
+    }
+    const ordersWithNames = orders.map((o) => ({
+      ...o,
+      assigned_staff_name: o.assigned_staff_id
+        ? (assigneeNames[o.assigned_staff_id] ?? null)
+        : null,
+    }));
+    return { aggregateOnly: false as const, orders: ordersWithNames };
   });
 
 // The ask-attachments bucket is private -- a raw file_path can't be shown in

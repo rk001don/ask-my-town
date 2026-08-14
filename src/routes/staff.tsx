@@ -67,6 +67,7 @@ type StaffOrderRow = {
   cancellation_reason?: string | null;
   assigned_staff_id?: string | null;
   assigned_staff_email?: string | null;
+  assigned_staff_name?: string | null;
   customer: {
     name: string;
     phone: string;
@@ -147,7 +148,8 @@ function StaffOrderCard({
 
   const assignedToMe = !!o.assigned_staff_id && o.assigned_staff_email === currentEmail;
   const assignedToOther = !!o.assigned_staff_id && !assignedToMe;
-  const assigneeName = o.assigned_staff_email?.split("@")[0] ?? "another staffer";
+  const assigneeName =
+    o.assigned_staff_name || o.assigned_staff_email?.split("@")[0] || "another staffer";
   const isTerminal = o.status === "completed" || o.status === "cancelled";
 
   return (
