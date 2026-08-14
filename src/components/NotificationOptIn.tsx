@@ -20,7 +20,9 @@ function urlBase64ToUint8Array(base64String: string) {
 export function NotificationOptIn() {
   const getKeyFn = useServerFn(getVapidPublicKey);
   const registerFn = useServerFn(registerDevice);
-  const [state, setState] = useState<"idle" | "loading" | "subscribed" | "unsupported">("idle");
+  const [state, setState] = useState<"idle" | "loading" | "subscribed" | "unsupported" | "blocked">(
+    "idle",
+  );
 
   useEffect(() => {
     if (
@@ -38,6 +40,13 @@ export function NotificationOptIn() {
         setState("subscribed");
         return;
       }
+      // Browser already refused permission -- requestPermission() can't
+      // re-prompt from here, so showing the "Turn on" button would just be a
+      // dead loop. Say so plainly instead of pretending a tap will work.
+      if (Notification.permission === "denied") {
+        setState("blocked");
+        return;
+      }
       // Permission already granted elsewhere but no live subscription: heal it
       // silently so the toggle shows "On" without making the user tap again.
       if (Notification.permission === "granted") void subscribe(true);
@@ -51,7 +60,7 @@ export function NotificationOptIn() {
         const permission = await Notification.requestPermission();
         if (permission !== "granted") {
           if (!silent) toast.error("Notifications were blocked in your browser settings.");
-          setState("idle");
+          setState(permission === "denied" ? "blocked" : "idle");
           return;
         }
       }
@@ -97,6 +106,12 @@ export function NotificationOptIn() {
         <div className="flex shrink-0 items-center gap-1.5 text-xs font-semibold text-[color:var(--success)]">
           <BellRing className="h-4 w-4" />
           On
+        </div>
+      ) : state === "blocked" ? (
+        <div className="shrink-0 text-right text-xs font-medium text-[color:var(--text-secondary)]">
+          Blocked — enable in browser
+          <br />
+          site settings
         </div>
       ) : (
         <button

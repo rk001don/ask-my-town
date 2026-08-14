@@ -85,12 +85,14 @@ export async function sendPushForOrder(
         if (!result.ok && (result.statusCode === 404 || result.statusCode === 410)) {
           const table = sub.source === "order" ? "order_push_subscriptions" : "push_devices";
           await supabaseAdmin.from(table).delete().eq("id", sub.id);
+        } else if (!result.ok) {
+          // Logged (not thrown) -- push delivery is best-effort and must
+          // never fail the status update, but a silent drop with zero trace
+          // makes "sometimes it doesn't notify" impossible to diagnose.
+          console.error(`push send failed for order ${orderId}: ${result.statusCode}`);
         }
-      } catch {
-        // Any other error (network blip, etc.) is not fatal to the status
-        // update itself -- notifications are best-effort, not a source of
-        // truth the customer depends on exclusively (they can still check
-        // the tracking page).
+      } catch (err) {
+        console.error(`push send threw for order ${orderId}:`, err);
       }
     }),
   );
