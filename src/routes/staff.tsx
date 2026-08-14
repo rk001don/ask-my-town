@@ -105,8 +105,6 @@ function StaffOrderCard({
   onAssign,
   onUnassign,
   isAssigning,
-  nearbyCount,
-  onClaimNearby,
 }: {
   order: StaffOrderRow;
   onOpenAttachment: (filePath: string) => void;
@@ -118,8 +116,6 @@ function StaffOrderCard({
   onAssign: (orderId: string) => void;
   onUnassign: (orderId: string) => void;
   isAssigning: boolean;
-  nearbyCount: number;
-  onClaimNearby: () => void;
 }) {
   const idx = ORDER_STATUS_STEPS.findIndex((st) => st.key === o.status);
   // A cancelled order isn't on the step ladder (idx === -1) — it must never
@@ -151,16 +147,26 @@ function StaffOrderCard({
 
   const assignedToMe = !!o.assigned_staff_id && o.assigned_staff_email === currentEmail;
   const assignedToOther = !!o.assigned_staff_id && !assignedToMe;
+  const assigneeName = o.assigned_staff_email?.split("@")[0] ?? "another staffer";
+  const isTerminal = o.status === "completed" || o.status === "cancelled";
 
   return (
     <div className="card-surface rounded-2xl p-4">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div
-            className="h-2 w-2 flex-shrink-0 rounded-full"
-            style={{ background: statusColor[o.status] ?? "var(--text-muted)" }}
-          />
-          <span className="truncate font-mono text-xs text-[color:var(--text-muted)]">{o.id}</span>
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide"
+            style={{ color: statusColor[o.status] ?? "var(--text-muted)" }}
+          >
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ background: statusColor[o.status] ?? "var(--text-muted)" }}
+            />
+            {STATUS_COPY[o.status]?.label ?? o.status}
+          </span>
+          <span className="truncate font-mono text-[11px] text-[color:var(--text-muted)]">
+            {o.id}
+          </span>
         </div>
         <div className="flex flex-shrink-0 items-center gap-1.5">
           {showWaiting && (
@@ -201,50 +207,46 @@ function StaffOrderCard({
         </span>
       </div>
 
-      {/* Who's delivering this -- the thing that was completely missing
-          before: no way to see or claim ownership of an individual order. */}
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        {assignedToMe ? (
-          <button
-            onClick={() => onUnassign(o.id)}
-            disabled={isAssigning}
-            className="tap-scale flex items-center gap-1.5 rounded-full bg-[color:var(--success)]/15 px-2.5 py-1 text-[11px] font-semibold text-[color:var(--success)] disabled:opacity-50"
-          >
-            {isAssigning ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <UserMinus className="h-3 w-3" />
-            )}
-            Assigned to you — release
-          </button>
-        ) : assignedToOther ? (
-          <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] text-[color:var(--text-secondary)]">
-            Assigned to {o.assigned_staff_email ?? "another staffer"}
-          </span>
-        ) : (
-          <button
-            onClick={() => onAssign(o.id)}
-            disabled={isAssigning}
-            className="tap-scale flex items-center gap-1.5 rounded-full accent-gradient px-2.5 py-1 text-[11px] font-semibold disabled:opacity-50"
-          >
-            {isAssigning ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <UserPlus className="h-3 w-3" />
-            )}
-            Assign to me
-          </button>
-        )}
-        {nearbyCount > 0 && (
-          <button
-            onClick={onClaimNearby}
-            disabled={isAssigning}
-            className="tap-scale flex items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] px-2.5 py-1 text-[11px] font-semibold disabled:opacity-50"
-          >
-            <Users className="h-3 w-3" />+{nearbyCount} more here — claim all
-          </button>
-        )}
-      </div>
+      {/* Who's handling this order. Hidden once delivered/cancelled -- at that
+          point ownership is settled and a "release" control just invites
+          confusion. When someone else has it, their name is shown plainly so
+          nobody double-claims. */}
+      {!isTerminal && (
+        <div className="mt-2">
+          {assignedToMe ? (
+            <button
+              onClick={() => onUnassign(o.id)}
+              disabled={isAssigning}
+              className="tap-scale flex items-center gap-1.5 rounded-full bg-[color:var(--success)]/15 px-2.5 py-1 text-[11px] font-semibold text-[color:var(--success)] disabled:opacity-50"
+            >
+              {isAssigning ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <UserMinus className="h-3 w-3" />
+              )}
+              You're handling this — release
+            </button>
+          ) : assignedToOther ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-[color:var(--text-secondary)]">
+              <Users className="h-3 w-3" />
+              Claimed by {assigneeName}
+            </span>
+          ) : (
+            <button
+              onClick={() => onAssign(o.id)}
+              disabled={isAssigning}
+              className="tap-scale flex items-center gap-1.5 rounded-full accent-gradient px-2.5 py-1 text-[11px] font-semibold disabled:opacity-50"
+            >
+              {isAssigning ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <UserPlus className="h-3 w-3" />
+              )}
+              Assign to me
+            </button>
+          )}
+        </div>
+      )}
 
       {priced.length > 0 && (
         <div className="mt-2 space-y-0.5 rounded-xl bg-white/5 p-2 text-xs">
@@ -435,7 +437,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
   const [assigningId, setAssigningId] = useState<string | null>(null);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [mobileFilter, setMobileFilter] = useState<"active" | OrderStatus>("active");
+  const [statusFilter, setStatusFilter] = useState<"active" | OrderStatus>("active");
   const [previewLoading, setPreviewLoading] = useState(false);
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -493,30 +495,6 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
       (g[s] as unknown as unknown[])?.push(o);
     });
     return g;
-  }, [ordersQ.data]);
-
-  // Same-address bundling: orderId -> ids of other unassigned, still-active
-  // orders sharing the exact same delivery address, so a rider can spot "3
-  // more orders at this hostel" and grab the whole drop in one trip instead
-  // of four separate ones.
-  const nearbyGroups = useMemo(() => {
-    const map: Record<string, string[]> = {};
-    const data = ordersQ.data;
-    if (!data || data.aggregateOnly) return map;
-    const byAddress = new Map<string, string[]>();
-    for (const o of data.orders ?? []) {
-      if (o.assigned_staff_id) continue;
-      if (!["received", "confirmed", "arranging"].includes(o.status ?? "")) continue;
-      const key = (o.customer?.address ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-      if (!key) continue;
-      if (!byAddress.has(key)) byAddress.set(key, []);
-      byAddress.get(key)!.push(o.id);
-    }
-    for (const ids of byAddress.values()) {
-      if (ids.length < 2) continue;
-      for (const id of ids) map[id] = ids.filter((x) => x !== id);
-    }
-    return map;
   }, [ordersQ.data]);
 
   async function setStatus(orderId: string, next: OrderStatus) {
@@ -694,132 +672,88 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
           </div>
         </div>
       ) : (
-        <>
-          <div className="no-scrollbar hidden gap-4 overflow-x-auto px-4 py-4 md:flex md:snap-x md:snap-mandatory md:px-6">
-            {BOARD_STATUSES.map((s) => {
-              const list = (grouped[s] as unknown as StaffOrderRow[]) ?? [];
+        <div className="mx-auto max-w-6xl">
+          {/* One status filter, identical at every width. "Active" (default)
+              hides delivered/cancelled so the board shows only what still
+              needs doing; any single status -- including Delivered -- is one
+              tap away. Replaces the old side-scrolling desktop kanban whose
+              fixed-width columns ran off the right edge of the screen. */}
+          <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-1 pt-3">
+            {(["active", ...BOARD_STATUSES] as const).map((f) => {
+              const count =
+                f === "active"
+                  ? BOARD_STATUSES.filter((s) => s !== "completed").reduce(
+                      (n, s) => n + ((grouped[s] as unknown as StaffOrderRow[])?.length ?? 0),
+                      0,
+                    )
+                  : ((grouped[f] as unknown as StaffOrderRow[])?.length ?? 0);
+              const active = statusFilter === f;
               return (
-                <div key={s} className="min-w-[280px] flex-shrink-0 snap-start">
-                  <div className="mb-3 flex items-center justify-between rounded-xl bg-[color:var(--bg-elevated)] px-3 py-2">
-                    <div className="text-xs font-bold uppercase tracking-wide">
-                      {STATUS_COPY[s]?.label ?? s}
-                    </div>
-                    <div className="grid h-5 min-w-5 place-items-center rounded-full bg-white/10 px-1 text-[10px] font-bold">
-                      {list.length}
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    {list.map((o) => (
-                      <StaffOrderCard
-                        key={o.id}
-                        order={{ ...o, status: s }}
-                        onOpenAttachment={openAttachment}
-                        onAdvance={setStatus}
-                        onCancel={setCancelOrderId}
-                        windowRanges={windowRanges}
-                        isAdvancing={advancingOrderId === o.id}
-                        currentEmail={email}
-                        onAssign={(id) => assignToMe([id])}
-                        onUnassign={unassign}
-                        isAssigning={assigningId === o.id}
-                        nearbyCount={nearbyGroups[o.id]?.length ?? 0}
-                        onClaimNearby={() => assignToMe([o.id, ...(nearbyGroups[o.id] ?? [])])}
-                      />
-                    ))}
-                    {list.length === 0 && (
-                      <div className="rounded-xl border border-dashed border-[color:var(--border-subtle)] p-4 text-center text-xs text-[color:var(--text-muted)]">
-                        Empty
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <button
+                  key={f}
+                  onClick={() => setStatusFilter(f)}
+                  className="tap-scale flex-shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold capitalize"
+                  style={{
+                    color: active ? "var(--on-accent)" : "var(--text-secondary)",
+                    background: active
+                      ? "linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))"
+                      : "var(--bg-elevated)",
+                  }}
+                >
+                  {f === "active" ? "Active" : (STATUS_COPY[f]?.label ?? f)}{" "}
+                  <span style={{ opacity: 0.7 }}>({count})</span>
+                </button>
               );
             })}
           </div>
 
-          {/* Mobile: a single vertical list with status filter pills, not a
-            side-scrolling kanban — the horizontal scroll itself was the
-            "why is there a sidebar-like strip on mobile" complaint. */}
-          <div className="md:hidden">
-            <div className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-1 pt-3">
-              {(["active", ...BOARD_STATUSES] as const).map((f) => {
-                const count =
-                  f === "active"
-                    ? BOARD_STATUSES.filter((s) => s !== "completed").reduce(
-                        (n, s) => n + ((grouped[s] as unknown as StaffOrderRow[])?.length ?? 0),
-                        0,
-                      )
-                    : ((grouped[f] as unknown as StaffOrderRow[])?.length ?? 0);
-                const active = mobileFilter === f;
-                return (
-                  <button
-                    key={f}
-                    onClick={() => setMobileFilter(f)}
-                    className="tap-scale flex-shrink-0 rounded-full px-3.5 py-2 text-xs font-semibold capitalize"
-                    style={{
-                      color: active ? "var(--on-accent)" : "var(--text-secondary)",
-                      background: active
-                        ? "linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))"
-                        : "var(--bg-elevated)",
-                    }}
-                  >
-                    {f === "active" ? "Active" : (STATUS_COPY[f]?.label ?? f)}{" "}
-                    <span style={{ opacity: 0.7 }}>({count})</span>
-                  </button>
-                );
-              })}
-            </div>
+          {/* One prioritized list -- oldest waiting first -- in a responsive
+              grid that fills the width cleanly. Each card carries its own
+              status badge, so nothing is lost by dropping the column headers. */}
+          {(() => {
+            const filteredOrders = BOARD_STATUSES.filter((s) =>
+              statusFilter === "active" ? s !== "completed" : s === statusFilter,
+            ).flatMap((s) =>
+              ((grouped[s] as unknown as StaffOrderRow[]) ?? []).map((o) => ({
+                ...o,
+                status: s,
+              })),
+            );
 
-            {/* One simple list, oldest order first -- no separate "batch"
-                screen to understand, no toggle to pick. Whoever's waited
-                longest is at the top. */}
-            {(() => {
-              const filteredOrders = BOARD_STATUSES.filter((s) =>
-                mobileFilter === "active" ? s !== "completed" : s === mobileFilter,
-              ).flatMap((s) =>
-                ((grouped[s] as unknown as StaffOrderRow[]) ?? []).map((o) => ({
-                  ...o,
-                  status: s,
-                })),
-              );
-
-              if (filteredOrders.length === 0) {
-                return (
-                  <div className="px-4 pb-6 pt-3">
-                    <div className="card-surface flex flex-col items-center gap-2 p-8 text-center">
-                      <Package className="h-8 w-8 text-[color:var(--text-muted)]" />
-                      <div className="text-sm text-[color:var(--text-tertiary)]">
-                        No orders here right now.
-                      </div>
+            if (filteredOrders.length === 0) {
+              return (
+                <div className="px-4 pb-6 pt-3">
+                  <div className="card-surface mx-auto flex max-w-md flex-col items-center gap-2 p-8 text-center">
+                    <Package className="h-8 w-8 text-[color:var(--text-muted)]" />
+                    <div className="text-sm text-[color:var(--text-tertiary)]">
+                      No orders here right now.
                     </div>
                   </div>
-                );
-              }
-
-              return (
-                <div className="space-y-3 px-4 pb-6 pt-3">
-                  {filteredOrders.map((o) => (
-                    <StaffOrderCard
-                      key={o.id}
-                      order={o}
-                      onOpenAttachment={openAttachment}
-                      onAdvance={setStatus}
-                      onCancel={setCancelOrderId}
-                      windowRanges={windowRanges}
-                      isAdvancing={advancingOrderId === o.id}
-                      currentEmail={email}
-                      onAssign={(id) => assignToMe([id])}
-                      onUnassign={unassign}
-                      isAssigning={assigningId === o.id}
-                      nearbyCount={nearbyGroups[o.id]?.length ?? 0}
-                      onClaimNearby={() => assignToMe([o.id, ...(nearbyGroups[o.id] ?? [])])}
-                    />
-                  ))}
                 </div>
               );
-            })()}
-          </div>
-        </>
+            }
+
+            return (
+              <div className="grid grid-cols-1 items-start gap-3 px-4 pb-6 pt-3 sm:grid-cols-2 xl:grid-cols-3">
+                {filteredOrders.map((o) => (
+                  <StaffOrderCard
+                    key={o.id}
+                    order={o}
+                    onOpenAttachment={openAttachment}
+                    onAdvance={setStatus}
+                    onCancel={setCancelOrderId}
+                    windowRanges={windowRanges}
+                    isAdvancing={advancingOrderId === o.id}
+                    currentEmail={email}
+                    onAssign={(id) => assignToMe([id])}
+                    onUnassign={unassign}
+                    isAssigning={assigningId === o.id}
+                  />
+                ))}
+              </div>
+            );
+          })()}
+        </div>
       )}
 
       {(previewUrl || previewLoading) && (
