@@ -77,7 +77,8 @@ export function NotificationOptIn() {
       setState("subscribed");
       if (!silent) toast.success("Notifications turned on for this device");
     } catch (err) {
-      if (!silent) toast.error(err instanceof Error ? err.message : "Couldn't turn on notifications");
+      if (!silent)
+        toast.error(err instanceof Error ? err.message : "Couldn't turn on notifications");
       setState("idle");
     }
   }

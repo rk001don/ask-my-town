@@ -14,6 +14,9 @@ import {
   updateCategory,
   listAppConfig,
   updateAppConfig,
+  listUserRoles,
+  grantUserRole,
+  revokeUserRole,
 } from "@/lib/admin.functions";
 import { AppHeader } from "@/components/AppHeader";
 import { ErrorState } from "@/components/States";
@@ -37,7 +40,11 @@ import {
   ArrowUpDown,
   X,
   AlertTriangle,
+  UserPlus,
+  ShieldCheck,
 } from "lucide-react";
+
+type AdminTab = "dashboard" | "catalog" | "team" | "notifications" | "config";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -152,9 +159,7 @@ function AdminBoard({ email }: { email: string }) {
   const [savingConfigKey, setSavingConfigKey] = useState<string | null>(null);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [sendingCampaignId, setSendingCampaignId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "catalog" | "notifications" | "config">(
-    "dashboard",
-  );
+  const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
 
   const dashboardStats = useMemo(() => {
     const productCount = productsQ.data?.length ?? 0;
@@ -377,15 +382,14 @@ function AdminBoard({ email }: { email: string }) {
         {[
           { id: "dashboard", label: "Dashboard" },
           { id: "catalog", label: "Catalog" },
+          { id: "team", label: "Team" },
           { id: "notifications", label: "Notifications" },
           { id: "config", label: "Config" },
         ].map((tab) => (
           <button
             key={tab.id}
             type="button"
-            onClick={() =>
-              setActiveTab(tab.id as "dashboard" | "catalog" | "notifications" | "config")
-            }
+            onClick={() => setActiveTab(tab.id as AdminTab)}
             className={`tap-scale min-h-11 rounded-full px-3 py-2 text-xs font-semibold transition-colors ${
               activeTab === tab.id
                 ? "accent-gradient text-white"
@@ -510,10 +514,7 @@ function AdminBoard({ email }: { email: string }) {
             {productsQ.isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : productsQ.isError ? (
-              <SectionError
-                message="Couldn't load products."
-                onRetry={() => productsQ.refetch()}
-              />
+              <SectionError message="Couldn't load products." onRetry={() => productsQ.refetch()} />
             ) : filteredProducts.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-[color:var(--border-strong)] p-6 text-center text-sm text-[color:var(--text-tertiary)]">
                 No products match that search/filter.
@@ -617,6 +618,8 @@ function AdminBoard({ email }: { email: string }) {
           </section>
         </>
       )}
+
+      {activeTab === "team" && <TeamManager currentEmail={email} />}
 
       {activeTab === "config" && (
         <section className="mb-8">
@@ -1505,5 +1508,176 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
         <span className="mt-1 block text-[11px] text-[color:var(--text-tertiary)]">{hint}</span>
       )}
     </label>
+  );
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Admin",
+  ops: "Staff (ops)",
+  warden_viewer: "Viewer",
+};
+const ROLE_HINTS: Record<string, string> = {
+  admin: "Full console + staff board",
+  ops: "Staff order board only",
+  warden_viewer: "Read-only counts",
+};
+
+function TeamManager({ currentEmail }: { currentEmail: string | null }) {
+  const qc = useQueryClient();
+  const listFn = useServerFn(listUserRoles);
+  const grantFn = useServerFn(grantUserRole);
+  const revokeFn = useServerFn(revokeUserRole);
+
+  const usersQ = useQuery({ queryKey: ["admin-user-roles"], queryFn: () => listFn() });
+
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<"admin" | "ops" | "warden_viewer">("ops");
+  const [granting, setGranting] = useState(false);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+
+  async function grant(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setGranting(true);
+    try {
+      await grantFn({ data: { email: email.trim(), role } });
+      toast.success(`Granted ${ROLE_LABELS[role]} to ${email.trim()}`);
+      setEmail("");
+      qc.invalidateQueries({ queryKey: ["admin-user-roles"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't grant role");
+    } finally {
+      setGranting(false);
+    }
+  }
+
+  async function revoke(userId: string, r: string, who: string) {
+    const key = `${userId}:${r}`;
+    setBusyKey(key);
+    try {
+      await revokeFn({ data: { userId, role: r as "admin" | "ops" | "warden_viewer" } });
+      toast.success(`Removed ${ROLE_LABELS[r] ?? r} from ${who}`);
+      qc.invalidateQueries({ queryKey: ["admin-user-roles"] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't remove role");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  const staffUsers = (usersQ.data ?? []).filter((u) => u.roles.length > 0);
+
+  return (
+    <section className="mb-8 space-y-5">
+      <div>
+        <h2 className="text-lg font-semibold">Team &amp; access</h2>
+        <p className="mt-1 text-xs text-[color:var(--text-secondary)]">
+          Grant staff or admin access by email. The person must sign in once (email or Google)
+          before they appear here — phone + PIN accounts can&apos;t hold staff roles.
+        </p>
+      </div>
+
+      {/* Grant form */}
+      <form onSubmit={grant} className="glass space-y-3 rounded-2xl p-4">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <UserPlus className="h-4 w-4 text-[color:var(--accent-primary)]" />
+          Grant a role
+        </div>
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="person@example.com"
+            className="min-h-11 rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] px-3 text-sm outline-none focus:border-[color:var(--accent-primary)]"
+          />
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value as "admin" | "ops" | "warden_viewer")}
+            className="min-h-11 rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] px-3 text-sm outline-none focus:border-[color:var(--accent-primary)]"
+          >
+            <option value="ops">Staff (ops)</option>
+            <option value="admin">Admin</option>
+            <option value="warden_viewer">Viewer</option>
+          </select>
+          <button
+            type="submit"
+            disabled={granting || !email.trim()}
+            className="tap-scale min-h-11 rounded-xl accent-gradient px-4 text-sm font-semibold text-[color:var(--on-accent)] disabled:opacity-50"
+          >
+            {granting ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : "Grant"}
+          </button>
+        </div>
+        <p className="text-[11px] text-[color:var(--text-tertiary)]">{ROLE_HINTS[role]}</p>
+      </form>
+
+      {/* Current team */}
+      <div>
+        <div className="mb-2 text-sm font-semibold">Current team</div>
+        {usersQ.isLoading ? (
+          <Loader2 className="h-5 w-5 animate-spin text-[color:var(--accent-primary)]" />
+        ) : usersQ.isError ? (
+          <SectionError message="Couldn't load the team." onRetry={() => usersQ.refetch()} />
+        ) : staffUsers.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-[color:var(--border-subtle)] p-4 text-center text-xs text-[color:var(--text-muted)]">
+            No staff or admins yet — grant the first role above.
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {staffUsers.map((u) => {
+              const who = u.email ?? u.phone ?? u.userId.slice(0, 8);
+              const isSelf = !!u.email && u.email === currentEmail;
+              return (
+                <li
+                  key={u.userId}
+                  className="card-surface flex flex-wrap items-center justify-between gap-3 p-3"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 text-sm font-semibold">
+                      <ShieldCheck className="h-3.5 w-3.5 text-[color:var(--accent-primary)]" />
+                      <span className="truncate">{who}</span>
+                      {isSelf && (
+                        <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--text-tertiary)]">
+                          you
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {u.roles.map((r) => {
+                      const key = `${u.userId}:${r}`;
+                      const cannotRevoke = isSelf && r === "admin";
+                      return (
+                        <span
+                          key={r}
+                          className="inline-flex items-center gap-1 rounded-full bg-[color:var(--accent-primary)]/12 px-2.5 py-1 text-[11px] font-semibold text-[color:var(--accent-primary)]"
+                        >
+                          {ROLE_LABELS[r] ?? r}
+                          {!cannotRevoke && (
+                            <button
+                              type="button"
+                              onClick={() => revoke(u.userId, r, who)}
+                              disabled={busyKey === key}
+                              aria-label={`Remove ${ROLE_LABELS[r] ?? r}`}
+                              className="tap-scale grid h-4 w-4 place-items-center rounded-full hover:bg-black/10 disabled:opacity-50"
+                            >
+                              {busyKey === key ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <X className="h-3 w-3" />
+                              )}
+                            </button>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </section>
   );
 }

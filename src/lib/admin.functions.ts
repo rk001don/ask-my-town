@@ -297,3 +297,127 @@ export const uploadCatalogImage = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { url: `/api/public/catalog-image/${encodeURIComponent(path)}` };
   });
+
+// ---------------------------------------------------------------------------
+// Team / access management. Admin-only. Replaces the manual Supabase SQL step
+// for granting and revoking staff/admin roles from inside the app.
+// ---------------------------------------------------------------------------
+
+const PIN_EMAIL_SUFFIX = "@customers.mytown.internal";
+const GRANTABLE_ROLES = ["admin", "ops", "warden_viewer"] as const;
+
+/** Lists every signed-up account with its granted roles, for the admin console. */
+export const listUserRoles = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Town-scale: one page of up to 200 accounts is plenty for now. If the
+    // user base ever outgrows this, page through with { page, perPage }.
+    const { data: usersData, error: usersErr } = await supabaseAdmin.auth.admin.listUsers({
+      page: 1,
+      perPage: 200,
+    });
+    if (usersErr) throw new Error(usersErr.message);
+
+    const { data: roleRows, error: rolesErr } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id, role");
+    if (rolesErr) throw new Error(rolesErr.message);
+
+    const rolesByUser = new Map<string, string[]>();
+    for (const r of roleRows ?? []) {
+      const list = rolesByUser.get(r.user_id) ?? [];
+      list.push(r.role);
+      rolesByUser.set(r.user_id, list);
+    }
+
+    return (usersData.users ?? []).map((u) => {
+      const isPin = (u.email ?? "").endsWith(PIN_EMAIL_SUFFIX);
+      const phone = isPin ? (u.email ?? "").replace(PIN_EMAIL_SUFFIX, "") : (u.phone ?? null);
+      return {
+        userId: u.id,
+        email: isPin ? null : (u.email ?? null),
+        phone,
+        isPinAccount: isPin,
+        roles: (rolesByUser.get(u.id) ?? []).filter((r) => r !== "customer"),
+        createdAt: u.created_at,
+      };
+    });
+  });
+
+const GrantRoleSchema = z.object({
+  email: z.string().trim().email().max(200),
+  role: z.enum(GRANTABLE_ROLES),
+});
+
+/** Grants a role to the account with the given email. */
+export const grantUserRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: z.infer<typeof GrantRoleSchema>) => GrantRoleSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const email = data.email.toLowerCase();
+    if (email.endsWith(PIN_EMAIL_SUFFIX)) {
+      throw new Error("Phone + PIN accounts can't be staff. Use a real email or Google account.");
+    }
+
+    // Look the account up by email. GoTrue has no direct get-by-email admin
+    // call, so scan the first pages of users for the match.
+    let matchId: string | null = null;
+    for (let page = 1; page <= 5 && !matchId; page++) {
+      const { data: usersData, error } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage: 200,
+      });
+      if (error) throw new Error(error.message);
+      const found = (usersData.users ?? []).find((u) => (u.email ?? "").toLowerCase() === email);
+      if (found) matchId = found.id;
+      if ((usersData.users ?? []).length < 200) break;
+    }
+    if (!matchId) {
+      throw new Error(
+        "No account with that email. They must sign in once before you can grant a role.",
+      );
+    }
+
+    const { error: insErr } = await supabaseAdmin
+      .from("user_roles")
+      .upsert({ user_id: matchId, role: data.role }, { onConflict: "user_id,role" });
+    if (insErr) {
+      // The DB trigger blocks admin/ops on PIN accounts; surface it cleanly.
+      throw new Error(
+        insErr.message.includes("cannot be granted")
+          ? "That account can't hold staff roles (phone + PIN account)."
+          : insErr.message,
+      );
+    }
+    return { ok: true as const, userId: matchId };
+  });
+
+const RevokeRoleSchema = z.object({
+  userId: z.string().uuid(),
+  role: z.enum(GRANTABLE_ROLES),
+});
+
+/** Revokes a role from an account. Guards against an admin locking themselves out. */
+export const revokeUserRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: z.infer<typeof RevokeRoleSchema>) => RevokeRoleSchema.parse(data))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    if (data.role === "admin" && data.userId === context.userId) {
+      throw new Error("You can't remove your own admin role — ask another admin to do it.");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("user_roles")
+      .delete()
+      .eq("user_id", data.userId)
+      .eq("role", data.role);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });

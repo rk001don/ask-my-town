@@ -47,12 +47,17 @@ export function CancelOrderDialog({
           </div>
           <DialogTitle>Cancel order?</DialogTitle>
           <DialogDescription>
-            {orderId ? `${orderId} will be cancelled and cannot be resumed.` : "This order will be cancelled."}
+            {orderId
+              ? `${orderId} will be cancelled and cannot be resumed.`
+              : "This order will be cancelled."}
           </DialogDescription>
         </DialogHeader>
         <div>
           <label htmlFor="cancel-reason" className="text-sm font-semibold">
-            Reason {reasonOptional ? <span className="font-normal text-muted-foreground">(optional)</span> : null}
+            Reason{" "}
+            {reasonOptional ? (
+              <span className="font-normal text-muted-foreground">(optional)</span>
+            ) : null}
           </label>
           <textarea
             id="cancel-reason"
@@ -66,7 +71,12 @@ export function CancelOrderDialog({
           />
         </div>
         <DialogFooter className="grid grid-cols-2 gap-2 sm:grid-cols-2 sm:space-x-0">
-          <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() => onOpenChange(false)}
+          >
             Keep order
           </Button>
           <Button

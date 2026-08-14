@@ -124,7 +124,9 @@ function MyActivity() {
           <div className="min-w-0">
             <div className="text-sm font-semibold">Your account</div>
             {identity && (
-              <p className="mt-0.5 truncate text-xs text-[color:var(--text-secondary)]">{identity}</p>
+              <p className="mt-0.5 truncate text-xs text-[color:var(--text-secondary)]">
+                {identity}
+              </p>
             )}
           </div>
           <button
