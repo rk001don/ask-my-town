@@ -17,7 +17,10 @@ export function EmptyState({
     <div className="rise mx-auto flex max-w-sm flex-col items-center justify-center gap-3 px-6 py-16 text-center">
       <div
         className="grid h-16 w-16 place-items-center rounded-full"
-        style={{ background: "linear-gradient(140deg, oklch(0.82 0.16 70 / 0.25), oklch(0.72 0.19 30 / 0.25))" }}
+        style={{
+          background:
+            "linear-gradient(140deg, oklch(0.82 0.16 70 / 0.25), oklch(0.72 0.19 30 / 0.25))",
+        }}
       >
         <Sparkles className="h-7 w-7 text-[color:var(--accent-primary)]" />
       </div>

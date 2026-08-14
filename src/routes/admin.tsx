@@ -514,10 +514,7 @@ function AdminBoard({ email }: { email: string }) {
             {productsQ.isLoading ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : productsQ.isError ? (
-              <SectionError
-                message="Couldn't load products."
-                onRetry={() => productsQ.refetch()}
-              />
+              <SectionError message="Couldn't load products." onRetry={() => productsQ.refetch()} />
             ) : filteredProducts.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-[color:var(--border-strong)] p-6 text-center text-sm text-[color:var(--text-tertiary)]">
                 No products match that search/filter.
@@ -1575,8 +1572,8 @@ function TeamManager({ currentEmail }: { currentEmail: string | null }) {
       <div>
         <h2 className="text-lg font-semibold">Team &amp; access</h2>
         <p className="mt-1 text-xs text-[color:var(--text-secondary)]">
-          Grant staff or admin access by email. The person must sign in once (email or Google) before
-          they appear here — phone + PIN accounts can&apos;t hold staff roles.
+          Grant staff or admin access by email. The person must sign in once (email or Google)
+          before they appear here — phone + PIN accounts can&apos;t hold staff roles.
         </p>
       </div>
 

@@ -111,7 +111,12 @@ export const getMyOrders = createServerFn({ method: "GET" })
 export const cancelMyOrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { orderId: string; reason?: string }) =>
-    z.object({ orderId: z.string().trim().min(3).max(20), reason: z.string().trim().max(500).optional() }).parse(data),
+    z
+      .object({
+        orderId: z.string().trim().min(3).max(20),
+        reason: z.string().trim().max(500).optional(),
+      })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");

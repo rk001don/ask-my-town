@@ -379,7 +379,9 @@ export const grantUserRole = createServerFn({ method: "POST" })
       if ((usersData.users ?? []).length < 200) break;
     }
     if (!matchId) {
-      throw new Error("No account with that email. They must sign in once before you can grant a role.");
+      throw new Error(
+        "No account with that email. They must sign in once before you can grant a role.",
+      );
     }
 
     const { error: insErr } = await supabaseAdmin

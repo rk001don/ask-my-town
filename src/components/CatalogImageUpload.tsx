@@ -59,7 +59,6 @@ export function CatalogImageUpload({
     }
   }
 
-
   return (
     <div className="group relative">
       <button

@@ -103,7 +103,8 @@ export function NotifyMeButton({ orderId }: { orderId: string }) {
       setState("subscribed");
       if (!silent) toast.success("You'll get a notification when your order updates");
     } catch (err) {
-      if (!silent) toast.error(err instanceof Error ? err.message : "Couldn't turn on notifications");
+      if (!silent)
+        toast.error(err instanceof Error ? err.message : "Couldn't turn on notifications");
       setState("idle");
     }
   }
