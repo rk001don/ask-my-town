@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Minus, Plus, StickyNote } from "lucide-react";
 import { iconFor } from "./icon-map";
+import { placeholderGradientFor } from "@/lib/catalog-display";
 import {
   addCatalogItem,
   decrementItem,
@@ -48,8 +49,7 @@ export function ItemCard({
           safeImageUrl
             ? undefined
             : {
-                background:
-                  "linear-gradient(150deg, oklch(0.28 0.06 60) 0%, oklch(0.22 0.05 30) 60%, oklch(0.18 0.03 260) 100%)",
+                background: placeholderGradientFor(itemName),
               }
         }
       >

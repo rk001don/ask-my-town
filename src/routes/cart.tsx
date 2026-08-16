@@ -6,6 +6,7 @@ import { ArrowRight, Minus, Plus, ShoppingBag, Sparkles, StickyNote, Trash2 } fr
 import { iconFor } from "@/components/icon-map";
 import { ServiceFeeBreakdown } from "@/components/ServiceFeeBreakdown";
 import { useState } from "react";
+import { placeholderGradientFor } from "@/lib/catalog-display";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({
@@ -118,9 +119,13 @@ function CartRow({ it }: { it: ReturnType<typeof useCart>["items"][number] }) {
         <div
           className="grid h-16 w-16 shrink-0 place-items-center rounded-xl"
           style={{
+            // Same per-item placeholder colour the catalogue uses, so a dish
+            // looks like itself from grid to cart instead of changing colour
+            // on the way. Freeform asks aren't catalogue items, so they keep
+            // the distinct accent wash that marks them as "you told us this".
             background: it.isFreeform
               ? "linear-gradient(140deg, oklch(0.82 0.16 70 / 0.35), oklch(0.72 0.19 30 / 0.35))"
-              : "linear-gradient(140deg, oklch(0.82 0.16 70 / 0.18), oklch(0.72 0.19 30 / 0.16))",
+              : placeholderGradientFor(it.itemName),
           }}
         >
           {it.isFreeform ? (

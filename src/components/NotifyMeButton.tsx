@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { getVapidPublicKey, subscribeToOrderPush } from "@/lib/api.functions";
 import { registerDevice } from "@/lib/notifications.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { toUserMessage } from "@/lib/errors";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -111,8 +112,7 @@ export function NotifyMeButton({ orderId }: { orderId: string }) {
       setState("subscribed");
       if (!silent) toast.success("You'll get a notification when your order updates");
     } catch (err) {
-      if (!silent)
-        toast.error(err instanceof Error ? err.message : "Couldn't turn on notifications");
+      if (!silent) toast.error(toUserMessage(err, "Couldn't turn on notifications"));
       setState("idle");
     }
   }

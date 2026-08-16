@@ -95,6 +95,39 @@
   * {
     border-color: var(--color-border);
   }
+  /* Every interactive control, not just the ones carrying `tap-scale`:
+     opt out of the legacy double-tap-to-zoom delay and the browser's default
+     grey tap flash, so taps register on the first press everywhere. */
+  button,
+  a,
+  [role="button"],
+  input,
+  select,
+  textarea,
+  label {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* A control that can be pressed should look like it. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  /* Honour the OS "reduce motion" setting: keep the app usable and still give
+     feedback, but drop the movement. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
   html,
   body {
     background: var(--bg-base);
@@ -177,13 +210,34 @@
   border-radius: var(--radius-pill);
 }
 
+/* Press feedback.
+ *
+ * This used to declare only the transition, while the actual press transform
+ * lived in a separate `tap-scale-active` utility that nothing ever applied --
+ * so ~100 buttons across the app animated nothing on tap. With no visual
+ * acknowledgement, a tap that *had* registered felt ignored, which is what
+ * made the app read as slow and had people tapping a second time.
+ *
+ * `:active` fires the instant a finger lands (before any network work), so
+ * feedback is immediate regardless of how slow the follow-up action is. */
 @utility tap-scale {
   transition:
     transform 120ms cubic-bezier(0.2, 0.7, 0.2, 1),
-    background-color 160ms;
-}
-@utility tap-scale-active {
-  transform: scale(0.96);
+    background-color 160ms,
+    opacity 120ms;
+  /* Kills the ~300ms "is this a double-tap-to-zoom?" wait some mobile
+     browsers still apply, and suppresses the grey flash overlay so our own
+     press state is the only feedback shown. */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+
+  &:active {
+    transform: scale(0.96);
+  }
+  /* A disabled control must not pretend to respond to a press. */
+  &:disabled:active {
+    transform: none;
+  }
 }
 
 /* Skeleton shimmer */

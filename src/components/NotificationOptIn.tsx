@@ -4,6 +4,7 @@ import { Bell, BellRing, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { getVapidPublicKey } from "@/lib/api.functions";
 import { registerDevice } from "@/lib/notifications.functions";
+import { toUserMessage } from "@/lib/errors";
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -86,8 +87,7 @@ export function NotificationOptIn() {
       setState("subscribed");
       if (!silent) toast.success("Notifications turned on for this device");
     } catch (err) {
-      if (!silent)
-        toast.error(err instanceof Error ? err.message : "Couldn't turn on notifications");
+      if (!silent) toast.error(toUserMessage(err, "Couldn't turn on notifications"));
       setState("idle");
     }
   }

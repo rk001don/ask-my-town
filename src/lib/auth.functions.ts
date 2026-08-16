@@ -2,6 +2,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { failFrom, userError } from "@/lib/errors";
 import { isValidIndianPhone, normalizeIndianPhone } from "@/lib/phone";
 
 // A phone number's PIN "account" is really just a normal Supabase Auth user
@@ -24,7 +25,7 @@ const PinSignupSchema = z.object({
 export const signUpWithPin = createServerFn({ method: "POST" })
   .inputValidator((data: z.infer<typeof PinSignupSchema>) => PinSignupSchema.parse(data))
   .handler(async ({ data }) => {
-    if (!isValidIndianPhone(data.phone)) throw new Error("Enter a valid 10-digit mobile number");
+    if (!isValidIndianPhone(data.phone)) throw userError("Enter a valid 10-digit mobile number");
     const phone = normalizeIndianPhone(data.phone);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -35,8 +36,8 @@ export const signUpWithPin = createServerFn({ method: "POST" })
       p_max_hits: 5,
       p_window_seconds: 3600,
     });
-    if (rlErr) throw new Error(rlErr.message);
-    if (!allowed) throw new Error("Too many attempts. Please try again in a while.");
+    if (rlErr) failFrom("auth:38", rlErr, "We couldn't complete sign-up. Please try again.");
+    if (!allowed) throw userError("Too many attempts. Please try again in a while.");
 
     const email = syntheticEmailForPhone(phone);
     const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
@@ -47,11 +48,11 @@ export const signUpWithPin = createServerFn({ method: "POST" })
     });
     if (error) {
       if (error.message.toLowerCase().includes("already")) {
-        throw new Error(
+        throw userError(
           "This phone number already has an account. Try signing in with your PIN instead.",
         );
       }
-      throw new Error(error.message);
+      failFrom("auth:54", error, "We couldn't create your account. Please try again.");
     }
 
     // Link (or create) the customers row for this phone to the new account,
@@ -93,7 +94,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
       .select("id, name, phone, address, landmark")
       .eq("user_id", context.userId)
       .maybeSingle();
-    if (error) throw new Error(error.message);
+    if (error) failFrom("auth:96", error, "We couldn't load your profile. Please try again.");
     return data;
   });
 
@@ -108,7 +109,7 @@ export const getMyOrders = createServerFn({ method: "GET" })
       )
       .order("created_at", { ascending: false })
       .limit(50);
-    if (error) throw new Error(error.message);
+    if (error) failFrom("auth:111", error, "We couldn't load your orders. Pull down to refresh.");
     return data ?? [];
   });
 
@@ -129,20 +130,21 @@ export const cancelMyOrder = createServerFn({ method: "POST" })
       .select("id, customer_id, status, service_fee_estimate")
       .eq("id", data.orderId)
       .maybeSingle();
-    if (orderErr) throw new Error(orderErr.message);
-    if (!order) throw new Error("Order not found");
+    if (orderErr) failFrom("auth:132", orderErr, "We couldn't load that order. Please try again.");
+    if (!order) throw userError("Order not found");
 
     const { data: customer, error: customerErr } = await supabaseAdmin
       .from("customers")
       .select("id, user_id")
       .eq("id", order.customer_id)
       .maybeSingle();
-    if (customerErr) throw new Error(customerErr.message);
+    if (customerErr)
+      failFrom("auth:140", customerErr, "We couldn't verify your account. Please try again.");
     if (!customer || customer.user_id !== context.userId) {
-      throw new Error("You can only cancel your own order.");
+      throw userError("You can only cancel your own order.");
     }
     if (order.status !== "received") {
-      throw new Error("Only newly received orders can be cancelled by the customer.");
+      throw userError("Only newly received orders can be cancelled by the customer.");
     }
 
     const now = new Date().toISOString();
@@ -158,7 +160,7 @@ export const cancelMyOrder = createServerFn({ method: "POST" })
         updated_at: now,
       })
       .eq("id", data.orderId);
-    if (error) throw new Error(error.message);
+    if (error) failFrom("auth:161", error, "We couldn't cancel the order. Please try again.");
 
     await supabaseAdmin.from("audit_log").insert({
       staff_id: context.userId,
@@ -190,12 +192,12 @@ export const linkCustomerToMe = createServerFn({ method: "POST" })
       .select("id, customer_id, created_at")
       .eq("id", data.orderId)
       .maybeSingle();
-    if (orderErr) throw new Error(orderErr.message);
-    if (!order) throw new Error("Order not found");
+    if (orderErr) failFrom("auth:193", orderErr, "We couldn't load that order. Please try again.");
+    if (!order) throw userError("Order not found");
 
     const createdAtMs = new Date(order.created_at).getTime();
     if (Date.now() - createdAtMs > 30 * 60 * 1000) {
-      throw new Error("This order is too old to link automatically.");
+      throw userError("This order is too old to link automatically.");
     }
 
     const { data: customer, error: custErr } = await supabaseAdmin
@@ -203,12 +205,13 @@ export const linkCustomerToMe = createServerFn({ method: "POST" })
       .select("id, user_id")
       .eq("id", order.customer_id)
       .maybeSingle();
-    if (custErr) throw new Error(custErr.message);
-    if (!customer) throw new Error("Customer record not found");
+    if (custErr)
+      failFrom("auth:206", custErr, "We couldn't verify your account. Please try again.");
+    if (!customer) throw userError("Customer record not found");
 
     // Already linked to someone else — never overwrite.
     if (customer.user_id && customer.user_id !== context.userId) {
-      throw new Error("This order belongs to a different account.");
+      throw userError("This order belongs to a different account.");
     }
     if (customer.user_id === context.userId) {
       return { ok: true as const }; // already linked to this same user, nothing to do
@@ -219,7 +222,7 @@ export const linkCustomerToMe = createServerFn({ method: "POST" })
       .update({ user_id: context.userId })
       .eq("id", customer.id)
       .is("user_id", null);
-    if (error) throw new Error(error.message);
+    if (error) failFrom("auth:222", error, "We couldn't link this order to your account.");
     return { ok: true as const };
   });
 
@@ -231,7 +234,7 @@ export const getMyRoles = createServerFn({ method: "GET" })
       .from("user_roles")
       .select("role")
       .eq("user_id", context.userId);
-    if (error) throw new Error(error.message);
+    if (error) failFrom("auth:234", error, "We couldn't save your details. Please try again.");
     const roles = (data ?? []).map((r) => r.role);
     return {
       roles,

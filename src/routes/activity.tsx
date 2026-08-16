@@ -19,6 +19,7 @@ import { Search, Check, Clock, Sparkles, LogOut } from "lucide-react";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 import { NotificationOptIn } from "@/components/NotificationOptIn";
 import { toast } from "sonner";
+import { toUserMessage } from "@/lib/errors";
 
 export const Route = createFileRoute("/activity")({
   head: () => ({
@@ -110,7 +111,7 @@ function MyActivity() {
       setCancelOrderId(null);
       qc.invalidateQueries({ queryKey: ["my-orders"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Cancellation failed");
+      toast.error(toUserMessage(err, "Cancellation failed"));
     } finally {
       setCancelling(false);
     }

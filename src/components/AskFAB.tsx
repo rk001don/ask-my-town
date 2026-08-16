@@ -4,6 +4,7 @@ import { addFreeformAsk } from "@/lib/cart-store";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { toUserMessage } from "@/lib/errors";
 
 let openSheet: ((prefill?: string) => void) | null = null;
 
@@ -80,7 +81,7 @@ export function AskFAB({ hideMobileTrigger = false }: { hideMobileTrigger?: bool
       setAttachmentPath(path);
       setAttachmentPreview(URL.createObjectURL(file));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't attach that photo");
+      toast.error(toUserMessage(err, "Couldn't attach that photo"));
     } finally {
       setUploading(false);
     }

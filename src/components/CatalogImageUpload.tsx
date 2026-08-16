@@ -3,6 +3,7 @@ import { Loader2, ImageOff, Pencil } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { uploadCatalogImage } from "@/lib/admin.functions";
+import { toUserMessage } from "@/lib/errors";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
 
@@ -52,7 +53,7 @@ export function CatalogImageUpload({
       onUploaded(url);
       toast.success("Image updated");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed");
+      toast.error(toUserMessage(err, "Upload failed"));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
