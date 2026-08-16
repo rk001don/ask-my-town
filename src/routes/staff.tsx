@@ -39,6 +39,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
+import { toUserMessage } from "@/lib/errors";
 
 export const Route = createFileRoute("/staff")({
   head: () => ({
@@ -507,7 +508,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
       toast.success(`Marked ${STATUS_COPY[next]?.label ?? next}`);
       qc.invalidateQueries({ queryKey: ["staff-orders"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Update failed");
+      toast.error(toUserMessage(err, "Update failed"));
     } finally {
       setAdvancingOrderId(null);
     }
@@ -531,7 +532,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
       }
       qc.invalidateQueries({ queryKey: ["staff-orders"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't assign");
+      toast.error(toUserMessage(err, "Couldn't assign"));
     } finally {
       setAssigningId(null);
     }
@@ -545,7 +546,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
       toast.success("Released");
       qc.invalidateQueries({ queryKey: ["staff-orders"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't release");
+      toast.error(toUserMessage(err, "Couldn't release"));
     } finally {
       setAssigningId(null);
     }
@@ -560,7 +561,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
       setCancelOrderId(null);
       qc.invalidateQueries({ queryKey: ["staff-orders"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Cancellation failed");
+      toast.error(toUserMessage(err, "Cancellation failed"));
     } finally {
       setCancelling(false);
     }

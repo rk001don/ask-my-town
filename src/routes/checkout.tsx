@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { toUserMessage } from "@/lib/errors";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({ meta: [{ title: "Your details — MyTown" }] }),
@@ -203,7 +204,7 @@ function Checkout() {
       // still mounted here.
       clearCart();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Couldn't send your ask. Please try again.";
+      const msg = toUserMessage(err, "Couldn't send your ask. Please try again.");
       toast.error(msg);
       console.error(err);
     } finally {

@@ -2,6 +2,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { failFrom, userError } from "@/lib/errors";
 import {
   STATUS_COPY,
   STATUS_PUSH_TITLE,
@@ -47,12 +48,12 @@ async function assertStaff(
     .from("user_roles")
     .select("role")
     .eq("user_id", userId);
-  if (error) throw new Error("Failed to verify staff role");
+  if (error) throw userError("Failed to verify staff role");
   const roles = (data ?? []).map((r) => r.role);
   const staff = roles.some((r) => r === "admin" || r === "ops" || r === "warden_viewer");
-  if (!staff) throw new Error("Forbidden: staff role required");
+  if (!staff) throw userError("Forbidden: staff role required");
   if (requireOps && !roles.some((r) => r === "admin" || r === "ops")) {
-    throw new Error("Forbidden: admin or ops required");
+    throw userError("Forbidden: admin or ops required");
   }
   return roles;
 }
@@ -70,7 +71,7 @@ export const listStaffOrders = createServerFn({ method: "GET" })
       // invoke it via the admin client after verifying the staff role above.
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data, error } = await supabaseAdmin.rpc("mytown_warden_daily_counts", {});
-      if (error) throw new Error(error.message);
+      if (error) failFrom("staff:73", error, "Couldn't load the daily summary. Please retry.");
       return { aggregateOnly: true as const, dailyCounts: data ?? [] };
     }
 
@@ -83,7 +84,7 @@ export const listStaffOrders = createServerFn({ method: "GET" })
       // same first-come-first-served principle every delivery queue runs on.
       .order("created_at", { ascending: true })
       .limit(200);
-    if (error) throw new Error(error.message);
+    if (error) failFrom("staff:86", error, "Couldn't load orders. Please retry.");
     const orders = data ?? [];
 
     // Look up real display names for whoever has claimed an order, so "Claimed
@@ -128,7 +129,7 @@ export const getAttachmentSignedUrl = createServerFn({ method: "POST" })
     const { data: signed, error } = await supabaseAdmin.storage
       .from("ask-attachments")
       .createSignedUrl(data.filePath, 300); // 5 minutes -- just long enough to view, not a durable link
-    if (error) throw new Error(error.message);
+    if (error) failFrom("staff:131", error, "Couldn't open that attachment. Please retry.");
     return { url: signed.signedUrl };
   });
 
@@ -146,11 +147,12 @@ export const updateStaffOrderStatus = createServerFn({ method: "POST" })
         .select("status")
         .eq("id", data.orderId)
         .maybeSingle();
-      if (fetchErr) throw new Error(fetchErr.message);
-      if (!current) throw new Error("Order not found");
+      if (fetchErr)
+        failFrom("staff:149", fetchErr, "Couldn't read the order's current status. Please retry.");
+      if (!current) throw userError("Order not found");
       const expected = ORDER_NEXT_STATUS[current.status];
       if (expected !== data.status) {
-        throw new Error(
+        throw userError(
           `Cannot move from "${current.status}" to "${data.status}". Next valid status is "${expected ?? "none"}".`,
         );
       }
@@ -176,7 +178,7 @@ export const updateStaffOrderStatus = createServerFn({ method: "POST" })
       patch.cancellation_reason = "Cancelled by staff.";
     }
     const { error } = await context.supabase.from("orders").update(patch).eq("id", data.orderId);
-    if (error) throw new Error(error.message);
+    if (error) failFrom("staff:179", error, "Couldn't update the order status. Please retry.");
     // Fire-and-forget audit
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     await supabaseAdmin.from("audit_log").insert({
@@ -227,8 +229,8 @@ export const cancelStaffOrder = createServerFn({ method: "POST" })
       .select("id, status")
       .eq("id", data.orderId)
       .maybeSingle();
-    if (orderErr) throw new Error(orderErr.message);
-    if (!order) throw new Error("Order not found");
+    if (orderErr) failFrom("staff:230", orderErr, "Couldn't load that order. Please retry.");
+    if (!order) throw userError("Order not found");
 
     const now = new Date().toISOString();
     const { error } = await supabaseAdmin
@@ -242,7 +244,7 @@ export const cancelStaffOrder = createServerFn({ method: "POST" })
         updated_at: now,
       })
       .eq("id", data.orderId);
-    if (error) throw new Error(error.message);
+    if (error) failFrom("staff:245", error, "Couldn't cancel the order. Please retry.");
 
     await supabaseAdmin.from("audit_log").insert({
       staff_id: context.userId,
@@ -284,7 +286,7 @@ export const assignOrdersToMe = createServerFn({ method: "POST" })
       .in("id", data.orderIds)
       .is("assigned_staff_id", null)
       .select("id");
-    if (error) throw new Error(error.message);
+    if (error) failFrom("staff:287", error, "Couldn't assign the order. Please retry.");
     return { claimed: (claimed ?? []).map((o) => o.id) };
   });
 
@@ -307,7 +309,7 @@ export const unassignOrder = createServerFn({ method: "POST" })
     if (!isAdmin) query = query.eq("assigned_staff_id", context.userId);
 
     const { data: released, error } = await query.select("id").maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!released) throw new Error("This order isn't assigned to you.");
+    if (error) failFrom("staff:310", error, "Couldn't release the order. Please retry.");
+    if (!released) throw userError("This order isn't assigned to you.");
     return { ok: true as const };
   });

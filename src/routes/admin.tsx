@@ -30,6 +30,7 @@ import {
   getNotificationReach,
 } from "@/lib/notifications-admin.functions";
 import { NotificationOptIn } from "@/components/NotificationOptIn";
+import { toUserMessage } from "@/lib/errors";
 import {
   Loader2,
   ShieldAlert,
@@ -207,7 +208,7 @@ function AdminBoard({ email }: { email: string }) {
       toast.success("Saved");
       qc.invalidateQueries({ queryKey: ["admin-products"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Save failed");
+      toast.error(toUserMessage(err, "Save failed"));
     }
   }
 
@@ -225,7 +226,7 @@ function AdminBoard({ email }: { email: string }) {
       setShowNewProduct(false);
       qc.invalidateQueries({ queryKey: ["admin-products"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't add product");
+      toast.error(toUserMessage(err, "Couldn't add product"));
     }
   }
 
@@ -243,7 +244,7 @@ function AdminBoard({ email }: { email: string }) {
       toast.success("Removed");
       qc.invalidateQueries({ queryKey: ["admin-products"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't remove product");
+      toast.error(toUserMessage(err, "Couldn't remove product"));
     } finally {
       setDeletingProductId(null);
     }
@@ -256,7 +257,7 @@ function AdminBoard({ email }: { email: string }) {
       setShowNewCategory(false);
       qc.invalidateQueries({ queryKey: ["admin-categories"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't add category");
+      toast.error(toUserMessage(err, "Couldn't add category"));
     }
   }
 
@@ -266,7 +267,7 @@ function AdminBoard({ email }: { email: string }) {
       toast.success("Saved");
       qc.invalidateQueries({ queryKey: ["admin-categories"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Save failed");
+      toast.error(toUserMessage(err, "Save failed"));
     }
   }
 
@@ -279,7 +280,7 @@ function AdminBoard({ email }: { email: string }) {
       toast.success("Config saved");
       qc.invalidateQueries({ queryKey: ["admin-config"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Invalid JSON or save failed");
+      toast.error(toUserMessage(err, "Invalid JSON or save failed"));
     } finally {
       setSavingConfigKey(null);
     }
@@ -300,7 +301,7 @@ function AdminBoard({ email }: { email: string }) {
       toast.success("Campaign saved");
       qc.invalidateQueries({ queryKey: ["admin-campaigns"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't save campaign");
+      toast.error(toUserMessage(err, "Couldn't save campaign"));
     }
   }
 
@@ -311,7 +312,7 @@ function AdminBoard({ email }: { email: string }) {
         result.sent ? `Test push sent to ${result.sent} device(s)` : "No devices registered yet",
       );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't send test");
+      toast.error(toUserMessage(err, "Couldn't send test"));
     }
   }
 
@@ -330,7 +331,7 @@ function AdminBoard({ email }: { email: string }) {
       qc.invalidateQueries({ queryKey: ["admin-campaigns"] });
       qc.invalidateQueries({ queryKey: ["admin-notification-reach"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't send campaign");
+      toast.error(toUserMessage(err, "Couldn't send campaign"));
       qc.invalidateQueries({ queryKey: ["admin-campaigns"] });
     } finally {
       setSendingCampaignId(null);
@@ -1545,7 +1546,7 @@ function TeamManager({ currentEmail }: { currentEmail: string | null }) {
       setEmail("");
       qc.invalidateQueries({ queryKey: ["admin-user-roles"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't grant role");
+      toast.error(toUserMessage(err, "Couldn't grant role"));
     } finally {
       setGranting(false);
     }
@@ -1559,7 +1560,7 @@ function TeamManager({ currentEmail }: { currentEmail: string | null }) {
       toast.success(`Removed ${ROLE_LABELS[r] ?? r} from ${who}`);
       qc.invalidateQueries({ queryKey: ["admin-user-roles"] });
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't remove role");
+      toast.error(toUserMessage(err, "Couldn't remove role"));
     } finally {
       setBusyKey(null);
     }

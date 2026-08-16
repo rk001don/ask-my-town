@@ -89,22 +89,26 @@ export function ProductCard({
       } ${highlighted ? "ring-2 ring-[color:var(--accent-primary)] transition-shadow duration-500" : ""}`}
     >
       {image}
-      {product.is_veg != null && (
-        <span
-          aria-label={product.is_veg ? "Veg" : "Non-veg"}
-          className="mt-1.5 grid h-4 w-4 shrink-0 place-items-center border"
-          style={{
-            borderColor: product.is_veg ? "var(--success)" : "var(--danger)",
-          }}
-        >
-          <span
-            className="h-2 w-2 rounded-full"
-            style={{ background: product.is_veg ? "var(--success)" : "var(--danger)" }}
-          />
-        </span>
-      )}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="min-w-0 break-words text-[14px] font-semibold leading-tight">
+        {/* Veg/non-veg marker sits inline above the dish name, the way every
+            Indian food app places it. It used to be a flex sibling of the
+            image and the text block, which in grid view (a flex-col card)
+            made it claim an entire row of its own between the photo and the
+            name, and in list view pushed the text away from the photo. */}
+        {product.is_veg != null && (
+          <span
+            aria-label={product.is_veg ? "Veg" : "Non-veg"}
+            title={product.is_veg ? "Veg" : "Non-veg"}
+            className="grid h-3.5 w-3.5 place-items-center rounded-[3px] border-[1.5px]"
+            style={{ borderColor: product.is_veg ? "var(--success)" : "var(--danger)" }}
+          >
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ background: product.is_veg ? "var(--success)" : "var(--danger)" }}
+            />
+          </span>
+        )}
+        <div className="min-w-0 break-words text-[15px] font-semibold leading-snug">
           {product.name}
         </div>
         {product.description && (
@@ -138,7 +142,7 @@ export function ProductCard({
                   iconKey: categoryIcon ?? product.categories?.icon_key ?? undefined,
                 })
               }
-              className="tap-scale rounded-full accent-gradient px-4 py-2 text-sm font-semibold"
+              className="tap-scale rounded-full accent-gradient px-5 py-2 text-sm font-bold shadow-[0_2px_10px_-2px_oklch(0.72_0.19_30_/_0.5)]"
             >
               {product.is_service ? "Ask" : "Add"}
             </button>

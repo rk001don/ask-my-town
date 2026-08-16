@@ -1,6 +1,7 @@
 // All MyTown server functions. Callable from routes/components via useServerFn or directly.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { failFrom, userError } from "@/lib/errors";
 import { isValidIndianPhone, normalizeIndianPhone } from "@/lib/phone";
 import type { ServiceFeeTiers } from "@/lib/serviceFee";
 import { computeServiceFee } from "@/lib/serviceFee";
@@ -64,7 +65,7 @@ export const subscribeToOrderPush = createServerFn({ method: "POST" })
       .select("id")
       .eq("id", data.orderId.toUpperCase())
       .maybeSingle();
-    if (!order) throw new Error("Order not found");
+    if (!order) throw userError("We couldn't find that order. Check the ID and try again.");
     const { error } = await supabaseAdmin.from("order_push_subscriptions").upsert(
       {
         order_id: order.id,
@@ -74,7 +75,12 @@ export const subscribeToOrderPush = createServerFn({ method: "POST" })
       },
       { onConflict: "order_id,endpoint" },
     );
-    if (error) throw new Error(error.message);
+    if (error)
+      failFrom(
+        "subscribeToOrderPush",
+        error,
+        "We couldn't turn on updates for this order. Please try again.",
+      );
     return { ok: true as const };
   });
 
@@ -85,7 +91,7 @@ export const getLocations = createServerFn({ method: "GET" }).handler(async () =
     .select("id, name, slug, default_language, timezone, config")
     .eq("active", true)
     .order("name", { ascending: true });
-  if (error) throw new Error(error.message);
+  if (error) failFrom("getLocations", error, "We couldn't load delivery areas. Please try again.");
   return data ?? [];
 });
 
@@ -97,7 +103,8 @@ export const getServiceFeeConfig = createServerFn({ method: "GET" }).handler(asy
     .eq("key", "service_fee_tiers")
     .eq("scope", "global")
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error)
+    failFrom("getServiceFeeConfig", error, "We couldn't load service charges. Please try again.");
   return (data?.value as ServiceFeeTiers | undefined) ?? null;
 });
 
@@ -146,7 +153,7 @@ export const getProducts = createServerFn({ method: "GET" })
       query = query.limit(data.limit);
     }
     const { data: rows, error } = await query;
-    if (error) throw new Error(error.message);
+    if (error) failFrom("getProducts", error, "We couldn't load this menu. Pull down to refresh.");
     return rows ?? [];
   });
 
@@ -160,7 +167,7 @@ export const getCategories = createServerFn({ method: "GET" }).handler(async () 
     .select("id, name, slug, parent_id, icon_key, image_url, sort_order")
     .is("parent_id", null)
     .order("sort_order", { ascending: true });
-  if (error) throw new Error(error.message);
+  if (error) failFrom("getCategories", error, "We couldn't load categories. Pull down to refresh.");
   return data ?? [];
 });
 
@@ -174,7 +181,8 @@ export const getSubcategories = createServerFn({ method: "GET" })
       .eq("slug", data.slug)
       .is("parent_id", null)
       .maybeSingle();
-    if (pErr) throw new Error(pErr.message);
+    if (pErr)
+      failFrom("getCategoryTree", pErr, "We couldn't load this category. Please try again.");
     if (!parent) return { parent: null, items: [] };
 
     const { data: items, error: cErr } = await supabaseAdmin
@@ -182,7 +190,12 @@ export const getSubcategories = createServerFn({ method: "GET" })
       .select("id, name, slug, icon_key, image_url, sort_order")
       .eq("parent_id", parent.id)
       .order("sort_order", { ascending: true });
-    if (cErr) throw new Error(cErr.message);
+    if (cErr)
+      failFrom(
+        "getCategoryTree.children",
+        cErr,
+        "We couldn't load this category. Please try again.",
+      );
     return { parent, items: items ?? [] };
   });
 
@@ -257,7 +270,12 @@ export const searchItems = createServerFn({ method: "GET" })
         .select("id, name, slug, parent_id, icon_key")
         .or(orExpr)
         .limit(40);
-      if (error) throw new Error(error.message);
+      if (error)
+        failFrom(
+          "searchItems.categories",
+          error,
+          "Search is unavailable right now. Please try again.",
+        );
       results = rows ?? [];
     }
 
@@ -297,7 +315,12 @@ export const searchItems = createServerFn({ method: "GET" })
         .or(productOrExpr)
         .eq("is_available", true)
         .limit(20);
-      if (prodErr) throw new Error(prodErr.message);
+      if (prodErr)
+        failFrom(
+          "searchItems.products",
+          prodErr,
+          "Search is unavailable right now. Please try again.",
+        );
       productResults = (prodRows ?? []).map((p) => ({
         id: p.id,
         name: p.name,
@@ -464,8 +487,13 @@ export const createOrder = createServerFn({ method: "POST" })
             .order("name")
             .limit(1)
             .maybeSingle();
-      if (locErr) throw new Error(locErr.message);
-      if (!loc) throw new Error("No active location configured");
+      if (locErr)
+        failFrom(
+          "createOrder.location",
+          locErr,
+          "We couldn't confirm the delivery area. Please try again.",
+        );
+      if (!loc) throw userError("We're not delivering in this area yet.");
       locationId = loc.id;
       locTz = loc.timezone || "Asia/Kolkata";
       const cfg = (loc.config ?? {}) as { delivery_windows?: DeliveryWindow[] };
@@ -479,7 +507,7 @@ export const createOrder = createServerFn({ method: "POST" })
     const dayAfter = addDaysISO(today, 2);
     const requestedDate = data.requestedDate ?? today;
     if (![today, tomorrow, dayAfter].includes(requestedDate)) {
-      throw new Error("Delivery date must be today, tomorrow, or the day after.");
+      throw userError("Pick a delivery date within the next three days.");
     }
 
     let requestedWindow: string | null = data.requestedWindow ?? null;
@@ -493,7 +521,7 @@ export const createOrder = createServerFn({ method: "POST" })
         const nowMin = nowTz.h * 60 + nowTz.m;
         const cutMin = h * 60 + m;
         if (nowMin >= cutMin) {
-          throw new Error(
+          throw userError(
             `Sorry, the ${win.label} window has closed for today. Please pick a later window.`,
           );
         }
@@ -516,10 +544,15 @@ export const createOrder = createServerFn({ method: "POST" })
           .from("products")
           .select("id, name, schedulable")
           .in("id", productIds);
-        if (pErr) throw new Error(pErr.message);
+        if (pErr)
+          failFrom(
+            "createOrder.priceLookup",
+            pErr,
+            "We couldn't confirm item prices. Please try again.",
+          );
         const blocked = (prods ?? []).find((p) => !p.schedulable);
         if (blocked)
-          throw new Error(
+          throw userError(
             `"${blocked.name}" can't be scheduled ahead. Please choose "Deliver ASAP" or remove it.`,
           );
       }
@@ -534,9 +567,14 @@ export const createOrder = createServerFn({ method: "POST" })
       p_max_hits: 8,
       p_window_seconds: 600,
     });
-    if (rlErr) throw new Error(rlErr.message);
+    if (rlErr)
+      failFrom(
+        "createOrder.rateLimit",
+        rlErr,
+        "We couldn't place your order right now. Please try again.",
+      );
     if (!allowed) {
-      throw new Error(
+      throw userError(
         "Too many orders placed recently from this number. Please wait a few minutes and try again.",
       );
     }
@@ -561,7 +599,12 @@ export const createOrder = createServerFn({ method: "POST" })
         })
         .select("id")
         .single();
-      if (error) throw new Error(error.message);
+      if (error)
+        failFrom(
+          "createOrder.customer",
+          error,
+          "We couldn't save your details. Please check them and try again.",
+        );
       customerId = inserted!.id;
     } else {
       await supabaseAdmin
@@ -576,7 +619,8 @@ export const createOrder = createServerFn({ method: "POST" })
 
     // Generate order id
     const { data: orderIdRow, error: idErr } = await supabaseAdmin.rpc("mytown_new_order_id");
-    if (idErr) throw new Error(idErr.message);
+    if (idErr)
+      failFrom("createOrder.orderId", idErr, "We couldn't create your order. Please try again.");
     const orderId = orderIdRow as unknown as string;
 
     // Snapshot the price actually charged, resolved server-side from the real
@@ -638,7 +682,11 @@ export const createOrder = createServerFn({ method: "POST" })
           .maybeSingle();
         if (raced) return { orderId: raced.id };
       }
-      throw new Error(orderErr.message);
+      failFrom(
+        "createOrder.insertOrder",
+        orderErr,
+        "We couldn't place your order. Please try again in a moment.",
+      );
     }
 
     // Insert items
@@ -658,7 +706,20 @@ export const createOrder = createServerFn({ method: "POST" })
         })),
       )
       .select("id");
-    if (itemsErr) throw new Error(itemsErr.message);
+    if (itemsErr) {
+      // The order row already exists at this point. Leaving it would put an
+      // itemless "phantom" order on the staff board that nobody can fulfil,
+      // while the customer is told the order failed -- the two sides would
+      // disagree about reality. Roll it back so the failure is clean, then
+      // report it. Postgres has no cross-statement transaction available over
+      // PostgREST, so this compensating delete is the rollback.
+      await supabaseAdmin.from("orders").delete().eq("id", orderId);
+      failFrom(
+        "createOrder.insertItems",
+        itemsErr,
+        "We couldn't place your order. Please try again in a moment.",
+      );
+    }
 
     // Attach any optional photos (Ask MyTown / medicine prescriptions) to their
     // matching item — insert() preserves input order, so index-align with data.items.
@@ -679,7 +740,12 @@ export const createOrder = createServerFn({ method: "POST" })
       const { error: attachErr } = await supabaseAdmin
         .from("order_attachments")
         .insert(attachmentRows);
-      if (attachErr) throw new Error(attachErr.message);
+      // Deliberately non-fatal: the order itself is already valid and visible
+      // to staff. Failing the whole request here would tell the customer their
+      // order didn't go through when it did -- and a retry would then create a
+      // duplicate. Log it and carry on; staff can ask for the photo again.
+      if (attachErr)
+        console.error(`[createOrder.attachments] ${attachErr.code} ${attachErr.message}`);
     }
 
     // Resolve/create delivery batch and attach — uses batchWindow so ASAP orders are
@@ -735,8 +801,13 @@ export const trackOrder = createServerFn({ method: "GET" })
       p_max_hits: 20,
       p_window_seconds: 60,
     });
-    if (rlErr) throw new Error(rlErr.message);
-    if (!allowed) throw new Error("Too many lookups. Please wait a moment and try again.");
+    if (rlErr)
+      failFrom(
+        "trackOrder.rateLimit",
+        rlErr,
+        "We couldn't look that up right now. Please try again.",
+      );
+    if (!allowed) throw userError("Too many lookups. Please wait a moment and try again.");
 
     let query = supabaseAdmin
       .from("orders")
@@ -760,6 +831,6 @@ export const trackOrder = createServerFn({ method: "GET" })
       query = query.eq("customer_id", cust.id);
     }
     const { data: rows, error } = await query;
-    if (error) throw new Error(error.message);
+    if (error) failFrom("trackOrder", error, "We couldn't load this order. Please try again.");
     return { orders: rows ?? [] };
   });

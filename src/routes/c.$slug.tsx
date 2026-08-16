@@ -126,6 +126,7 @@ function Category() {
   const { data: products } = useSuspenseQuery(prodOpts(slug));
   const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<CatalogView>("grid");
+  const [vegOnly, setVegOnly] = useState(false);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   useEffect(() => {
     setMounted(true);
@@ -156,9 +157,20 @@ function Category() {
     window.localStorage.setItem(CATALOG_VIEW_KEY, next);
   }
 
+  // Only offer the veg toggle where the data can answer it -- a category with
+  // no veg flags at all (rentals, e-Seva) would otherwise show a filter that
+  // blanks the page.
+  const hasVegData = useMemo(
+    () => (products as ProductRow[]).some((p) => p.is_veg != null),
+    [products],
+  );
+
   const groups = useMemo(() => {
     const map = new Map<string, ProductRow[]>();
-    for (const p of products as ProductRow[]) {
+    const visible = vegOnly
+      ? (products as ProductRow[]).filter((p) => p.is_veg === true)
+      : (products as ProductRow[]);
+    for (const p of visible) {
       const g = groupKeyFor(p.tags);
       if (!map.has(g)) map.set(g, []);
       map.get(g)!.push(p);
@@ -179,7 +191,7 @@ function Category() {
       return 0;
     });
     return entries;
-  }, [products]);
+  }, [products, vegOnly]);
 
   if (!sub.parent) return null;
 
@@ -202,7 +214,35 @@ function Category() {
         <div className="space-y-6 p-4 pb-24">
           {hasProducts && (
             <div className="flex items-center justify-between gap-3">
-              <p className="text-xs text-[color:var(--text-secondary)]">Switch view anytime</p>
+              {/* Veg filter — the one filter an Indian food catalogue is always
+                  expected to have. Only rendered where it means something: a
+                  category whose items actually carry a veg/non-veg flag (food
+                  does; rentals and e-Seva don't). */}
+              {hasVegData ? (
+                <button
+                  type="button"
+                  onClick={() => setVegOnly((v) => !v)}
+                  aria-pressed={vegOnly}
+                  className={`tap-scale flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-[13px] font-semibold ${
+                    vegOnly
+                      ? "border-[color:var(--success)] bg-[color:var(--success)]/15 text-[color:var(--success)]"
+                      : "border-[color:var(--border-strong)] bg-black/20 text-[color:var(--text-secondary)]"
+                  }`}
+                >
+                  <span
+                    className="grid h-3.5 w-3.5 place-items-center rounded-[3px] border-[1.5px]"
+                    style={{ borderColor: "var(--success)" }}
+                  >
+                    <span
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{ background: "var(--success)" }}
+                    />
+                  </span>
+                  Veg only
+                </button>
+              ) : (
+                <p className="text-xs text-[color:var(--text-secondary)]">Switch view anytime</p>
+              )}
               <div
                 className="flex shrink-0 rounded-full border border-[color:var(--border-strong)] bg-black/20 p-1"
                 aria-label="Catalog view"
@@ -246,6 +286,20 @@ function Category() {
                   {GROUP_LABELS[groupKey] ?? titleize(groupKey)}
                 </button>
               ))}
+            </div>
+          )}
+          {/* Veg filter on, nothing matched: say so and offer the way out,
+              rather than leaving an apparently-broken blank page. */}
+          {hasProducts && vegOnly && groups.length === 0 && (
+            <div className="rounded-2xl border border-dashed border-[color:var(--border-strong)] px-4 py-10 text-center">
+              <p className="text-sm font-semibold">No veg items in this category yet</p>
+              <button
+                type="button"
+                onClick={() => setVegOnly(false)}
+                className="tap-scale mt-3 rounded-full border border-[color:var(--border-strong)] px-4 py-2 text-[13px] font-semibold"
+              >
+                Show everything
+              </button>
             </div>
           )}
           {/* Priced catalog — the primary content, always shown first when it exists */}

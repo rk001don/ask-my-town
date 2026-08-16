@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { failFrom, userError } from "@/lib/errors";
 
 export const registerDevice = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -27,7 +28,8 @@ export const registerDevice = createServerFn({ method: "POST" })
       },
       { onConflict: "endpoint" },
     );
-    if (error) throw new Error(error.message);
+    if (error)
+      failFrom("notifications:30", error, "Couldn't register this device for notifications.");
     return { ok: true as const };
   });
 
@@ -43,7 +45,7 @@ export const unregisterDevice = createServerFn({ method: "POST" })
       .delete()
       .eq("endpoint", data.endpoint)
       .eq("user_id", context.userId);
-    if (error) throw new Error(error.message);
+    if (error) failFrom("notifications:46", error, "Couldn't update your notification settings.");
     return { ok: true as const };
   });
 
@@ -56,7 +58,7 @@ export const getNotificationPrefs = createServerFn({ method: "GET" })
       .select("id, endpoint, platform, topics, last_seen_at")
       .eq("user_id", context.userId)
       .order("last_seen_at", { ascending: false });
-    if (error) throw new Error(error.message);
+    if (error) failFrom("notifications:59", error, "Couldn't update your notification settings.");
     return { devices: data ?? [] };
   });
 
@@ -73,13 +75,15 @@ export const setNotificationPrefs = createServerFn({ method: "POST" })
       .eq("user_id", context.userId)
       .limit(1)
       .maybeSingle();
-    if (existingErr) throw new Error(existingErr.message);
+    if (existingErr)
+      failFrom("notifications:76", existingErr, "Couldn't register this device for notifications.");
     if (!existing) return { ok: true as const };
 
     const { error } = await supabaseAdmin
       .from("push_devices")
       .update({ topics: data.topics ?? [] })
       .eq("id", existing.id);
-    if (error) throw new Error(error.message);
+    if (error)
+      failFrom("notifications:83", error, "Couldn't register this device for notifications.");
     return { ok: true as const };
   });
