@@ -36,3 +36,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local environment overrides. `.env` in this repo holds only PUBLIC values
+# (project URL + publishable key, both shipped to the browser anyway).
+# Secrets — SUPABASE_SERVICE_ROLE_KEY, VAPID_PRIVATE_KEY — belong in Vercel's
+# environment variables, or in .env.local for local development. Never in .env,
+# which is committed.
+.env.local
+.env.*.local

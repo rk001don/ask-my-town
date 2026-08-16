@@ -71,9 +71,13 @@ export function ProductCard({
           onError={() => setImageFailed(true)}
         />
       ) : (
+        // Sized and dimmed to read as "no photo yet" rather than as the
+        // card's artwork. At h-12 and 90% white it was the loudest element on
+        // every card, which is what made a grid of placeholder cards look
+        // like a repeating pattern instead of a list of dishes.
         <VisualIcon
-          className={view === "grid" ? "h-12 w-12 text-white/90" : "h-7 w-7 text-white/90"}
-          strokeWidth={1.7}
+          className={view === "grid" ? "h-8 w-8 text-white/45" : "h-6 w-6 text-white/45"}
+          strokeWidth={1.5}
         />
       )}
     </div>

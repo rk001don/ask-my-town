@@ -34,17 +34,26 @@ export const Route = createFileRoute("/c/$slug")({
       context.queryClient.ensureQueryData(prodOpts(params.slug)),
     ]);
     if (!sub.parent) throw notFound();
+    // Hand the real category name to `head` below. Deriving the page title
+    // from the slug produced titles that disagreed with the page: /c/beauty
+    // showed "Pharmacy & Personal Care" but was titled "Beauty", and
+    // "Food & Home Meals" was titled just "Food" -- which is what a browser
+    // tab, a bookmark and a shared link all display.
+    return { categoryName: sub.parent.name };
   },
   validateSearch: (s) => categorySearchSchema.parse(s),
-  head: ({ params }) => ({
-    meta: [
-      { title: `${titleize(params.slug)} — MyTown` },
-      {
-        name: "description",
-        content: `Browse ${titleize(params.slug)} on MyTown, or just tell us what you need.`,
-      },
-    ],
-  }),
+  head: ({ params, loaderData }) => {
+    const name = loaderData?.categoryName ?? titleize(params.slug);
+    return {
+      meta: [
+        { title: `${name} — MyTown` },
+        {
+          name: "description",
+          content: `Browse ${name} on MyTown, or just tell us what you need.`,
+        },
+      ],
+    };
+  },
   component: Category,
   errorComponent: ({ reset }) => <ErrorState onRetry={reset} />,
   notFoundComponent: () => (

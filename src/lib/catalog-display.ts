@@ -52,5 +52,35 @@ export function catalogVisualFor(
   } else if (key.includes("coffee") || key.includes("tea")) {
     Icon = Coffee;
   }
-  return { Icon, gradient: CATALOG_FALLBACK_GRADIENT };
+  return { Icon, gradient: placeholderGradientFor(name) };
+}
+
+// Most of the catalogue has no photograph yet, so the placeholder *is* the
+// product image for now. Giving every one of them the identical gradient
+// turned a grid into wallpaper -- twenty cards that read as one repeating
+// texture, which is the main thing that made the catalogue look unfinished
+// next to an app like Swiggy.
+//
+// These eight are all dark, low-chroma and drawn from the app's own warm
+// accent range, so a grid stays cohesive; they differ enough for each card to
+// register as its own thing. The choice is a hash of the name, so a given
+// dish keeps the same colour on every screen it appears on (grid, search,
+// cart) instead of changing as it moves around.
+const PLACEHOLDER_GRADIENTS = [
+  "linear-gradient(150deg, oklch(0.30 0.07 55) 0%, oklch(0.22 0.05 30) 65%, oklch(0.18 0.03 260) 100%)",
+  "linear-gradient(150deg, oklch(0.29 0.06 20) 0%, oklch(0.21 0.05 10) 65%, oklch(0.17 0.03 280) 100%)",
+  "linear-gradient(150deg, oklch(0.30 0.06 95) 0%, oklch(0.22 0.05 70) 65%, oklch(0.18 0.03 250) 100%)",
+  "linear-gradient(150deg, oklch(0.28 0.06 145) 0%, oklch(0.21 0.04 130) 65%, oklch(0.17 0.03 250) 100%)",
+  "linear-gradient(150deg, oklch(0.28 0.06 300) 0%, oklch(0.21 0.05 290) 65%, oklch(0.17 0.03 260) 100%)",
+  "linear-gradient(150deg, oklch(0.29 0.06 240) 0%, oklch(0.21 0.05 250) 65%, oklch(0.17 0.03 270) 100%)",
+  "linear-gradient(150deg, oklch(0.30 0.07 40) 0%, oklch(0.22 0.05 350) 65%, oklch(0.18 0.03 270) 100%)",
+  "linear-gradient(150deg, oklch(0.28 0.05 180) 0%, oklch(0.21 0.04 200) 65%, oklch(0.17 0.03 260) 100%)",
+];
+
+export function placeholderGradientFor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  }
+  return PLACEHOLDER_GRADIENTS[hash % PLACEHOLDER_GRADIENTS.length];
 }
