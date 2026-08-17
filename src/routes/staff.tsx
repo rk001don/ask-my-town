@@ -21,7 +21,6 @@ import { ErrorState } from "@/components/States";
 import { toast } from "sonner";
 import {
   Loader2,
-  LogOut,
   RefreshCw,
   Phone,
   MapPin,
@@ -38,7 +37,7 @@ import {
   Users,
   AlertTriangle,
 } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { StaffProfileMenu } from "@/components/StaffProfileMenu";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 import { toUserMessage } from "@/lib/errors";
 
@@ -623,11 +622,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
             {email} · {rolesQ.data.roles.join(", ")}
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          {/* Staff work a full shift on this screen, often outdoors in
-              daylight and then in the evening -- the same reason customers
-              got a theme control, only more so. */}
-          <ThemeToggle />
+        <div className="flex items-center gap-1.5">
           <button
             onClick={() => qc.invalidateQueries({ queryKey: ["staff-orders"] })}
             className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
@@ -635,13 +630,10 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
           >
             <RefreshCw className="h-5 w-5" />
           </button>
-          <button
-            onClick={onSignOut}
-            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
-            aria-label="Sign out"
-          >
-            <LogOut className="h-5 w-5" />
-          </button>
+          {/* Theme and sign-out live behind this rather than inline: on a
+              phone-width board they were competing for space with the
+              refresh control and the order count. */}
+          <StaffProfileMenu email={email} roles={rolesQ.data.roles} onSignOut={onSignOut} />
         </div>
       </div>
 

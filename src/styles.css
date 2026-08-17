@@ -154,98 +154,178 @@
    choice beat the OS in either direction. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg-base: oklch(0.145 0.012 55);
-    --bg-elevated: oklch(0.196 0.014 55);
-    --bg-elevated-2: oklch(0.246 0.016 55);
-    --bg-glass: oklch(0.19 0.014 55 / 0.75);
+    --bg-base: oklch(0.14 0.014 260);
+    --bg-elevated: oklch(0.195 0.017 260);
+    --bg-elevated-2: oklch(0.24 0.019 260);
+    --bg-glass: oklch(0.185 0.019 260 / 0.75);
 
-    --text-primary: oklch(0.97 0.004 70);
-    --text-secondary: oklch(0.8 0.01 70);
-    --text-muted: oklch(0.63 0.014 70);
-    --text-tertiary: oklch(0.52 0.014 70);
+    --text-primary: oklch(0.98 0.005 260);
+    --text-secondary: oklch(0.82 0.015 260);
+    --text-muted: oklch(0.63 0.02 260);
+    --text-tertiary: oklch(0.52 0.02 260);
 
-    --accent-primary: oklch(0.78 0.165 58);
-    --accent-primary-strong: oklch(0.72 0.19 48);
-    --accent-secondary: oklch(0.7 0.2 32);
-    --on-accent: oklch(0.16 0.02 50);
+    --accent-primary: oklch(0.82 0.16 70);
+    --accent-primary-strong: oklch(0.75 0.19 55);
+    --accent-secondary: oklch(0.72 0.19 30);
+    --on-accent: oklch(0.145 0.02 60);
 
-    --success: oklch(0.76 0.15 155);
-    --warning: oklch(0.82 0.15 85);
-    --danger: oklch(0.68 0.2 25);
-    --info: oklch(0.74 0.12 230);
+    --success: oklch(0.78 0.15 155);
+    --warning: oklch(0.82 0.16 85);
+    --danger: oklch(0.68 0.22 25);
+    --info: oklch(0.75 0.13 220);
 
-    --border-subtle: oklch(0.9 0.02 70 / 0.1);
-    --border-strong: oklch(0.9 0.02 70 / 0.2);
+    --border-subtle: oklch(1 0 0 / 0.09);
+    --border-strong: oklch(1 0 0 / 0.18);
 
-    --shadow-elevation: 0 1px 2px oklch(0 0 0 / 0.4), 0 10px 28px oklch(0 0 0 / 0.35);
-    --shadow-accent-glow: 0 10px 36px -14px oklch(0.78 0.165 58 / 0.5);
+    --shadow-elevation: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 24px oklch(0 0 0 / 0.32);
+    --shadow-accent-glow: 0 10px 40px -12px oklch(0.78 0.16 60 / 0.55);
 
-    --wash-1: oklch(0.78 0.16 65 / 0.07);
-    --wash-2: oklch(0.7 0.19 30 / 0.05);
+    --wash-1: oklch(0.82 0.16 70 / 0.1);
+    --wash-2: oklch(0.72 0.19 30 / 0.08);
 
-    --hero-1: oklch(0.235 0.035 62);
-    --hero-2: oklch(0.195 0.03 35);
-    --hero-3: oklch(0.165 0.02 30);
-    --skeleton-base: oklch(0.225 0.014 55);
-    --skeleton-shine: oklch(0.285 0.016 55);
+    --hero-1: oklch(0.22 0.03 60);
+    --hero-2: oklch(0.18 0.025 30);
+    --hero-3: oklch(0.16 0.02 260);
+    --skeleton-base: oklch(0.22 0.02 260);
+    --skeleton-shine: oklch(0.28 0.02 260);
 
-    --ph-0: linear-gradient(150deg, oklch(0.32 0.055 55), oklch(0.22 0.035 40));
-    --ph-1: linear-gradient(150deg, oklch(0.31 0.05 15), oklch(0.21 0.035 5));
-    --ph-2: linear-gradient(150deg, oklch(0.32 0.05 95), oklch(0.22 0.035 75));
-    --ph-3: linear-gradient(150deg, oklch(0.3 0.05 150), oklch(0.21 0.035 135));
-    --ph-4: linear-gradient(150deg, oklch(0.3 0.045 300), oklch(0.21 0.035 290));
-    --ph-5: linear-gradient(150deg, oklch(0.3 0.045 245), oklch(0.21 0.035 255));
-    --ph-6: linear-gradient(150deg, oklch(0.32 0.055 35), oklch(0.22 0.04 350));
-    --ph-7: linear-gradient(150deg, oklch(0.3 0.045 185), oklch(0.21 0.035 205));
-    --ph-ink: oklch(1 0 0 / 0.45);
+    --ph-0: linear-gradient(
+      150deg,
+      oklch(0.3 0.07 55) 0%,
+      oklch(0.22 0.05 30) 65%,
+      oklch(0.18 0.03 260) 100%
+    );
+    --ph-1: linear-gradient(
+      150deg,
+      oklch(0.29 0.06 20) 0%,
+      oklch(0.21 0.05 10) 65%,
+      oklch(0.17 0.03 280) 100%
+    );
+    --ph-2: linear-gradient(
+      150deg,
+      oklch(0.3 0.06 95) 0%,
+      oklch(0.22 0.05 70) 65%,
+      oklch(0.18 0.03 250) 100%
+    );
+    --ph-3: linear-gradient(
+      150deg,
+      oklch(0.28 0.06 145) 0%,
+      oklch(0.21 0.04 130) 65%,
+      oklch(0.17 0.03 250) 100%
+    );
+    --ph-4: linear-gradient(
+      150deg,
+      oklch(0.28 0.06 300) 0%,
+      oklch(0.21 0.05 290) 65%,
+      oklch(0.17 0.03 260) 100%
+    );
+    --ph-5: linear-gradient(
+      150deg,
+      oklch(0.29 0.06 240) 0%,
+      oklch(0.21 0.05 250) 65%,
+      oklch(0.17 0.03 270) 100%
+    );
+    --ph-6: linear-gradient(
+      150deg,
+      oklch(0.3 0.07 40) 0%,
+      oklch(0.22 0.05 350) 65%,
+      oklch(0.18 0.03 270) 100%
+    );
+    --ph-7: linear-gradient(
+      150deg,
+      oklch(0.28 0.05 180) 0%,
+      oklch(0.21 0.04 200) 65%,
+      oklch(0.17 0.03 260) 100%
+    );
+    --ph-ink: oklch(1 0 0 / 0.42);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg-base: oklch(0.145 0.012 55);
-  --bg-elevated: oklch(0.196 0.014 55);
-  --bg-elevated-2: oklch(0.246 0.016 55);
-  --bg-glass: oklch(0.19 0.014 55 / 0.75);
+  --bg-base: oklch(0.14 0.014 260);
+  --bg-elevated: oklch(0.195 0.017 260);
+  --bg-elevated-2: oklch(0.24 0.019 260);
+  --bg-glass: oklch(0.185 0.019 260 / 0.75);
 
-  --text-primary: oklch(0.97 0.004 70);
-  --text-secondary: oklch(0.8 0.01 70);
-  --text-muted: oklch(0.63 0.014 70);
-  --text-tertiary: oklch(0.52 0.014 70);
+  --text-primary: oklch(0.98 0.005 260);
+  --text-secondary: oklch(0.82 0.015 260);
+  --text-muted: oklch(0.63 0.02 260);
+  --text-tertiary: oklch(0.52 0.02 260);
 
-  --accent-primary: oklch(0.78 0.165 58);
-  --accent-primary-strong: oklch(0.72 0.19 48);
-  --accent-secondary: oklch(0.7 0.2 32);
-  --on-accent: oklch(0.16 0.02 50);
+  --accent-primary: oklch(0.82 0.16 70);
+  --accent-primary-strong: oklch(0.75 0.19 55);
+  --accent-secondary: oklch(0.72 0.19 30);
+  --on-accent: oklch(0.145 0.02 60);
 
-  --success: oklch(0.76 0.15 155);
-  --warning: oklch(0.82 0.15 85);
-  --danger: oklch(0.68 0.2 25);
-  --info: oklch(0.74 0.12 230);
+  --success: oklch(0.78 0.15 155);
+  --warning: oklch(0.82 0.16 85);
+  --danger: oklch(0.68 0.22 25);
+  --info: oklch(0.75 0.13 220);
 
-  --border-subtle: oklch(0.9 0.02 70 / 0.1);
-  --border-strong: oklch(0.9 0.02 70 / 0.2);
+  --border-subtle: oklch(1 0 0 / 0.09);
+  --border-strong: oklch(1 0 0 / 0.18);
 
-  --shadow-elevation: 0 1px 2px oklch(0 0 0 / 0.4), 0 10px 28px oklch(0 0 0 / 0.35);
-  --shadow-accent-glow: 0 10px 36px -14px oklch(0.78 0.165 58 / 0.5);
+  --shadow-elevation: 0 1px 2px oklch(0 0 0 / 0.3), 0 8px 24px oklch(0 0 0 / 0.32);
+  --shadow-accent-glow: 0 10px 40px -12px oklch(0.78 0.16 60 / 0.55);
 
-  --wash-1: oklch(0.78 0.16 65 / 0.07);
-  --wash-2: oklch(0.7 0.19 30 / 0.05);
+  --wash-1: oklch(0.82 0.16 70 / 0.1);
+  --wash-2: oklch(0.72 0.19 30 / 0.08);
 
-  --hero-1: oklch(0.235 0.035 62);
-  --hero-2: oklch(0.195 0.03 35);
-  --hero-3: oklch(0.165 0.02 30);
-  --skeleton-base: oklch(0.225 0.014 55);
-  --skeleton-shine: oklch(0.285 0.016 55);
+  --hero-1: oklch(0.22 0.03 60);
+  --hero-2: oklch(0.18 0.025 30);
+  --hero-3: oklch(0.16 0.02 260);
+  --skeleton-base: oklch(0.22 0.02 260);
+  --skeleton-shine: oklch(0.28 0.02 260);
 
-  --ph-0: linear-gradient(150deg, oklch(0.32 0.055 55), oklch(0.22 0.035 40));
-  --ph-1: linear-gradient(150deg, oklch(0.31 0.05 15), oklch(0.21 0.035 5));
-  --ph-2: linear-gradient(150deg, oklch(0.32 0.05 95), oklch(0.22 0.035 75));
-  --ph-3: linear-gradient(150deg, oklch(0.3 0.05 150), oklch(0.21 0.035 135));
-  --ph-4: linear-gradient(150deg, oklch(0.3 0.045 300), oklch(0.21 0.035 290));
-  --ph-5: linear-gradient(150deg, oklch(0.3 0.045 245), oklch(0.21 0.035 255));
-  --ph-6: linear-gradient(150deg, oklch(0.32 0.055 35), oklch(0.22 0.04 350));
-  --ph-7: linear-gradient(150deg, oklch(0.3 0.045 185), oklch(0.21 0.035 205));
-  --ph-ink: oklch(1 0 0 / 0.45);
+  --ph-0: linear-gradient(
+    150deg,
+    oklch(0.3 0.07 55) 0%,
+    oklch(0.22 0.05 30) 65%,
+    oklch(0.18 0.03 260) 100%
+  );
+  --ph-1: linear-gradient(
+    150deg,
+    oklch(0.29 0.06 20) 0%,
+    oklch(0.21 0.05 10) 65%,
+    oklch(0.17 0.03 280) 100%
+  );
+  --ph-2: linear-gradient(
+    150deg,
+    oklch(0.3 0.06 95) 0%,
+    oklch(0.22 0.05 70) 65%,
+    oklch(0.18 0.03 250) 100%
+  );
+  --ph-3: linear-gradient(
+    150deg,
+    oklch(0.28 0.06 145) 0%,
+    oklch(0.21 0.04 130) 65%,
+    oklch(0.17 0.03 250) 100%
+  );
+  --ph-4: linear-gradient(
+    150deg,
+    oklch(0.28 0.06 300) 0%,
+    oklch(0.21 0.05 290) 65%,
+    oklch(0.17 0.03 260) 100%
+  );
+  --ph-5: linear-gradient(
+    150deg,
+    oklch(0.29 0.06 240) 0%,
+    oklch(0.21 0.05 250) 65%,
+    oklch(0.17 0.03 270) 100%
+  );
+  --ph-6: linear-gradient(
+    150deg,
+    oklch(0.3 0.07 40) 0%,
+    oklch(0.22 0.05 350) 65%,
+    oklch(0.18 0.03 270) 100%
+  );
+  --ph-7: linear-gradient(
+    150deg,
+    oklch(0.28 0.05 180) 0%,
+    oklch(0.21 0.04 200) 65%,
+    oklch(0.17 0.03 260) 100%
+  );
+  --ph-ink: oklch(1 0 0 / 0.42);
 }
 
 @layer base {
