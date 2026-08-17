@@ -365,6 +365,74 @@ export const searchItems = createServerFn({ method: "GET" })
   });
 
 /**
+ * IDs of the best-selling products *within one category*, for the "Bestseller"
+ * badge on a category page.
+ *
+ * Scoped to the category rather than reusing the global ranking: food outsells
+ * everything, so a global top-N would badge a few dishes and leave every other
+ * category with none.
+ *
+ * Returns an empty list unless at least `minDistinct` different products have
+ * sold in the window. A badge is a claim about relative popularity, and with
+ * one or two orders behind it that claim isn't true yet -- better to show
+ * nothing than to label the only thing anyone happened to buy a "bestseller".
+ */
+export const getCategoryBestSellerIds = createServerFn({ method: "GET" })
+  .inputValidator((data: { categorySlug: string; days?: number; limit?: number }) =>
+    z
+      .object({
+        categorySlug: z.string().min(1).max(64),
+        days: z.number().int().min(1).max(90).optional(),
+        limit: z.number().int().min(1).max(10).optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }): Promise<string[]> => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const days = data.days ?? 30;
+    const limit = data.limit ?? 4;
+    const minDistinct = 4;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: cat } = await supabaseAdmin
+      .from("categories")
+      .select("id")
+      .eq("slug", data.categorySlug)
+      .maybeSingle();
+    if (!cat) return [];
+
+    const { data: products } = await supabaseAdmin
+      .from("products")
+      .select("id")
+      .eq("category_id", cat.id)
+      .eq("is_available", true);
+    if (!products?.length) return [];
+    const inCategory = new Set(products.map((p) => p.id));
+
+    const { data: rows, error } = await supabaseAdmin
+      .from("order_items")
+      .select("product_id, quantity, orders!inner(created_at, status)")
+      .not("product_id", "is", null)
+      .gte("orders.created_at", since)
+      .neq("orders.status", "cancelled")
+      .limit(2000);
+    // A badge is decoration; never fail a category page over it.
+    if (error || !rows?.length) return [];
+
+    const units = new Map<string, number>();
+    for (const r of rows) {
+      if (!r.product_id || !inCategory.has(r.product_id)) continue;
+      units.set(r.product_id, (units.get(r.product_id) ?? 0) + (r.quantity ?? 1));
+    }
+    if (units.size < minDistinct) return [];
+
+    return [...units.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([id]) => id);
+  });
+
+/**
  * Best-selling products, computed from real orders rather than a manual tag.
  *
  * The Home shelves were driven by "popular"/"trending" tags set by hand in the
