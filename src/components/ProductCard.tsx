@@ -13,6 +13,8 @@ export type ProductRow = {
   id: string;
   name: string;
   description: string | null;
+  /** Full copy for the detail sheet; falls back to `description` when empty. */
+  description_long?: string | null;
   image_url?: string | null;
   price: number | null;
   show_price: boolean;
