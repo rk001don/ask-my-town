@@ -2,7 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Search as SearchIcon, ShoppingBag, User } from "lucide-react";
 import { MyTownLogo } from "./MyTownLogo";
 import { useCartCount } from "@/lib/cart-store";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 type Props = {
@@ -24,6 +24,22 @@ export function AppHeader({
   const navigate = useNavigate();
   const [bump, setBump] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
+  const headerRef = useRef<HTMLElement | null>(null);
+
+  // Publish the header's real height so anything sticking beneath it (the
+  // category filter bar) can offset correctly. It isn't a fixed number: a long
+  // category name wraps to two lines and makes the header taller, so a
+  // hardcoded offset would either overlap or leave a gap.
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const publish = () =>
+      document.documentElement.style.setProperty("--app-header-h", `${el.offsetHeight}px`);
+    publish();
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   useEffect(() => {
     if (cartCount === 0) return;
     setBump(true);
@@ -38,6 +54,7 @@ export function AppHeader({
 
   return (
     <header
+      ref={headerRef}
       className={`sticky top-0 z-[var(--z-header)] flex items-center justify-between gap-2 px-4 py-3 ${transparent ? "" : "glass"}`}
     >
       <div className="flex min-w-0 items-center gap-2">

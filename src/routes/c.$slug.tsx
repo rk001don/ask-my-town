@@ -91,7 +91,25 @@ const CURATION_FLAGS = new Set(["popular", "trending"]);
 // category page. Fold them into one group.
 const GROUP_KEY_ALIASES: Record<string, string> = {
   "local-assistance": "local-service",
+  // "side-dishes" and "curries" describe the same thing to a customer, and as
+  // separate filter chips they read as a distinction without a difference
+  // ("Curries & Accompaniments" next to "Curries & Gravies"). One group.
+  "side-dishes": "curries",
 };
+
+/** Meal-time order first, then anything else, with the catch-all last. */
+function orderGroupKeys(keys: string[]): string[] {
+  return [...keys].sort((a, b) => {
+    if (a === "other") return 1;
+    if (b === "other") return -1;
+    const ai = GROUP_ORDER.indexOf(a);
+    const bi = GROUP_ORDER.indexOf(b);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return 0;
+  });
+}
 
 function groupKeyFor(tags: string[] | null | undefined): string {
   const tag = tags?.find((t) => !CURATION_FLAGS.has(t));
@@ -112,8 +130,7 @@ const GROUP_LABELS: Record<string, string> = {
   stationery: "Stationery",
   remittance: "Bookings & Courier",
   "rice-chinese": "Rice & Chinese",
-  "side-dishes": "Curries & Accompaniments",
-  curries: "Curries & Gravies",
+  curries: "Curries & Sides",
   juice: "Fresh Juices",
   shake: "Milkshakes",
   "soft-drink": "Beverages",
@@ -137,6 +154,7 @@ function Category() {
   const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<CatalogView>("grid");
   const [vegOnly, setVegOnly] = useState(false);
+  const [activeGroups, setActiveGroups] = useState<Set<string>>(new Set());
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [openProduct, setOpenProduct] = useState<ProductRow | null>(null);
   useEffect(() => {
@@ -182,11 +200,34 @@ function Category() {
     [products],
   );
 
+  // Every group present in this category, regardless of what's filtered --
+  // the chip row must stay stable as selections change, or chips would
+  // disappear as you use them and there'd be no way to undo a selection.
+  const allGroupKeys = useMemo(() => {
+    const seen = new Set<string>();
+    for (const p of products as ProductRow[]) seen.add(groupKeyFor(p.tags));
+    return orderGroupKeys([...seen]);
+  }, [products]);
+
+  function toggleGroup(key: string) {
+    setActiveGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
   const groups = useMemo(() => {
     const map = new Map<string, ProductRow[]>();
-    const visible = vegOnly
-      ? (products as ProductRow[]).filter((p) => p.is_veg === true)
-      : (products as ProductRow[]);
+    let visible = products as ProductRow[];
+    if (vegOnly) visible = visible.filter((p) => p.is_veg === true);
+    // Chips filter the list in place rather than scrolling to a heading.
+    // Nothing selected means everything, which is what makes deselecting the
+    // last chip a natural "show me all again".
+    if (activeGroups.size > 0) {
+      visible = visible.filter((p) => activeGroups.has(groupKeyFor(p.tags)));
+    }
     for (const p of visible) {
       const g = groupKeyFor(p.tags);
       if (!map.has(g)) map.set(g, []);
@@ -196,19 +237,9 @@ function Category() {
     // they first appear in the query result -- without an explicit order
     // that could put "Other" ahead of "Breakfast"/"Lunch". Pin known
     // meal-time groups to a sensible sequence and always sink "other" last.
-    const entries = [...map.entries()];
-    entries.sort(([a], [b]) => {
-      if (a === "other") return 1;
-      if (b === "other") return -1;
-      const ai = GROUP_ORDER.indexOf(a);
-      const bi = GROUP_ORDER.indexOf(b);
-      if (ai !== -1 && bi !== -1) return ai - bi;
-      if (ai !== -1) return -1;
-      if (bi !== -1) return 1;
-      return 0;
-    });
-    return entries;
-  }, [products, vegOnly]);
+    const ordered = orderGroupKeys([...map.keys()]);
+    return ordered.map((k) => [k, map.get(k)!] as [string, ProductRow[]]);
+  }, [products, vegOnly, activeGroups]);
 
   if (!sub.parent) return null;
 
@@ -283,36 +314,57 @@ function Category() {
               </div>
             </div>
           )}
-          {/* Jump-to-group chips — only worth showing once there's more than one
-              group to scroll past (e.g. Breakfast / Meals / Snacks). Reuses the
-              same horizontal-chip pattern as the home page's category quick-jump,
-              just scrolling within the page instead of navigating. */}
-          {hasProducts && groups.length > 1 && (
-            <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5">
-              {groups.map(([groupKey]) => (
-                <button
-                  key={groupKey}
-                  type="button"
-                  onClick={() =>
-                    document
-                      .getElementById(`group-${groupKey}`)
-                      ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                  }
-                  className="tap-scale flex-shrink-0 rounded-full border border-[color:var(--border-strong)] bg-black/20 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap"
-                >
-                  {GROUP_LABELS[groupKey] ?? titleize(groupKey)}
-                </button>
-              ))}
+          {/* Filter chips. These used to scroll the page to a heading, which
+              meant you still had to scan past everything else -- every serious
+              food app narrows the list in place instead. Multi-select, and
+              deselecting the last one restores everything. Sticky so the
+              controls stay reachable while scrolling a long category. */}
+          {hasProducts && allGroupKeys.length > 1 && (
+            <div className="sticky top-[var(--app-header-h,3.5rem)] z-[var(--z-sticky)] -mx-4 bg-[color:var(--bg-base)]/95 px-4 py-2 backdrop-blur">
+              <div className="no-scrollbar -mx-1 flex items-center gap-2 overflow-x-auto px-1">
+                {activeGroups.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveGroups(new Set())}
+                    className="tap-scale flex-shrink-0 rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-[13px] font-semibold whitespace-nowrap text-[color:var(--text-secondary)]"
+                  >
+                    Clear
+                  </button>
+                )}
+                {allGroupKeys.map((groupKey) => {
+                  const on = activeGroups.has(groupKey);
+                  return (
+                    <button
+                      key={groupKey}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggleGroup(groupKey)}
+                      className={`tap-scale flex-shrink-0 rounded-full border px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap ${
+                        on
+                          ? "border-transparent accent-gradient"
+                          : "border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)]"
+                      }`}
+                    >
+                      {groupKey === "other"
+                        ? "More"
+                        : (GROUP_LABELS[groupKey] ?? titleize(groupKey))}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
           {/* Veg filter on, nothing matched: say so and offer the way out,
               rather than leaving an apparently-broken blank page. */}
-          {hasProducts && vegOnly && groups.length === 0 && (
+          {hasProducts && groups.length === 0 && (vegOnly || activeGroups.size > 0) && (
             <div className="rounded-2xl border border-dashed border-[color:var(--border-strong)] px-4 py-10 text-center">
-              <p className="text-sm font-semibold">No veg items in this category yet</p>
+              <p className="text-sm font-semibold">Nothing matches those filters</p>
               <button
                 type="button"
-                onClick={() => setVegOnly(false)}
+                onClick={() => {
+                  setVegOnly(false);
+                  setActiveGroups(new Set());
+                }}
                 className="tap-scale mt-3 rounded-full border border-[color:var(--border-strong)] px-4 py-2 text-[13px] font-semibold"
               >
                 Show everything
@@ -325,7 +377,7 @@ function Category() {
               <section key={groupKey} id={`group-${groupKey}`} className="scroll-mt-20">
                 {groups.length > 1 && (
                   <h2 className="mb-2 text-[13px] font-bold uppercase tracking-wider text-[color:var(--text-secondary)]">
-                    {GROUP_LABELS[groupKey] ?? titleize(groupKey)}
+                    {groupKey === "other" ? "More" : (GROUP_LABELS[groupKey] ?? titleize(groupKey))}
                   </h2>
                 )}
                 <div

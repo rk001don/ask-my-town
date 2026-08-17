@@ -356,6 +356,72 @@ export const searchItems = createServerFn({ method: "GET" })
   });
 
 /**
+ * Best-selling products, computed from real orders rather than a manual tag.
+ *
+ * The Home shelves were driven by "popular"/"trending" tags set by hand in the
+ * catalogue, which means they reflect what someone once decided to spotlight,
+ * not what the town actually buys. This ranks by units ordered.
+ *
+ * `window` splits the two shelves: 30 days for "Popular" (a stable read on
+ * what sells), 7 days for "Trending" (what's moving right now). Cancelled
+ * orders are excluded -- an order that was called off is not a signal of
+ * demand being met.
+ *
+ * Falls back to the tagged shelf when there isn't enough order history yet, so
+ * a new town doesn't get an empty home page.
+ */
+export const getBestSellers = createServerFn({ method: "GET" })
+  .inputValidator((data: { days?: number; limit?: number }) =>
+    z
+      .object({
+        days: z.number().int().min(1).max(90).optional(),
+        limit: z.number().int().min(1).max(24).optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const days = data.days ?? 30;
+    const limit = data.limit ?? 12;
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: rows, error } = await supabaseAdmin
+      .from("order_items")
+      .select("product_id, quantity, orders!inner(created_at, status)")
+      .not("product_id", "is", null)
+      .gte("orders.created_at", since)
+      .neq("orders.status", "cancelled")
+      .limit(2000);
+    // A shelf is a nicety; never fail the home page over it.
+    if (error || !rows?.length) return [];
+
+    const units = new Map<string, number>();
+    for (const r of rows) {
+      if (!r.product_id) continue;
+      units.set(r.product_id, (units.get(r.product_id) ?? 0) + (r.quantity ?? 1));
+    }
+    const topIds = [...units.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, limit)
+      .map(([id]) => id);
+    if (!topIds.length) return [];
+
+    const { data: products, error: pErr } = await supabaseAdmin
+      .from("products")
+      .select(
+        "id, category_id, name, description, description_long, image_url, price, currency, show_price, payment_mode, is_veg, is_service, is_available, schedulable, sort_order, tags, categories(name, icon_key)",
+      )
+      .in("id", topIds)
+      .eq("is_available", true);
+    if (pErr || !products) return [];
+
+    // Preserve the ranking the counts produced -- `in` returns rows in
+    // arbitrary order, which would otherwise scramble "best selling".
+    const rank = new Map(topIds.map((id, i) => [id, i]));
+    return [...products].sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
+  });
+
+/**
  * What people are actually searching for, from the last 14 days.
  *
  * `search_analytics` has been recorded on every search since launch and never

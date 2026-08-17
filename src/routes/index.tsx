@@ -8,7 +8,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { MyTownLogo } from "@/components/MyTownLogo";
-import { getCategories, getProducts } from "@/lib/api.functions";
+import { getBestSellers, getCategories, getProducts } from "@/lib/api.functions";
 import { CategoryTile } from "@/components/CategoryTile";
 import { ProductCard } from "@/components/ProductCard";
 import { TileSkeleton, ShelfSkeleton, ErrorState } from "@/components/States";
@@ -22,17 +22,26 @@ const categoriesOptions = queryOptions({
   queryFn: () => getCategories(),
 });
 
+// Both shelves are driven by what the town actually orders, not by a tag
+// someone set by hand months ago. "Popular" reads 30 days (a stable view of
+// what sells); "Trending" reads 7 (what's moving right now).
+//
+// Each falls back to its curated tag when there isn't enough order history --
+// a brand-new town would otherwise land on an empty home page.
 const popularProductsOptions = queryOptions({
-  queryKey: ["products", "popular"],
-  queryFn: () => getProducts({ data: { tag: "popular", limit: 16 } }),
+  queryKey: ["products", "popular", "bestsellers-30d"],
+  queryFn: async () => {
+    const top = await getBestSellers({ data: { days: 30, limit: 16 } });
+    return top.length >= 4 ? top : getProducts({ data: { tag: "popular", limit: 16 } });
+  },
 });
 
-// Curated shelf pulled from the existing catalog via the "trending" tag
-// (see the price-visibility/trending migration) -- not a new product set,
-// just a quick-order view into items already in stock.
 const trendingProductsOptions = queryOptions({
-  queryKey: ["products", "trending"],
-  queryFn: () => getProducts({ data: { tag: "trending", limit: 12 } }),
+  queryKey: ["products", "trending", "bestsellers-7d"],
+  queryFn: async () => {
+    const top = await getBestSellers({ data: { days: 7, limit: 12 } });
+    return top.length >= 4 ? top : getProducts({ data: { tag: "trending", limit: 12 } });
+  },
 });
 
 export const Route = createFileRoute("/")({
