@@ -173,7 +173,7 @@ export function AskFAB({ hideMobileTrigger = false }: { hideMobileTrigger?: bool
                   resetAttachment();
                 }}
                 aria-label="Close"
-                className="tap-scale rounded-full p-2 hover:bg-white/5"
+                className="tap-scale rounded-full p-2 hover:surface-subtle"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -206,7 +206,7 @@ export function AskFAB({ hideMobileTrigger = false }: { hideMobileTrigger?: bool
                   <button
                     type="button"
                     onClick={resetAttachment}
-                    className="tap-scale grid h-8 w-8 place-items-center rounded-full hover:bg-white/5"
+                    className="tap-scale grid h-8 w-8 place-items-center rounded-full hover:surface-subtle"
                     aria-label="Remove photo"
                   >
                     <X className="h-4 w-4" />

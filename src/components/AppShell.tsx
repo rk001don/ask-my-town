@@ -136,7 +136,7 @@ function MobileCartBar({ onDismiss }: { onDismiss: () => void }) {
           className="tap-scale flex min-w-0 flex-1 items-center justify-between gap-2"
         >
           <div className="flex min-w-0 items-center gap-3 text-[color:var(--on-accent)]">
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/15">
+            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full on-accent-veil">
               <ShoppingBag className="h-4.5 w-4.5" />
             </span>
             <div className="min-w-0">
@@ -146,14 +146,14 @@ function MobileCartBar({ onDismiss }: { onDismiss: () => void }) {
               <div className="truncate text-[11px] font-medium opacity-80">Tap to review</div>
             </div>
           </div>
-          <span className="flex shrink-0 items-center gap-1 rounded-full bg-black/15 px-3.5 py-2 text-xs font-bold text-[color:var(--on-accent)]">
+          <span className="flex shrink-0 items-center gap-1 rounded-full on-accent-veil px-3.5 py-2 text-xs font-bold text-[color:var(--on-accent)]">
             View cart <ArrowRight className="h-3.5 w-3.5" />
           </span>
         </Link>
         <button
           onClick={onDismiss}
           aria-label="Dismiss"
-          className="tap-scale grid h-9 w-9 shrink-0 place-items-center rounded-full bg-black/15 text-[color:var(--on-accent)]"
+          className="tap-scale grid h-9 w-9 shrink-0 place-items-center rounded-full on-accent-veil text-[color:var(--on-accent)]"
         >
           <X className="h-4 w-4" />
         </button>

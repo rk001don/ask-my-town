@@ -158,7 +158,7 @@ function StaffOrderCard({
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <span
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide"
+            className="flex shrink-0 items-center gap-1.5 rounded-full surface-muted px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide"
             style={{ color: statusColor[o.status] ?? "var(--text-muted)" }}
           >
             <span
@@ -182,7 +182,7 @@ function StaffOrderCard({
             </span>
           )}
           {o.requested_window && (
-            <span className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px]">
+            <span className="flex items-center gap-1 rounded-full surface-muted px-2 py-0.5 text-[10px]">
               {o.requested_window}
               {windowRanges[o.requested_window] ? ` (${windowRanges[o.requested_window]})` : ""}
             </span>
@@ -230,7 +230,7 @@ function StaffOrderCard({
               You're handling this — release
             </button>
           ) : assignedToOther ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-[color:var(--text-secondary)]">
+            <span className="inline-flex items-center gap-1.5 rounded-full surface-muted px-2.5 py-1 text-[11px] font-semibold text-[color:var(--text-secondary)]">
               <Users className="h-3 w-3" />
               Claimed by {assigneeName}
             </span>
@@ -252,7 +252,7 @@ function StaffOrderCard({
       )}
 
       {priced.length > 0 && (
-        <div className="mt-2 space-y-0.5 rounded-xl bg-white/5 p-2 text-xs">
+        <div className="mt-2 space-y-0.5 rounded-xl surface-subtle p-2 text-xs">
           <div className="flex justify-between text-[color:var(--text-secondary)]">
             <span>Items subtotal</span>
             <span>₹{orderTotal}</span>
@@ -270,7 +270,7 @@ function StaffOrderCard({
 
       <ul className="mt-3 space-y-1 text-xs">
         {o.items.map((it, i) => (
-          <li key={i} className="flex items-start gap-2 rounded-lg bg-white/5 px-2.5 py-1.5">
+          <li key={i} className="flex items-start gap-2 rounded-lg surface-subtle px-2.5 py-1.5">
             <span className="font-semibold text-[color:var(--accent-primary)]">{it.quantity}×</span>
             <span className="flex-1 text-[color:var(--text-primary)]">
               {it.item_name}
@@ -405,7 +405,7 @@ function StaffSignIn(_: { onDone: () => void }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="staff@mytown.example"
-              className="w-full rounded-2xl border border-[color:var(--border-subtle)] bg-black/20 px-4 py-3 outline-none focus:border-[color:var(--accent-primary)]"
+              className="w-full rounded-2xl border border-[color:var(--border-subtle)] surface-muted px-4 py-3 outline-none focus:border-[color:var(--accent-primary)]"
             />
             <input
               type="password"
@@ -413,7 +413,7 @@ function StaffSignIn(_: { onDone: () => void }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="w-full rounded-2xl border border-[color:var(--border-subtle)] bg-black/20 px-4 py-3 outline-none focus:border-[color:var(--accent-primary)]"
+              className="w-full rounded-2xl border border-[color:var(--border-subtle)] surface-muted px-4 py-3 outline-none focus:border-[color:var(--accent-primary)]"
             />
             <button
               disabled={busy}
@@ -613,14 +613,14 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
         <div className="flex items-center gap-1">
           <button
             onClick={() => qc.invalidateQueries({ queryKey: ["staff-orders"] })}
-            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
+            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
             aria-label="Refresh"
           >
             <RefreshCw className="h-5 w-5" />
           </button>
           <button
             onClick={onSignOut}
-            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
+            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
             aria-label="Sign out"
           >
             <LogOut className="h-5 w-5" />
@@ -657,7 +657,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
                 (d: { delivery_date: string; total_orders: number; completed_orders: number }) => (
                   <div
                     key={d.delivery_date}
-                    className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2 text-sm"
+                    className="flex items-center justify-between rounded-xl surface-subtle px-3 py-2 text-sm"
                   >
                     <span>{d.delivery_date}</span>
                     <span className="text-[color:var(--text-secondary)]">

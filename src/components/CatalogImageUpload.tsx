@@ -66,7 +66,7 @@ export function CatalogImageUpload({
         type="button"
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
-        className={`tap-scale relative grid ${size} shrink-0 place-items-center overflow-hidden rounded-xl bg-white/5`}
+        className={`tap-scale relative grid ${size} shrink-0 place-items-center overflow-hidden rounded-xl surface-subtle`}
         aria-label={imageUrl ? "Change image" : "Add image"}
       >
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onPick} />

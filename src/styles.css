@@ -429,6 +429,34 @@
    Built with color-mix from the themed accents so they resolve correctly on
    both grounds -- the literals these replace were the dark theme's bright
    amber, which only happened to look acceptable on white. */
+/* Neutral surface overlays.
+ *
+ * Replaces the bg-white/N and bg-black/N literals that were scattered through
+ * the app. Those can only ever be right in one theme: bg-white/10 is a subtle
+ * lift on a dark ground and effectively invisible on a light one, while
+ * bg-black/20 is a dark box on white.
+ *
+ * Mixing from --text-primary inverts automatically -- near-white in dark,
+ * near-black in light -- so a single class is correct in both. The dark
+ * appearance is unchanged from the literals it replaces.
+ *
+ * These are for SURFACES only. Modal scrims stay literal black: a scrim is
+ * meant to darken whatever is behind it in either theme. */
+/* Overlay for use ON the accent gradient (the cart bar, gradient buttons).
+   That surface is the same orange in both themes, so its overlays must stay
+   white-based -- surface-muted would mix from --text-primary and turn into a
+   dark smudge on orange in the light theme. */
+@utility on-accent-veil {
+  background: rgb(255 255 255 / 0.16);
+}
+
+@utility surface-subtle {
+  background: color-mix(in oklab, var(--text-primary) 5%, transparent);
+}
+@utility surface-muted {
+  background: color-mix(in oklab, var(--text-primary) 10%, transparent);
+}
+
 @utility accent-wash {
   background: linear-gradient(
     140deg,

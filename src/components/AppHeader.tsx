@@ -75,7 +75,7 @@ export function AppHeader({
           <button
             aria-label="Back"
             onClick={() => (history.length > 1 ? history.back() : navigate({ to: "/" }))}
-            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
+            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
@@ -95,7 +95,7 @@ export function AppHeader({
           <Link
             to="/search"
             aria-label="Search"
-            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
+            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
           >
             <SearchIcon className="h-5 w-5" />
           </Link>
@@ -103,7 +103,7 @@ export function AppHeader({
         <Link
           to={signedIn ? "/activity" : "/auth"}
           aria-label={signedIn ? "My orders" : "Sign in"}
-          className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
+          className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
         >
           <User className="h-5 w-5" />
         </Link>
@@ -111,7 +111,7 @@ export function AppHeader({
           <Link
             to="/cart"
             aria-label="Cart"
-            className="tap-scale relative grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
+            className="tap-scale relative grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
           >
             <ShoppingBag className="h-5 w-5" />
             {cartCount > 0 && (

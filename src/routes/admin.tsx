@@ -539,7 +539,7 @@ function AdminBoard({ email }: { email: string }) {
               <>
                 <div className="hidden overflow-x-auto rounded-2xl border border-[color:var(--border-subtle)] md:block">
                   <table className="w-full text-sm">
-                    <thead className="bg-white/5 text-left text-xs uppercase text-[color:var(--text-tertiary)]">
+                    <thead className="surface-subtle text-left text-xs uppercase text-[color:var(--text-tertiary)]">
                       <tr>
                         <th className="p-3">Image</th>
                         <SortableHeader
@@ -865,7 +865,7 @@ function NewCategoryForm({
         <div className="text-sm font-semibold">New category</div>
         <button
           onClick={onCancel}
-          className="tap-scale grid h-9 w-9 place-items-center rounded-full hover:bg-white/5"
+          className="tap-scale grid h-9 w-9 place-items-center rounded-full hover:surface-subtle"
           aria-label="Cancel"
         >
           <X className="h-4 w-4" />
@@ -936,7 +936,7 @@ function NewProductForm({
         <div className="text-sm font-semibold">New product</div>
         <button
           onClick={onCancel}
-          className="tap-scale grid h-9 w-9 place-items-center rounded-full hover:bg-white/5"
+          className="tap-scale grid h-9 w-9 place-items-center rounded-full hover:surface-subtle"
           aria-label="Cancel"
         >
           <X className="h-4 w-4" />
@@ -1282,7 +1282,7 @@ function ConfigRow({
               {arrValue.map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-1 text-xs"
+                  className="inline-flex items-center gap-1 rounded-full surface-muted px-2 py-1 text-xs"
                 >
                   {tag}
                   <button
@@ -1653,7 +1653,7 @@ function TeamManager({ currentEmail }: { currentEmail: string | null }) {
                       <ShieldCheck className="h-3.5 w-3.5 text-[color:var(--accent-primary)]" />
                       <span className="truncate">{who}</span>
                       {isSelf && (
-                        <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--text-tertiary)]">
+                        <span className="rounded-full surface-muted px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--text-tertiary)]">
                           you
                         </span>
                       )}
@@ -1675,7 +1675,7 @@ function TeamManager({ currentEmail }: { currentEmail: string | null }) {
                               onClick={() => revoke(u.userId, r, who)}
                               disabled={busyKey === key}
                               aria-label={`Remove ${ROLE_LABELS[r] ?? r}`}
-                              className="tap-scale grid h-4 w-4 place-items-center rounded-full hover:bg-black/10 disabled:opacity-50"
+                              className="tap-scale grid h-4 w-4 place-items-center rounded-full hover:surface-subtle disabled:opacity-50"
                             >
                               {busyKey === key ? (
                                 <Loader2 className="h-3 w-3 animate-spin" />
