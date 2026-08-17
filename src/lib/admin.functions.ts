@@ -4,6 +4,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { failFrom, userError } from "@/lib/errors";
 import type { Json } from "@/integrations/supabase/types";
 
 async function assertAdmin(
@@ -17,9 +18,9 @@ async function assertAdmin(
   userId: string,
 ) {
   const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-  if (error) throw new Error("Failed to verify admin role");
+  if (error) throw userError("Failed to verify admin role");
   const isAdmin = (data ?? []).some((r) => r.role === "admin");
-  if (!isAdmin) throw new Error("Forbidden: admin role required");
+  if (!isAdmin) throw userError("Forbidden: admin role required");
 }
 
 const GLOBAL_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
@@ -35,7 +36,7 @@ export const listAllProducts = createServerFn({ method: "GET" })
         "id, name, category_id, price, show_price, is_service, schedulable, is_available, is_veg, image_url, sort_order, categories(name)",
       )
       .order("sort_order", { ascending: true });
-    if (error) throw new Error(error.message);
+    if (error) failFrom("admin", error, "That didn't save. Please try again.");
     return data ?? [];
   });
 
@@ -65,11 +66,11 @@ export const updateProduct = createServerFn({ method: "POST" })
         .maybeSingle();
       const effectivePrice = patch.price ?? current?.price ?? null;
       if (effectivePrice === null) {
-        throw new Error("Set a price before turning show_price on.");
+        throw userError("Set a price before turning show_price on.");
       }
     }
     const { error } = await supabaseAdmin.from("products").update(patch).eq("id", id);
-    if (error) throw new Error(error.message);
+    if (error) failFrom("admin", error, "That didn't save. Please try again.");
     await supabaseAdmin.from("audit_log").insert({
       staff_id: context.userId,
       action: "product.update",
@@ -89,7 +90,7 @@ export const listAppConfig = createServerFn({ method: "GET" })
       .from("app_config")
       .select("key, scope, scope_id, value, description")
       .order("key", { ascending: true });
-    if (error) throw new Error(error.message);
+    if (error) failFrom("admin", error, "That didn't save. Please try again.");
     return data ?? [];
   });
 
@@ -113,7 +114,7 @@ export const updateAppConfig = createServerFn({ method: "POST" })
       },
       { onConflict: "key,scope,scope_id" },
     );
-    if (error) throw new Error(error.message);
+    if (error) failFrom("admin", error, "That didn't save. Please try again.");
     await supabaseAdmin.from("audit_log").insert({
       staff_id: context.userId,
       action: "config.update",
@@ -162,7 +163,7 @@ export const createCategory = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) failFrom("admin", error, "That didn't save. Please try again.");
     await supabaseAdmin.from("audit_log").insert({
       staff_id: context.userId,
       action: "category.create",
@@ -187,7 +188,7 @@ export const updateCategory = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { id, ...patch } = data;
     const { error } = await supabaseAdmin.from("categories").update(patch).eq("id", id);
-    if (error) throw new Error(error.message);
+    if (error) failFrom("admin", error, "That didn't save. Please try again.");
     await supabaseAdmin.from("audit_log").insert({
       staff_id: context.userId,
       action: "category.update",
@@ -207,7 +208,7 @@ export const listCategoriesForAdmin = createServerFn({ method: "GET" })
       .from("categories")
       .select("id, name, slug, parent_id, image_url")
       .order("name", { ascending: true });
-    if (error) throw new Error(error.message);
+    if (error) failFrom("admin", error, "That didn't save. Please try again.");
     return data ?? [];
   });
 
@@ -228,14 +229,14 @@ export const createProduct = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase as never, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     if (data.show_price && data.price == null) {
-      throw new Error("Set a price before turning show_price on.");
+      throw userError("Set a price before turning show_price on.");
     }
     const { data: inserted, error } = await supabaseAdmin
       .from("products")
       .insert({ ...data, is_available: true })
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) failFrom("admin", error, "That didn't save. Please try again.");
     await supabaseAdmin.from("audit_log").insert({
       staff_id: context.userId,
       action: "product.create",
@@ -258,7 +259,7 @@ export const deleteProduct = createServerFn({ method: "POST" })
       .from("products")
       .update({ is_available: false })
       .eq("id", data.id);
-    if (error) throw new Error(error.message);
+    if (error) failFrom("admin", error, "That didn't save. Please try again.");
     await supabaseAdmin.from("audit_log").insert({
       staff_id: context.userId,
       action: "product.delete",
@@ -288,13 +289,13 @@ export const uploadCatalogImage = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase as never, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const bytes = Buffer.from(data.dataBase64, "base64");
-    if (bytes.byteLength > 5 * 1024 * 1024) throw new Error("Image must be under 5MB");
+    if (bytes.byteLength > 5 * 1024 * 1024) throw userError("Image must be under 5MB");
     const safeName = data.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
     const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
     const { error } = await supabaseAdmin.storage
       .from("catalog-images")
       .upload(path, bytes, { contentType: data.contentType, upsert: false });
-    if (error) throw new Error(error.message);
+    if (error) failFrom("admin", error, "That didn't save. Please try again.");
     return { url: `/api/public/catalog-image/${encodeURIComponent(path)}` };
   });
 
@@ -319,13 +320,11 @@ export const listUserRoles = createServerFn({ method: "GET" })
       page: 1,
       perPage: 200,
     });
-    if (usersErr) throw new Error(usersErr.message);
-
+    if (usersErr) failFrom("admin", usersErr, "That didn't save. Please try again.");
     const { data: roleRows, error: rolesErr } = await supabaseAdmin
       .from("user_roles")
       .select("user_id, role");
-    if (rolesErr) throw new Error(rolesErr.message);
-
+    if (rolesErr) failFrom("admin", rolesErr, "That didn't save. Please try again.");
     const rolesByUser = new Map<string, string[]>();
     for (const r of roleRows ?? []) {
       const list = rolesByUser.get(r.user_id) ?? [];
@@ -362,7 +361,7 @@ export const grantUserRole = createServerFn({ method: "POST" })
 
     const email = data.email.toLowerCase();
     if (email.endsWith(PIN_EMAIL_SUFFIX)) {
-      throw new Error("Phone + PIN accounts can't be staff. Use a real email or Google account.");
+      throw userError("Phone + PIN accounts can't be staff. Use a real email or Google account.");
     }
 
     // Look the account up by email. GoTrue has no direct get-by-email admin
@@ -373,13 +372,13 @@ export const grantUserRole = createServerFn({ method: "POST" })
         page,
         perPage: 200,
       });
-      if (error) throw new Error(error.message);
+      if (error) failFrom("admin", error, "That didn't save. Please try again.");
       const found = (usersData.users ?? []).find((u) => (u.email ?? "").toLowerCase() === email);
       if (found) matchId = found.id;
       if ((usersData.users ?? []).length < 200) break;
     }
     if (!matchId) {
-      throw new Error(
+      throw userError(
         "No account with that email. They must sign in once before you can grant a role.",
       );
     }
@@ -388,12 +387,13 @@ export const grantUserRole = createServerFn({ method: "POST" })
       .from("user_roles")
       .upsert({ user_id: matchId, role: data.role }, { onConflict: "user_id,role" });
     if (insErr) {
-      // The DB trigger blocks admin/ops on PIN accounts; surface it cleanly.
-      throw new Error(
-        insErr.message.includes("cannot be granted")
-          ? "That account can't hold staff roles (phone + PIN account)."
-          : insErr.message,
-      );
+      // The DB trigger blocks admin/ops on PIN accounts -- that one is worth
+      // explaining, since it's a rule rather than a fault. Anything else is an
+      // internal failure and must not be echoed back verbatim.
+      if (insErr.message.includes("cannot be granted")) {
+        throw userError("That account can't hold staff roles (phone + PIN account).");
+      }
+      failFrom("admin.grantUserRole", insErr, "Couldn't grant that role. Please try again.");
     }
     return { ok: true as const, userId: matchId };
   });
@@ -410,7 +410,7 @@ export const revokeUserRole = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase as never, context.userId);
     if (data.role === "admin" && data.userId === context.userId) {
-      throw new Error("You can't remove your own admin role — ask another admin to do it.");
+      throw userError("You can't remove your own admin role — ask another admin to do it.");
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin
@@ -418,6 +418,6 @@ export const revokeUserRole = createServerFn({ method: "POST" })
       .delete()
       .eq("user_id", data.userId)
       .eq("role", data.role);
-    if (error) throw new Error(error.message);
+    if (error) failFrom("admin", error, "That didn't save. Please try again.");
     return { ok: true as const };
   });

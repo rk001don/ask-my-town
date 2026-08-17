@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { failFrom, userError } from "@/lib/errors";
 
 async function assertAdmin(
   supabase: {
@@ -16,9 +17,9 @@ async function assertAdmin(
   userId: string,
 ) {
   const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-  if (error) throw new Error("Failed to verify admin role");
+  if (error) throw userError("Failed to verify admin role");
   if (!(data ?? []).some((r) => r.role === "admin")) {
-    throw new Error("Forbidden: admin role required");
+    throw userError("Forbidden: admin role required");
   }
 }
 
@@ -79,7 +80,7 @@ export const createCampaign = createServerFn({ method: "POST" })
       })
       .select("id")
       .single();
-    if (error) throw new Error(error.message);
+    if (error) failFrom("notifications-admin", error, "That didn't work. Please try again.");
     return { id: inserted.id };
   });
 
@@ -94,7 +95,7 @@ export const listCampaigns = createServerFn({ method: "GET" })
         "id, type, title, body, image_url, deep_link, category, target, status, scheduled_at, sent_at, created_at",
       )
       .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
+    if (error) failFrom("notifications-admin", error, "That didn't work. Please try again.");
     return data ?? [];
   });
 
@@ -121,9 +122,9 @@ export const sendCampaignNow = createServerFn({ method: "POST" })
       .in("status", SENDABLE_STATUSES)
       .select("id, title, body, image_url, deep_link, target")
       .maybeSingle();
-    if (claimErr) throw new Error(claimErr.message);
+    if (claimErr) failFrom("notifications-admin", claimErr, "That didn't work. Please try again.");
     if (!claimed) {
-      throw new Error("This campaign is already sending or has already been sent.");
+      throw userError("This campaign is already sending or has already been sent.");
     }
 
     try {
@@ -138,7 +139,8 @@ export const sendCampaignNow = createServerFn({ method: "POST" })
           .from("user_roles")
           .select("user_id")
           .in("role", roles);
-        if (roleErr) throw new Error(roleErr.message);
+        if (roleErr)
+          failFrom("notifications-admin", roleErr, "That didn't work. Please try again.");
         const userIds = [...new Set((roleRows ?? []).map((r) => r.user_id))];
         if (userIds.length === 0) {
           await supabaseAdmin
@@ -155,7 +157,8 @@ export const sendCampaignNow = createServerFn({ method: "POST" })
         const { data: roleRows, error: roleErr } = await supabaseAdmin
           .from("user_roles")
           .select("user_id");
-        if (roleErr) throw new Error(roleErr.message);
+        if (roleErr)
+          failFrom("notifications-admin", roleErr, "That didn't work. Please try again.");
         const staffIds = [...new Set((roleRows ?? []).map((r) => r.user_id))];
         if (staffIds.length > 0) {
           deviceQuery = deviceQuery.not("user_id", "in", `(${staffIds.join(",")})`);
@@ -163,8 +166,7 @@ export const sendCampaignNow = createServerFn({ method: "POST" })
       }
 
       const { data: devices, error: devErr } = await deviceQuery;
-      if (devErr) throw new Error(devErr.message);
-
+      if (devErr) failFrom("notifications-admin", devErr, "That didn't work. Please try again.");
       const { sendWebPush } = await import("@/lib/webpush.server");
       const vapid = {
         publicKey: process.env.VAPID_PUBLIC_KEY ?? "",
@@ -172,7 +174,7 @@ export const sendCampaignNow = createServerFn({ method: "POST" })
         subject: process.env.VAPID_SUBJECT || "mailto:support@example.com",
       };
       if (!vapid.publicKey || !vapid.privateKey) {
-        throw new Error("Missing VAPID configuration");
+        throw userError("Missing VAPID configuration");
       }
 
       let sent = 0;
@@ -249,12 +251,11 @@ export const getNotificationReach = createServerFn({ method: "GET" })
     await assertAdmin(context.supabase as never, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: devices, error } = await supabaseAdmin.from("push_devices").select("user_id");
-    if (error) throw new Error(error.message);
+    if (error) failFrom("notifications-admin", error, "That didn't work. Please try again.");
     const { data: roleRows, error: roleErr } = await supabaseAdmin
       .from("user_roles")
       .select("user_id, role");
-    if (roleErr) throw new Error(roleErr.message);
-
+    if (roleErr) failFrom("notifications-admin", roleErr, "That didn't work. Please try again.");
     const staffAdminIds = new Set(roleRows?.map((r) => r.user_id) ?? []);
     const adminIds = new Set(
       (roleRows ?? []).filter((r) => r.role === "admin").map((r) => r.user_id),
@@ -306,7 +307,7 @@ export const sendTestNotification = createServerFn({ method: "POST" })
       subject: process.env.VAPID_SUBJECT || "mailto:support@example.com",
     };
     if (!vapid.publicKey || !vapid.privateKey) {
-      throw new Error("Missing VAPID configuration");
+      throw userError("Missing VAPID configuration");
     }
     let sent = 0;
     for (const device of devices) {

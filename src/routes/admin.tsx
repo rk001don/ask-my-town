@@ -31,6 +31,7 @@ import {
 } from "@/lib/notifications-admin.functions";
 import { NotificationOptIn } from "@/components/NotificationOptIn";
 import { toUserMessage } from "@/lib/errors";
+import { BulkImageUpload } from "@/components/BulkImageUpload";
 import {
   Loader2,
   ShieldAlert,
@@ -453,6 +454,16 @@ function AdminBoard({ email }: { email: string }) {
 
       {activeTab === "catalog" && (
         <>
+          <section className="mb-6">
+            <BulkImageUpload
+              products={(productsQ.data ?? []).map((p) => ({
+                id: p.id,
+                name: p.name,
+                image_url: p.image_url,
+              }))}
+              onDone={() => productsQ.refetch()}
+            />
+          </section>
           <section className="mb-8">
             <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-lg font-semibold">Products</h2>
