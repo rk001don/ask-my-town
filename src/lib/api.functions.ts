@@ -26,6 +26,12 @@ const CustomerSchema = z.object({
     .transform((v) => normalizeIndianPhone(v)),
   address: z.string().trim().min(6, "Address is too short").max(400),
   landmark: z.string().trim().max(120).optional().or(z.literal("")),
+  pincode: z
+    .string()
+    .trim()
+    .regex(/^[1-9][0-9]{5}$/, "Enter a valid 6-digit pincode, or leave it blank.")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
 });
 
 const OrderItemSchema = z.object({
@@ -937,6 +943,7 @@ export const createOrder = createServerFn({ method: "POST" })
       contact_phone: phone,
       delivery_address: data.customer.address,
       delivery_landmark: data.customer.landmark || null,
+      delivery_pincode: data.customer.pincode || null,
     });
     if (orderErr) {
       // Unique-violation on idempotency_key means a concurrent retry of this

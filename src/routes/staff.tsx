@@ -75,6 +75,7 @@ type StaffOrderRow = {
   contact_phone?: string | null;
   delivery_address?: string | null;
   delivery_landmark?: string | null;
+  delivery_pincode?: string | null;
   customer: {
     name: string;
     phone: string;
@@ -219,6 +220,7 @@ function StaffOrderCard({
           {(o.delivery_landmark ?? o.customer?.landmark)
             ? ` · ${o.delivery_landmark ?? o.customer?.landmark}`
             : ""}
+          {o.delivery_pincode ? ` · ${o.delivery_pincode}` : ""}
         </span>
       </div>
 

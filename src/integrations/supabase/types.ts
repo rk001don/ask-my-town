@@ -137,6 +137,7 @@ export type Database = {
       }
       customers: {
         Row: {
+          pincode: string | null
           address: string
           created_at: string
           id: string
@@ -146,6 +147,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          pincode?: string | null
           address: string
           created_at?: string
           id?: string
@@ -155,6 +157,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          pincode?: string | null
           address?: string
           created_at?: string
           id?: string
@@ -483,6 +486,7 @@ export type Database = {
           completed_at: string | null
           confirmed_at: string | null
           contact_name: string | null
+          delivery_pincode: string | null
           contact_phone: string | null
           created_at: string
           customer_id: string
@@ -516,6 +520,7 @@ export type Database = {
           completed_at?: string | null
           confirmed_at?: string | null
           contact_name?: string | null
+          delivery_pincode?: string | null
           contact_phone?: string | null
           created_at?: string
           customer_id: string
@@ -549,6 +554,7 @@ export type Database = {
           completed_at?: string | null
           confirmed_at?: string | null
           contact_name?: string | null
+          delivery_pincode?: string | null
           contact_phone?: string | null
           created_at?: string
           customer_id?: string
