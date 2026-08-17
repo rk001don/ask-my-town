@@ -477,18 +477,18 @@ export type Database = {
           assigned_staff_email: string | null
           assigned_staff_id: string | null
           cancellation_reason: string | null
-          contact_name: string | null
-          contact_phone: string | null
-          delivery_address: string | null
-          delivery_landmark: string | null
           cancelled_at: string | null
           cancelled_by: string | null
           cancelled_by_role: string | null
           completed_at: string | null
           confirmed_at: string | null
+          contact_name: string | null
+          contact_phone: string | null
           created_at: string
           customer_id: string
+          delivery_address: string | null
           delivery_batch_id: string | null
+          delivery_landmark: string | null
           group_order_id: string | null
           id: string
           idempotency_key: string | null
@@ -510,18 +510,18 @@ export type Database = {
           assigned_staff_email?: string | null
           assigned_staff_id?: string | null
           cancellation_reason?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
-          delivery_address?: string | null
-          delivery_landmark?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           cancelled_by_role?: string | null
           completed_at?: string | null
           confirmed_at?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           customer_id: string
+          delivery_address?: string | null
           delivery_batch_id?: string | null
+          delivery_landmark?: string | null
           group_order_id?: string | null
           id: string
           idempotency_key?: string | null
@@ -543,18 +543,18 @@ export type Database = {
           assigned_staff_email?: string | null
           assigned_staff_id?: string | null
           cancellation_reason?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
-          delivery_address?: string | null
-          delivery_landmark?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
           cancelled_by_role?: string | null
           completed_at?: string | null
           confirmed_at?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
           created_at?: string
           customer_id?: string
+          delivery_address?: string | null
           delivery_batch_id?: string | null
+          delivery_landmark?: string | null
           group_order_id?: string | null
           id?: string
           idempotency_key?: string | null
