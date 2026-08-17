@@ -39,6 +39,36 @@ export function NotificationOptIn() {
     }
   }
 
+  // The Permissions API fires a change event when the customer flips
+  // notifications in site settings, which is the one signal browsers do give
+  // us after a denial. Listening for it means they come back to a toggle
+  // that's already on, instead of having to find and press "check again".
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.permissions?.query) return;
+    let status: PermissionStatus | null = null;
+    let cancelled = false;
+    const onChange = () => {
+      if (cancelled || !status) return;
+      if (status.state === "granted") void subscribe(true);
+      else if (status.state === "denied") setState("blocked");
+      else setState("idle");
+    };
+    navigator.permissions
+      .query({ name: "notifications" as PermissionName })
+      .then((s) => {
+        if (cancelled) return;
+        status = s;
+        s.addEventListener("change", onChange);
+      })
+      // Safari historically rejects this query; the manual path still works.
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      status?.removeEventListener("change", onChange);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (
       typeof window === "undefined" ||
@@ -78,8 +108,10 @@ export function NotificationOptIn() {
         setState("subscribed");
         return;
       }
-      // Browser already refused permission -- requestPermission() cannot
-      // re-prompt, so the UI has to route them to site settings instead.
+      // Browser already refused permission. requestPermission() cannot
+      // re-prompt after a denial -- it resolves "denied" without showing
+      // anything, in every major browser -- so the only honest move is to
+      // point at site settings and watch for the change.
       if (Notification.permission === "denied") {
         setState("blocked");
         return;
@@ -194,7 +226,8 @@ export function NotificationOptIn() {
               </button>
             </div>
             <p className="mt-2 text-sm text-[color:var(--text-secondary)]">
-              Your browser is blocking them, so we can't ask again from here. It takes two taps:
+              Once notifications are blocked, browsers don't let a site ask again — the permission
+              has to be changed in settings. It takes two taps:
             </p>
             <ol className="mt-3 space-y-2 text-sm">
               <li className="flex gap-2.5">
@@ -223,6 +256,9 @@ export function NotificationOptIn() {
             >
               I've allowed it — check again
             </button>
+            <p className="mt-2 text-center text-xs text-[color:var(--text-muted)]">
+              We'll usually notice on our own the moment you change it.
+            </p>
           </div>
         </div>
       )}

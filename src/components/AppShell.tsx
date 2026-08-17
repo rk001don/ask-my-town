@@ -1,6 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import { Home, Compass, ClipboardList, Store, ShoppingBag, ArrowRight, X } from "lucide-react";
 import { AskFAB } from "@/components/AskFAB";
+import { SessionSync } from "@/components/SessionSync";
 import { MyTownLogo } from "@/components/MyTownLogo";
 import { useCart, useCartCount } from "@/lib/cart-store";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -53,11 +54,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const cartBarVisible = showFloatingCart && cartCount > 0 && !cartDismissed;
 
   if (hideNav) {
-    return <div className="min-h-[100dvh] w-full">{children}</div>;
+    return (
+      <div className="min-h-[100dvh] w-full">
+        <SessionSync />
+        {children}
+      </div>
+    );
   }
 
   return (
     <div className="mx-auto flex min-h-[100dvh] w-full max-w-[520px] flex-col md:max-w-none md:flex-row">
+      <SessionSync />
       <aside className="sticky top-0 hidden h-[100dvh] w-56 flex-shrink-0 border-r border-[color:var(--border-subtle)] px-3 py-6 md:flex md:flex-col">
         <Link to="/" aria-label="MyTown home" className="tap-scale block px-2">
           <MyTownLogo className="h-8 w-8" showWordmark />
