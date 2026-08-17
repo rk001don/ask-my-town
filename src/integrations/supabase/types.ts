@@ -589,6 +589,7 @@ export type Database = {
           created_at: string
           currency: string
           description: string | null
+          description_long: string | null
           id: string
           image_url: string | null
           is_available: boolean
@@ -610,6 +611,7 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string | null
+          description_long?: string | null
           id?: string
           image_url?: string | null
           is_available?: boolean
@@ -631,6 +633,7 @@ export type Database = {
           created_at?: string
           currency?: string
           description?: string | null
+          description_long?: string | null
           id?: string
           image_url?: string | null
           is_available?: boolean
