@@ -15,6 +15,7 @@ import {
   listAppConfig,
   updateAppConfig,
   listUserRoles,
+  getUnmetDemand,
   grantUserRole,
   revokeUserRole,
 } from "@/lib/admin.functions";
@@ -46,7 +47,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-type AdminTab = "dashboard" | "catalog" | "team" | "notifications" | "config";
+type AdminTab = "dashboard" | "demand" | "catalog" | "team" | "notifications" | "config";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -385,6 +386,7 @@ function AdminBoard({ email }: { email: string }) {
           { id: "dashboard", label: "Dashboard" },
           { id: "catalog", label: "Catalog" },
           { id: "team", label: "Team" },
+          { id: "demand", label: "Demand" },
           { id: "notifications", label: "Notifications" },
           { id: "config", label: "Config" },
         ].map((tab) => (
@@ -451,6 +453,8 @@ function AdminBoard({ email }: { email: string }) {
           </div>
         </section>
       )}
+
+      {activeTab === "demand" && <UnmetDemand />}
 
       {activeTab === "catalog" && (
         <>
@@ -1691,5 +1695,123 @@ function TeamManager({ currentEmail }: { currentEmail: string | null }) {
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * Unmet demand — what customers asked for that the catalogue couldn't answer.
+ *
+ * This is the answer to "we don't know what people will want": three signals
+ * that already flow through the app and were never read. Ranked by how often
+ * each was asked, so the top of the list is the next thing worth stocking.
+ */
+function UnmetDemand() {
+  const demandFn = useServerFn(getUnmetDemand);
+  const q = useQuery({ queryKey: ["admin-unmet-demand"], queryFn: () => demandFn() });
+
+  if (q.isLoading) return <div className="skeleton h-64 rounded-2xl" />;
+  if (q.error)
+    return <SectionError message="Couldn't load demand signals." onRetry={() => q.refetch()} />;
+
+  const d = q.data;
+  if (!d) return null;
+  const nothingYet = d.failedSearches.length === 0 && d.freeformAsks.length === 0;
+
+  return (
+    <section className="mb-8 space-y-5">
+      <div>
+        <h2 className="text-lg font-semibold">What people wanted that we didn't have</h2>
+        <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
+          From the last 30 days. The top of each list is the next thing worth adding.
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard label="Products live" value={String(d.catalogue.total)} />
+        <StatCard
+          label="Missing a photo"
+          value={String(d.catalogue.missingPhoto)}
+          tone={d.catalogue.missingPhoto > 0 ? "warn" : "ok"}
+        />
+        <StatCard
+          label="Missing a description"
+          value={String(d.catalogue.missingDescription)}
+          tone={d.catalogue.missingDescription > 0 ? "warn" : "ok"}
+        />
+      </div>
+
+      {nothingYet && (
+        <div className="card-surface p-6 text-center text-sm text-[color:var(--text-secondary)]">
+          No unmet demand recorded yet. Once customers search for things we don't stock, or send
+          free-form asks, they'll show up here.
+        </div>
+      )}
+
+      {d.failedSearches.length > 0 && (
+        <div className="card-surface p-4">
+          <h3 className="text-sm font-semibold">Searched for, found nothing</h3>
+          <p className="mt-0.5 mb-3 text-xs text-[color:var(--text-secondary)]">
+            Someone looked for this and the catalogue had no answer.
+          </p>
+          <ul className="space-y-1">
+            {d.failedSearches.map((row) => (
+              <li
+                key={row.label}
+                className="flex items-center justify-between gap-3 rounded-lg bg-[color:var(--bg-elevated-2)] px-3 py-2 text-sm"
+              >
+                <span className="min-w-0 truncate">{row.label}</span>
+                <span className="shrink-0 rounded-full bg-[color:var(--danger)]/15 px-2 py-0.5 text-[11px] font-bold text-[color:var(--danger)]">
+                  {row.count}×
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {d.freeformAsks.length > 0 && (
+        <div className="card-surface p-4">
+          <h3 className="text-sm font-semibold">Asked for in their own words</h3>
+          <p className="mt-0.5 mb-3 text-xs text-[color:var(--text-secondary)]">
+            Free-form "Ask MyTown" requests, grouped. Anything asked repeatedly is a product.
+          </p>
+          <ul className="space-y-1">
+            {d.freeformAsks.map((row) => (
+              <li
+                key={row.label}
+                className="flex items-center justify-between gap-3 rounded-lg bg-[color:var(--bg-elevated-2)] px-3 py-2 text-sm"
+              >
+                <span className="min-w-0 truncate">{row.label}</span>
+                <span className="shrink-0 rounded-full bg-[color:var(--accent-primary)]/15 px-2 py-0.5 text-[11px] font-bold text-[color:var(--accent-primary)]">
+                  {row.count}×
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  tone = "ok",
+}: {
+  label: string;
+  value: string;
+  tone?: "ok" | "warn";
+}) {
+  return (
+    <div className="card-surface p-4">
+      <div
+        className="text-2xl font-extrabold"
+        style={{ color: tone === "warn" ? "var(--warning)" : "var(--text-primary)" }}
+      >
+        {value}
+      </div>
+      <div className="mt-0.5 text-xs text-[color:var(--text-secondary)]">{label}</div>
+    </div>
   );
 }

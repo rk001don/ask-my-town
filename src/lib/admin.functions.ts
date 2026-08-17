@@ -300,6 +300,109 @@ export const uploadCatalogImage = createServerFn({ method: "POST" })
   });
 
 // ---------------------------------------------------------------------------
+// Unmet demand.
+//
+// The recurring question this answers is "we don't know what people will
+// want, how do we address that gap?" -- and the answer is not to guess harder.
+// Three signals already flow through the app and none were ever read:
+//
+//   1. Searches that returned NOTHING. Someone looked for it and we didn't
+//      have it. The purest demand signal a marketplace gets.
+//   2. Freeform "Ask MyTown" requests -- people typing, in their own words,
+//      what they want. Anything asked repeatedly is a product.
+//   3. Searches that returned results but where nothing was ordered. We had
+//      it and they still didn't buy: wrong price, wrong name, or no photo.
+//
+// Together these turn the catalogue from something guessed at monthly into
+// something customers write.
+// ---------------------------------------------------------------------------
+
+export const getUnmetDemand = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase as never, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    // --- 1. searches that found nothing ---
+    const { data: misses } = await supabaseAdmin
+      .from("search_analytics")
+      .select("term, normalized_term, created_at")
+      .eq("result_count", 0)
+      .gte("created_at", since)
+      .limit(2000);
+
+    const missCounts = new Map<string, { label: string; count: number; last: string }>();
+    for (const row of misses ?? []) {
+      const key = (row.normalized_term || row.term || "").trim();
+      if (key.length < 3) continue;
+      const hit = missCounts.get(key);
+      if (hit) {
+        hit.count += 1;
+        if (row.created_at > hit.last) hit.last = row.created_at;
+      } else {
+        missCounts.set(key, {
+          label: (row.term || key).trim(),
+          count: 1,
+          last: row.created_at ?? "",
+        });
+      }
+    }
+    const failedSearches = [...missCounts.values()].sort((a, b) => b.count - a.count).slice(0, 25);
+
+    // --- 2. freeform asks ---
+    // These are written by hand, so exact-matching them would scatter the
+    // counts across near-identical phrasings. Grouping on the first few
+    // meaningful words clusters "2 kg tomatoes from..." with "2kg tomato ..."
+    // well enough to spot what keeps being requested.
+    const { data: asks } = await supabaseAdmin
+      .from("order_items")
+      .select("item_name, created_at")
+      .eq("is_freeform", true)
+      .gte("created_at", since)
+      .limit(2000);
+
+    const askCounts = new Map<string, { label: string; count: number }>();
+    for (const row of asks ?? []) {
+      const text = (row.item_name || "").trim();
+      if (text.length < 3) continue;
+      const key = text
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, "")
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 3)
+        .join(" ");
+      if (!key) continue;
+      const hit = askCounts.get(key);
+      if (hit) hit.count += 1;
+      else askCounts.set(key, { label: text, count: 1 });
+    }
+    const freeformAsks = [...askCounts.values()].sort((a, b) => b.count - a.count).slice(0, 25);
+
+    // --- 3. catalogue health ---
+    const { data: products } = await supabaseAdmin
+      .from("products")
+      .select("id, name, image_url, description_long")
+      .eq("is_available", true);
+
+    const missingPhoto = (products ?? []).filter((p) => !p.image_url).length;
+    const missingDescription = (products ?? []).filter(
+      (p) => !p.description_long || !p.description_long.trim(),
+    ).length;
+
+    return {
+      failedSearches,
+      freeformAsks,
+      catalogue: {
+        total: products?.length ?? 0,
+        missingPhoto,
+        missingDescription,
+      },
+    };
+  });
+
+// ---------------------------------------------------------------------------
 // Team / access management. Admin-only. Replaces the manual Supabase SQL step
 // for granting and revoking staff/admin roles from inside the app.
 // ---------------------------------------------------------------------------
