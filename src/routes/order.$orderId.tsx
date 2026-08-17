@@ -10,10 +10,13 @@ import {
   type OrderStatus,
   waLink,
 } from "@/lib/constants";
-import { Check, Clock, MessageCircle, Sparkles, XCircle } from "lucide-react";
+import { Check, Clock, MessageCircle, RotateCcw, Sparkles, XCircle } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/States";
 import { NotifyMeButton } from "@/components/NotifyMeButton";
 import { getOrderTotals } from "@/lib/serviceFee";
+import { addCatalogItem, addFreeformAsk } from "@/lib/cart-store";
+import { toast } from "sonner";
+import { useNavigate } from "@tanstack/react-router";
 
 const opts = (orderId: string) =>
   queryOptions({
@@ -33,6 +36,9 @@ export const Route = createFileRoute("/order/$orderId")({
 function Confirmation() {
   const { orderId } = Route.useParams();
   const { data } = useSuspenseQuery(opts(orderId));
+  // Hooks must run unconditionally: the "order not found" branch below returns
+  // early, so anything hook-based has to be called before it.
+  const navigate = useNavigate();
   const order = data.orders[0];
 
   if (!order) {
@@ -49,6 +55,39 @@ function Confirmation() {
 
   const status = order.status as OrderStatus;
   const isCancelled = status === "cancelled";
+  // A delivered order used to show the same "MyTown got it" headline as a
+  // brand-new one -- the emotional peak of the whole product reduced to a
+  // label change. It gets its own state.
+  const isDelivered = status === "completed";
+
+  /**
+   * Rebuilds this order in the cart.
+   *
+   * Quantities are replayed rather than adding one of each -- someone who
+   * ordered four idlis last week almost certainly wants four again, and making
+   * them tap "+" three times is exactly the kind of friction reordering is
+   * meant to remove. Freeform asks are re-added as asks, since there's no
+   * catalogue product behind them to price.
+   */
+  function reorder() {
+    for (const it of order.items) {
+      if (it.is_freeform) {
+        addFreeformAsk(it.item_name);
+        continue;
+      }
+      for (let n = 0; n < (it.quantity ?? 1); n++) {
+        addCatalogItem({
+          itemName: it.item_name,
+          category: it.category ?? undefined,
+          subcategory: it.subcategory ?? undefined,
+          unitPrice: it.unit_price,
+          showPrice: it.unit_price != null,
+        });
+      }
+    }
+    toast.success("Added to your cart");
+    navigate({ to: "/cart" });
+  }
   const currentIdx = CUSTOMER_ORDER_STEPS.findIndex((s) => s.key === customerFacingStatus(status));
 
   return (
@@ -66,7 +105,7 @@ function Confirmation() {
           />
           <div className="relative flex items-start gap-3">
             <div
-              className={`grid h-11 w-11 shrink-0 place-items-center rounded-full border ${
+              className={`relative grid h-11 w-11 shrink-0 place-items-center rounded-full border ${
                 isCancelled
                   ? "border-[color:var(--danger)]/40 bg-[color:var(--danger)]/20"
                   : "border-[color:var(--success)]/40 bg-[color:var(--success)]/20"
@@ -75,12 +114,20 @@ function Confirmation() {
               {isCancelled ? (
                 <XCircle className="h-6 w-6 text-[color:var(--danger)]" strokeWidth={2.5} />
               ) : (
-                <Check className="h-6 w-6 text-[color:var(--success)]" strokeWidth={2.5} />
+                <>
+                  {isDelivered && (
+                    <span className="ring-out absolute inset-0 rounded-full border-2 border-[color:var(--success)]" />
+                  )}
+                  <Check
+                    className={`h-6 w-6 text-[color:var(--success)] ${isDelivered ? "tick-in" : ""}`}
+                    strokeWidth={2.5}
+                  />
+                </>
               )}
             </div>
             <div className="min-w-0">
               <div className="text-display text-xl font-semibold">
-                {isCancelled ? "Order cancelled" : "MyTown got it"}
+                {isCancelled ? "Order cancelled" : isDelivered ? "Delivered" : "MyTown got it"}
               </div>
               <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
                 {STATUS_COPY[status]?.blurb ??
@@ -109,10 +156,22 @@ function Confirmation() {
                     </div>
                   )}
               </div>
-              {!isCancelled && (
-                <div className="mt-3">
-                  <NotifyMeButton orderId={orderId} />
-                </div>
+              {/* A delivered order has nothing left to notify about; the
+                  useful next action is ordering the same thing again. */}
+              {isDelivered ? (
+                <button
+                  onClick={reorder}
+                  className="tap-scale accent-gradient mt-3 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-bold"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Order this again
+                </button>
+              ) : (
+                !isCancelled && (
+                  <div className="mt-3">
+                    <NotifyMeButton orderId={orderId} />
+                  </div>
+                )
               )}
             </div>
           </div>

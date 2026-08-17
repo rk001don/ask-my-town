@@ -1,5 +1,8 @@
 export const TOWN_NAME = "Karimangalam";
 export const WHATSAPP_NUMBER = "918072283367"; // wa.me format, no +
+
+/** Human-readable form of the same number, for use inside message copy. */
+export const SUPPORT_PHONE_DISPLAY = "+91 80722 83367";
 export const WHATSAPP_DEFAULT_MSG = "Hi MyTown, I need help with something.";
 export const APP_NAME = "MyTown";
 export const APP_TAGLINE = "Need Anything? MyTown!";

@@ -585,3 +585,38 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+/* Delivery confirmation.
+   A single, restrained moment: the tick scales in with a soft ring behind it.
+   Deliberately not confetti -- this fires every time a customer opens a
+   completed order, not just once, so it has to stay wearable. */
+@keyframes mt-tick-in {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes mt-ring-out {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(2.1);
+    opacity: 0;
+  }
+}
+@utility tick-in {
+  animation: mt-tick-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@utility ring-out {
+  animation: mt-ring-out 900ms ease-out both;
+}

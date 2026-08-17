@@ -71,3 +71,30 @@ export function failFrom(
   console.error(`[${context}] ${detail}`);
   throw userError(userFacing);
 }
+
+/**
+ * Runs a Zod schema and converts a failure into a displayable message.
+ *
+ * Validation failures are the one class of error that is inherently about the
+ * customer's own input, so the schema's message is exactly what they need to
+ * read. Without this they'd be thrown as a bare ZodError -- unmarked, and so
+ * collapsed to a generic fallback by `toUserMessage`, which is how a carefully
+ * written rule like "You can order up to 50 of one item" would never actually
+ * reach anyone.
+ *
+ * Only the first issue is surfaced: a list of six complaints is a worse
+ * experience than one clear thing to fix.
+ */
+export function parseOrUserError<T>(
+  schema: { parse: (data: unknown) => T },
+  data: unknown,
+  fallback = "Please check the details and try again.",
+): T {
+  try {
+    return schema.parse(data);
+  } catch (err) {
+    const issues = (err as { issues?: { message?: string }[] })?.issues;
+    const first = Array.isArray(issues) ? issues[0]?.message : undefined;
+    throw userError(first && first.trim() ? first : fallback);
+  }
+}

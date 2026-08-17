@@ -1,10 +1,11 @@
 // All MyTown server functions. Callable from routes/components via useServerFn or directly.
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { failFrom, userError } from "@/lib/errors";
+import { failFrom, parseOrUserError, userError } from "@/lib/errors";
 import { isValidIndianPhone, normalizeIndianPhone } from "@/lib/phone";
 import type { ServiceFeeTiers } from "@/lib/serviceFee";
 import { computeServiceFee } from "@/lib/serviceFee";
+import { SUPPORT_PHONE_DISPLAY } from "@/lib/constants";
 
 // ----- shared schemas -----
 const OrderStatus = z.enum([
@@ -32,7 +33,13 @@ const OrderItemSchema = z.object({
   itemName: z.string().trim().min(1).max(160),
   category: z.string().trim().max(80).optional(),
   subcategory: z.string().trim().max(80).optional(),
-  quantity: z.number().int().min(1).max(50),
+  quantity: z
+    .number()
+    .int()
+    .min(1)
+    // These messages are what the customer actually reads when validation
+    // fails, so they name the limit and the fix rather than saying "invalid".
+    .max(50, "You can order up to 50 of one item. Reduce the quantity to continue."),
   notes: z.string().trim().max(280).optional(),
   isFreeform: z.boolean(),
   attachmentPath: z.string().trim().max(500).optional(),
@@ -546,31 +553,26 @@ function currentOrNextWindow(
   return open?.w ?? null;
 }
 
+const CreateOrderSchema = z.object({
+  customer: CustomerSchema,
+  items: z.array(OrderItemSchema).min(1, "Add at least one item"),
+  notes: z.string().trim().max(500).optional(),
+  locationId: z.string().uuid().optional(),
+  requestedDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  requestedWindow: z.string().trim().min(1).max(40).optional(),
+  idempotencyKey: z.string().trim().min(10).max(100).optional(),
+});
+
 export const createOrder = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: {
-      customer: z.infer<typeof CustomerSchema>;
-      items: z.infer<typeof OrderItemSchema>[];
-      notes?: string;
-      locationId?: string;
-      requestedDate?: string;
-      requestedWindow?: string;
-      idempotencyKey?: string;
-    }) =>
-      z
-        .object({
-          customer: CustomerSchema,
-          items: z.array(OrderItemSchema).min(1, "Add at least one item"),
-          notes: z.string().trim().max(500).optional(),
-          locationId: z.string().uuid().optional(),
-          requestedDate: z
-            .string()
-            .regex(/^\d{4}-\d{2}-\d{2}$/)
-            .optional(),
-          requestedWindow: z.string().trim().min(1).max(40).optional(),
-          idempotencyKey: z.string().trim().min(10).max(100).optional(),
-        })
-        .parse(data),
+  .inputValidator((data: z.infer<typeof CreateOrderSchema>) =>
+    // Runs through the helper so the schema's own wording reaches the
+    // customer -- "You can order up to 50 of one item", "Enter a valid
+    // 10-digit mobile number" -- instead of a bare ZodError, which is
+    // unmarked and would collapse to a generic "please try again".
+    parseOrUserError(CreateOrderSchema, data, "Please check your details and try again."),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -632,15 +634,24 @@ export const createOrder = createServerFn({ method: "POST" })
     let batchWindow: string | null = null; // window actually used for delivery_batches assignment
     if (requestedWindow) {
       const win = windows.find((w) => w.label.toLowerCase() === requestedWindow!.toLowerCase());
-      if (!win) throw new Error(`Unknown delivery window: ${requestedWindow}`);
+      if (!win) throw userError("That delivery slot is no longer available. Please pick another.");
       requestedWindow = win.label;
       if (requestedDate === today) {
         const { h, m } = parseHM(win.cutoff);
         const nowMin = nowTz.h * 60 + nowTz.m;
         const cutMin = h * 60 + m;
         if (nowMin >= cutMin) {
+          // Name the next window that IS open rather than saying "pick a later
+          // one" and leaving the customer to work out which. If none is left
+          // today, say so plainly and point at tomorrow.
+          const nextToday = windows.find((w) => {
+            const c = parseHM(w.cutoff);
+            return c.h * 60 + c.m > nowMin;
+          });
           throw userError(
-            `Sorry, the ${win.label} window has closed for today. Please pick a later window.`,
+            nextToday
+              ? `The ${win.label} slot closed at ${win.cutoff}. The next one available today is ${nextToday.label}.`
+              : `The ${win.label} slot closed at ${win.cutoff}, and that was the last one today. Please pick a slot for tomorrow.`,
           );
         }
       }
@@ -692,8 +703,11 @@ export const createOrder = createServerFn({ method: "POST" })
         "We couldn't place your order right now. Please try again.",
       );
     if (!allowed) {
+      // Say what the rule is and give a way through. "Too many orders" alone
+      // reads as a rejection with no explanation and no next step -- the
+      // customer can't tell whether they did something wrong or the app broke.
       throw userError(
-        "Too many orders placed recently from this number. Please wait a few minutes and try again.",
+        `You've placed 8 orders in the last 10 minutes, which is our limit. Please try again in a few minutes — or message us on WhatsApp (${SUPPORT_PHONE_DISPLAY}) if it's urgent and we'll take it directly.`,
       );
     }
 
@@ -925,7 +939,11 @@ export const trackOrder = createServerFn({ method: "GET" })
         rlErr,
         "We couldn't look that up right now. Please try again.",
       );
-    if (!allowed) throw userError("Too many lookups. Please wait a moment and try again.");
+    if (!allowed) {
+      throw userError(
+        "That's 20 lookups in a minute, which is our limit. Wait about a minute and try again.",
+      );
+    }
 
     let query = supabaseAdmin
       .from("orders")
