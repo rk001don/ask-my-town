@@ -146,7 +146,7 @@ export function ProductCard({
                   iconKey: categoryIcon ?? product.categories?.icon_key ?? undefined,
                 })
               }
-              className="tap-scale rounded-full accent-gradient px-5 py-2 text-sm font-bold shadow-[0_2px_10px_-2px_oklch(0.72_0.19_30_/_0.5)]"
+              className="tap-scale accent-gradient rounded-full px-5 py-2 text-sm font-bold shadow-[var(--shadow-accent-glow)]"
             >
               {product.is_service ? "Ask" : "Add"}
             </button>

@@ -211,13 +211,7 @@ function SearchPage() {
                   onClick={() => saveRecent(debounced.trim())}
                   className="tap-scale card-surface flex items-center gap-3 p-3"
                 >
-                  <div
-                    className="grid h-11 w-11 place-items-center rounded-2xl"
-                    style={{
-                      background:
-                        "linear-gradient(140deg, oklch(0.82 0.16 70 / 0.18), oklch(0.72 0.19 30 / 0.16))",
-                    }}
-                  >
+                  <div className="accent-wash grid h-11 w-11 place-items-center rounded-2xl">
                     <Icon className="h-5 w-5 text-[color:var(--accent-primary)]" />
                   </div>
                   <div className="min-w-0 flex-1">

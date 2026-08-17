@@ -124,7 +124,7 @@ function CartRow({ it }: { it: ReturnType<typeof useCart>["items"][number] }) {
             // on the way. Freeform asks aren't catalogue items, so they keep
             // the distinct accent wash that marks them as "you told us this".
             background: it.isFreeform
-              ? "linear-gradient(140deg, oklch(0.82 0.16 70 / 0.35), oklch(0.72 0.19 30 / 0.35))"
+              ? "linear-gradient(140deg, color-mix(in oklab, var(--accent-primary) 34%, transparent), color-mix(in oklab, var(--accent-secondary) 32%, transparent))"
               : placeholderGradientFor(it.itemName),
           }}
         >

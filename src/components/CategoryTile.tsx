@@ -22,15 +22,7 @@ export function CategoryTile({ slug, name, iconKey, imageUrl, compact }: Props) 
     >
       <div
         className={`grid place-items-center overflow-hidden rounded-2xl ${compact ? "h-11 w-11" : "h-14 w-14"}`}
-        style={
-          safeImageUrl
-            ? undefined
-            : {
-                background:
-                  "linear-gradient(140deg, oklch(0.82 0.16 70 / 0.18), oklch(0.72 0.19 30 / 0.16))",
-                border: "1px solid var(--border-subtle)",
-              }
-        }
+        style={safeImageUrl ? undefined : { border: "1px solid var(--border-subtle)" }}
       >
         {safeImageUrl ? (
           <img

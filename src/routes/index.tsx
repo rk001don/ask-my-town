@@ -122,12 +122,7 @@ function Home() {
           MyTown!" identity card). */}
       <section className="px-4 pt-4">
         <div className="gradient-hero card-surface relative overflow-hidden p-4">
-          <div
-            className="absolute -right-10 -top-10 h-32 w-32 rounded-full"
-            style={{
-              background: "radial-gradient(circle, oklch(0.82 0.16 70 / 0.3), transparent 65%)",
-            }}
-          />
+          <div className="accent-halo absolute -right-10 -top-10 h-32 w-32 rounded-full" />
           <div className="relative">
             <h1 className="text-display text-[20px] leading-[1.15] font-bold">{APP_TAGLINE}</h1>
             <p className="mt-1 text-[13px] text-[color:var(--text-secondary)]">{APP_SUBTEXT}</p>
