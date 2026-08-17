@@ -51,7 +51,7 @@ function Explore() {
   useEffect(() => setMounted(true), []);
   return (
     <div>
-      <AppHeader title="Explore" showBack={false} />
+      <AppHeader title="Explore" showBack={false} showSearch={false} showChat />
       {/* Same tappable search bar as the home screen. Explore is where people
           come when they don't know which category a thing lives in, so it's
           the screen that needs search most, and it was the one screen without

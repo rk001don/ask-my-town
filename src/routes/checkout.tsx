@@ -5,13 +5,13 @@ import { AppHeader } from "@/components/AppHeader";
 import { EmptyState, ErrorState } from "@/components/States";
 import { clearCart, useCart } from "@/lib/cart-store";
 import { createOrder, getLocations } from "@/lib/api.functions";
-import { linkCustomerToMe } from "@/lib/auth.functions";
+import { getMyProfile, linkCustomerToMe } from "@/lib/auth.functions";
 import { rememberGuestOrder } from "@/lib/guest-orders";
 import { isValidIndianPhone } from "@/lib/phone";
 import { formatTimeRange12h } from "@/lib/time";
 import { ServiceFeeBreakdown, StickyFeeSummary } from "@/components/ServiceFeeBreakdown";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { toUserMessage } from "@/lib/errors";
@@ -79,7 +79,14 @@ function Checkout() {
   const priceableItems = items.filter((i) => i.showPrice && i.unitPrice != null);
   const itemsSubtotal = priceableItems.reduce((n, i) => n + (i.unitPrice ?? 0) * i.quantity, 0);
 
-  const initial = (() => {
+  type CheckoutForm = {
+    name: string;
+    phone: string;
+    address: string;
+    landmark: string;
+    notes: string;
+  };
+  const initial: CheckoutForm = (() => {
     if (typeof window === "undefined")
       return { name: "", phone: "", address: "", landmark: "", notes: "" };
     try {
@@ -91,8 +98,39 @@ function Checkout() {
     return { name: "", phone: "", address: "", landmark: "", notes: "" };
   })();
 
-  const [form, setForm] = useState(initial);
+  const [form, setForm] = useState<CheckoutForm>(initial);
   const [busy, setBusy] = useState(false);
+  // For a signed-in customer the account is the truth, not this device's last
+  // typed values. Reading only localStorage meant the checkout form and the
+  // account's own "Your details" could show two different names and addresses
+  // for the same person -- which is exactly what it looked like.
+  //
+  // Only fills blanks: anything already typed in this session wins, so this
+  // can never overwrite what someone is in the middle of correcting.
+  const profileFn = useServerFn(getMyProfile);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess.session || cancelled) return;
+      try {
+        const profile = await profileFn();
+        if (!profile || cancelled) return;
+        setForm((f) => ({
+          ...f,
+          name: f.name || (profile.name ?? ""),
+          phone: f.phone || (profile.phone ?? ""),
+          address: f.address || (profile.address ?? ""),
+          landmark: f.landmark || (profile.landmark ?? ""),
+        }));
+      } catch {
+        /* profile is a convenience here; the form still works */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [profileFn]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   // One key per checkout attempt (stable across re-renders, fresh on remount)
   // -- lets a genuine network-retry of the same submit land on the same

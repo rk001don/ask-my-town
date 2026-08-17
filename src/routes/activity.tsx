@@ -2,13 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AppHeader } from "@/components/AppHeader";
 import { trackOrder } from "@/lib/api.functions";
-import {
-  cancelMyOrder,
-  getMyOrders,
-  getMyProfile,
-  linkCustomerToMe,
-  updateMyProfile,
-} from "@/lib/auth.functions";
+import { cancelMyOrder, getMyOrders, getMyProfile, updateMyProfile } from "@/lib/auth.functions";
 import { EmptyState, ErrorState, CardSkeleton } from "@/components/States";
 import {
   CUSTOMER_ORDER_STEPS,
@@ -16,7 +10,6 @@ import {
   STATUS_COPY,
   customerFacingStatus,
   type OrderStatus,
-  SUPPORT_PHONE_DISPLAY,
 } from "@/lib/constants";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
@@ -24,12 +17,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Search,
   BadgeCheck,
+  XCircle,
   Check,
   Clock,
   Sparkles,
   LogOut,
   Pencil,
-  PackagePlus,
   X,
 } from "lucide-react";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
@@ -64,7 +57,7 @@ function Activity() {
   if (!authChecked) {
     return (
       <div>
-        <AppHeader title="Orders" showBack={false} />
+        <AppHeader title="Orders" showBack={false} showSearch={false} showChat />
         <div className="space-y-3 p-4">
           {Array.from({ length: 2 }).map((_, i) => (
             <div key={i} className="skeleton h-28 rounded-2xl" />
@@ -93,7 +86,6 @@ function MyActivity() {
   const [identity, setIdentity] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const [editingProfile, setEditingProfile] = useState(false);
-  const [claiming, setClaiming] = useState(false);
   const { data, isLoading, error } = useQuery({
     queryKey: ["my-orders"],
     queryFn: () => fetchOrders(),
@@ -160,7 +152,7 @@ function MyActivity() {
 
   return (
     <div>
-      <AppHeader title="Orders" showBack={false} />
+      <AppHeader title="Orders" showBack={false} showSearch={false} showChat />
       <div className="px-4 pt-2">
         <div className="glass mb-3 rounded-2xl p-4">
           <div className="flex items-center justify-between gap-3">
@@ -172,30 +164,27 @@ function MyActivity() {
                 </p>
               )}
             </div>
-            <button
-              onClick={signOut}
-              disabled={signingOut}
-              className="tap-scale flex shrink-0 items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Sign out
-            </button>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2 border-t border-[color:var(--border-subtle)] pt-3">
-            <button
-              onClick={() => setEditingProfile(true)}
-              className="tap-scale flex items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-xs font-semibold"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              Edit name & address
-            </button>
-            <button
-              onClick={() => setClaiming(true)}
-              className="tap-scale flex items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-xs font-semibold"
-            >
-              <PackagePlus className="h-3.5 w-3.5" />
-              Add a past order
-            </button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              {/* Edit is an icon beside Sign out rather than a labelled row of
+                  its own -- it saves a whole band of vertical space above the
+                  orders, which is what people actually came here for. */}
+              <button
+                onClick={() => setEditingProfile(true)}
+                aria-label="Edit your details"
+                title="Edit your details"
+                className="tap-scale grid h-9 w-9 place-items-center rounded-full border border-[color:var(--border-strong)]"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={signOut}
+                disabled={signingOut}
+                className="tap-scale flex items-center gap-1.5 rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-xs font-semibold disabled:opacity-50"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign out
+              </button>
+            </div>
           </div>
         </div>
         <div className="glass mb-3 flex items-center justify-between gap-3 rounded-2xl p-4">
@@ -241,15 +230,6 @@ function MyActivity() {
           onSaved={(name) => {
             setIdentity(name);
             setEditingProfile(false);
-          }}
-        />
-      )}
-      {claiming && (
-        <ClaimOrderDialog
-          onClose={() => setClaiming(false)}
-          onClaimed={() => {
-            setClaiming(false);
-            qc.invalidateQueries({ queryKey: ["my-orders"] });
           }}
         />
       )}
@@ -351,54 +331,6 @@ function ProfileDialog({
   );
 }
 
-/** Attach a guest order to this account, using its order ID as proof. */
-function ClaimOrderDialog({ onClose, onClaimed }: { onClose: () => void; onClaimed: () => void }) {
-  const claimFn = useServerFn(linkCustomerToMe);
-  const [orderId, setOrderId] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  async function claim(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    try {
-      await claimFn({ data: { orderId: orderId.trim() } });
-      toast.success("Order added to your account");
-      onClaimed();
-    } catch (err) {
-      toast.error(toUserMessage(err, "Couldn't add that order"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Sheet title="Add a past order" onClose={onClose}>
-      <p className="text-sm text-[color:var(--text-secondary)]">
-        Ordered before you signed in? Enter its order ID and we'll move it onto this account. The ID
-        is on your confirmation message.
-      </p>
-      <form onSubmit={claim} className="mt-4 space-y-3">
-        <input
-          value={orderId}
-          onChange={(e) => setOrderId(e.target.value.toUpperCase().slice(0, 20))}
-          placeholder="MT-4A9F2C"
-          autoCapitalize="characters"
-          autoCorrect="off"
-          spellCheck={false}
-          className="w-full rounded-xl border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] px-3 py-2.5 text-[15px] outline-none focus:border-[color:var(--accent-primary)]"
-        />
-        <button
-          type="submit"
-          disabled={busy || orderId.trim().length < 3}
-          className="tap-scale accent-gradient w-full rounded-full py-3 font-semibold disabled:opacity-60"
-        >
-          {busy ? "Adding…" : "Add to my orders"}
-        </button>
-      </form>
-    </Sheet>
-  );
-}
-
 /** Bottom sheet on mobile, centred panel above it -- same shell as ProductSheet. */
 function Sheet({
   title,
@@ -475,7 +407,7 @@ function GuestTracker() {
 
   return (
     <div>
-      <AppHeader title="Orders" showBack={false} />
+      <AppHeader title="Orders" showBack={false} showSearch={false} showChat />
       <div className="px-4 pt-2">
         {/* Appearance isn't account data -- it's a device preference, and
             gating it behind sign-in meant a guest had no way to leave a theme
@@ -494,7 +426,11 @@ function GuestTracker() {
         <h2 className="text-display text-2xl font-bold">Track your order</h2>
         <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
           Enter the order ID from your confirmation, like MT-4A9F2C.{" "}
-          <Link to="/auth" className="font-semibold text-[color:var(--accent-primary)]">
+          <Link
+            to="/auth"
+            search={{ redirect: "/activity" }}
+            className="font-semibold text-[color:var(--accent-primary)]"
+          >
             Sign in
           </Link>{" "}
           to see all your orders without typing anything.
@@ -520,9 +456,6 @@ function GuestTracker() {
             {state === "loading" ? "Looking…" : "Track"}
           </button>
         </form>
-        <p className="mt-3 text-xs text-[color:var(--text-muted)]">
-          Lost the ID? Message us on WhatsApp ({SUPPORT_PHONE_DISPLAY}) and we'll find it for you.
-        </p>
       </div>
 
       {state === "loading" && (
@@ -575,8 +508,17 @@ function OrderCard({ order, onCancel }: { order: Order; onCancel?: (orderId: str
           </div>
         </div>
         <div
-          className={`rounded-full px-3 py-1 text-[11px] font-bold uppercase ${status === "completed" ? "bg-[color:var(--success)]/20 text-[color:var(--success)]" : status === "cancelled" ? "bg-[color:var(--danger)]/20 text-[color:var(--danger)]" : "bg-[color:var(--accent-primary)]/20 text-[color:var(--accent-primary)]"}`}
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase ${status === "completed" ? "bg-[color:var(--success)]/20 text-[color:var(--success)]" : status === "cancelled" ? "bg-[color:var(--danger)]/20 text-[color:var(--danger)]" : "bg-[color:var(--accent-primary)]/20 text-[color:var(--accent-primary)]"}`}
         >
+          {/* The state's own icon, so the chip reads at a glance instead of
+              needing a second "Delivered" pill lower down the card. */}
+          {status === "completed" ? (
+            <BadgeCheck className="h-3.5 w-3.5" />
+          ) : status === "cancelled" ? (
+            <XCircle className="h-3.5 w-3.5" />
+          ) : (
+            <Clock className="h-3.5 w-3.5" />
+          )}
           {STATUS_COPY[displayStatus].label}
         </div>
       </div>
@@ -627,21 +569,6 @@ function OrderCard({ order, onCancel }: { order: Order; onCancel?: (orderId: str
           >
             Cancel order
           </button>
-        )}
-        {idx >= CUSTOMER_ORDER_STEPS.length - 1 && (
-          // A badge, not loose green text. "Done" set in the same size and
-          // weight as everything around it read as a stray word rather than
-          // as the order's outcome.
-          <span
-            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
-            style={{
-              background: "color-mix(in oklab, var(--success) 16%, transparent)",
-              color: "var(--success)",
-            }}
-          >
-            <BadgeCheck className="h-3.5 w-3.5" />
-            Delivered
-          </span>
         )}
       </div>
     </li>
