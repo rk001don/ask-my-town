@@ -30,6 +30,7 @@ export function ProductCard({
   view = "list",
   id,
   highlighted = false,
+  onOpen,
 }: {
   product: ProductRow;
   categoryName?: string;
@@ -37,6 +38,8 @@ export function ProductCard({
   view?: CatalogView;
   id?: string;
   highlighted?: boolean;
+  /** Opens the detail sheet. Omit to keep the card non-interactive. */
+  onOpen?: (product: ProductRow) => void;
 }) {
   const qty = useProductQuantity(product.id);
   const key = productKeyFor(product.id);
@@ -83,10 +86,28 @@ export function ProductCard({
     </div>
   );
 
+  // The whole card opens the detail sheet, but the cart controls inside it
+  // must not -- so those stop propagation rather than the card using a <button>
+  // wrapper, which would nest interactive elements.
+  const interactive = !!onOpen;
+
   return (
     <div
       id={id}
-      className={`scroll-mt-20 ${
+      {...(interactive
+        ? {
+            role: "button" as const,
+            tabIndex: 0,
+            onClick: () => onOpen(product),
+            onKeyDown: (e: React.KeyboardEvent) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onOpen(product);
+              }
+            },
+          }
+        : {})}
+      className={`scroll-mt-20 ${interactive ? "tap-scale cursor-pointer" : ""} ${
         view === "grid"
           ? "card-surface rise flex h-full min-h-[250px] flex-col gap-3 p-3"
           : "card-surface rise flex items-start gap-3 p-3"
@@ -134,7 +155,8 @@ export function ProductCard({
           </div>
           {qty === 0 ? (
             <button
-              onClick={() =>
+              onClick={(e) => {
+                e.stopPropagation();
                 addCatalogItem({
                   itemName: product.name,
                   category: categoryName,
@@ -144,8 +166,8 @@ export function ProductCard({
                   showPrice: product.show_price,
                   isService: product.is_service,
                   iconKey: categoryIcon ?? product.categories?.icon_key ?? undefined,
-                })
-              }
+                });
+              }}
               className="tap-scale accent-gradient rounded-full px-5 py-2 text-sm font-bold shadow-[var(--shadow-accent-glow)]"
             >
               {product.is_service ? "Ask" : "Add"}
@@ -153,7 +175,10 @@ export function ProductCard({
           ) : (
             <div className="flex items-center rounded-full border border-[color:var(--accent-primary)] bg-[color:var(--accent-primary)]/10">
               <button
-                onClick={() => decrementItem(key)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  decrementItem(key);
+                }}
                 aria-label="Decrease"
                 className="tap-scale grid h-9 w-9 place-items-center text-[color:var(--accent-primary)]"
               >
@@ -163,7 +188,10 @@ export function ProductCard({
                 {qty}
               </span>
               <button
-                onClick={() => incrementItem(key)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  incrementItem(key);
+                }}
                 aria-label="Increase"
                 className="tap-scale grid h-9 w-9 place-items-center text-[color:var(--accent-primary)]"
               >

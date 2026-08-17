@@ -1,12 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { searchItems } from "@/lib/api.functions";
+import { getTrendingSearches, searchItems } from "@/lib/api.functions";
 import { AppHeader } from "@/components/AppHeader";
 import { EmptyState, ErrorState } from "@/components/States";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search as SearchIcon, X, Sparkles as SparklesIcon } from "lucide-react";
+import {
+  Search as SearchIcon,
+  X,
+  Sparkles as SparklesIcon,
+  Utensils,
+  ChevronRight,
+} from "lucide-react";
 import { iconFor } from "@/components/icon-map";
 import { openAskSheet } from "@/components/AskFAB";
+import { placeholderGradientFor } from "@/lib/catalog-display";
 
 export const Route = createFileRoute("/search")({
   head: () => ({
@@ -22,7 +29,6 @@ export const Route = createFileRoute("/search")({
   errorComponent: ({ reset }) => <ErrorState onRetry={reset} />,
 });
 
-const TRENDING = ["Home-cooked meals", "Medicines", "Groceries", "Bus tickets"];
 const RECENTS_KEY = "mytown.search.recent.v1";
 
 function SearchPage() {
@@ -35,7 +41,24 @@ function SearchPage() {
   >([]);
   const [state, setState] = useState<"idle" | "loading" | "loaded" | "error">("idle");
   const [recents, setRecents] = useState<string[]>([]);
+  const [trending, setTrending] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const trendingFn = useServerFn(getTrendingSearches);
+
+  // Real trending, from what people have actually searched in the last two
+  // weeks. Best-effort: if it fails or there's not enough history yet, the
+  // section simply doesn't render rather than showing stale placeholders.
+  useEffect(() => {
+    let cancelled = false;
+    trendingFn()
+      .then((t) => {
+        if (!cancelled) setTrending(t ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [trendingFn]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -138,20 +161,24 @@ function SearchPage() {
               </div>
             </>
           )}
-          <h3 className="mt-6 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
-            Trending
-          </h3>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {TRENDING.map((t) => (
-              <button
-                key={t}
-                onClick={() => setQ(t)}
-                className="tap-scale rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-3 py-1.5 text-sm"
-              >
-                {t}
-              </button>
-            ))}
-          </div>
+          {trending.length > 0 && (
+            <>
+              <h3 className="mt-6 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
+                Trending in Karimangalam
+              </h3>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {trending.map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setQ(t)}
+                    className="tap-scale rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-3 py-1.5 text-sm"
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -177,18 +204,56 @@ function SearchPage() {
                 params={{ slug: p.category_slug ?? "" }}
                 search={{ highlight: p.id }}
                 onClick={() => saveRecent(debounced.trim())}
-                className="tap-scale flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3"
+                className="tap-scale card-surface flex items-center gap-3 p-2.5"
               >
-                <span className="text-sm font-semibold">{p.name}</span>
-                <span
-                  className={
-                    p.show_price && p.price != null
-                      ? "text-sm font-bold text-[color:var(--accent-primary)]"
-                      : "text-xs font-medium text-[color:var(--text-muted)]"
-                  }
+                <div
+                  className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-xl"
+                  style={p.image_url ? undefined : { background: placeholderGradientFor(p.name) }}
                 >
-                  {p.show_price && p.price != null ? `₹${p.price}` : "Price on request"}
-                </span>
+                  {p.image_url ? (
+                    <img
+                      src={p.image_url}
+                      alt={p.name}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  ) : (
+                    <Utensils className="h-5 w-5 text-white/45" strokeWidth={1.5} />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    {p.is_veg != null && (
+                      <span
+                        aria-label={p.is_veg ? "Veg" : "Non-veg"}
+                        className="grid h-3 w-3 shrink-0 place-items-center rounded-[2px] border"
+                        style={{ borderColor: p.is_veg ? "var(--success)" : "var(--danger)" }}
+                      >
+                        <span
+                          className="h-1 w-1 rounded-full"
+                          style={{ background: p.is_veg ? "var(--success)" : "var(--danger)" }}
+                        />
+                      </span>
+                    )}
+                    <span className="truncate text-[15px] font-semibold">{p.name}</span>
+                  </div>
+                  {p.category_name && (
+                    <div className="truncate text-[11px] text-[color:var(--text-muted)]">
+                      {p.category_name}
+                    </div>
+                  )}
+                  <div
+                    className={
+                      p.show_price && p.price != null
+                        ? "mt-0.5 text-[14px] font-bold text-[color:var(--accent-primary)]"
+                        : "mt-0.5 text-[11px] font-medium text-[color:var(--text-muted)]"
+                    }
+                  >
+                    {p.show_price && p.price != null ? `₹${p.price}` : "Price on request"}
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
               </Link>
             </li>
           ))}

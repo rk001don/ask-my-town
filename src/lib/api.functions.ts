@@ -303,6 +303,9 @@ export const searchItems = createServerFn({ method: "GET" })
       image_url: string | null;
       category_id: string;
       category_slug?: string | null;
+      category_name?: string | null;
+      is_veg?: boolean | null;
+      description?: string | null;
     }> = [];
     const productOrExpr = terms
       .filter((t) => t.length >= 2)
@@ -311,7 +314,11 @@ export const searchItems = createServerFn({ method: "GET" })
     if (productOrExpr) {
       const { data: prodRows, error: prodErr } = await supabaseAdmin
         .from("products")
-        .select("id, name, price, show_price, image_url, category_id, categories(slug)")
+        // Enough to render a real search row (thumbnail, veg mark, category)
+        // rather than a bare name-and-price line.
+        .select(
+          "id, name, description, price, show_price, image_url, is_veg, category_id, categories(slug,name,icon_key)",
+        )
         .or(productOrExpr)
         .eq("is_available", true)
         .limit(20);
@@ -321,15 +328,21 @@ export const searchItems = createServerFn({ method: "GET" })
           prodErr,
           "Search is unavailable right now. Please try again.",
         );
-      productResults = (prodRows ?? []).map((p) => ({
-        id: p.id,
-        name: p.name,
-        price: p.price,
-        show_price: p.show_price,
-        image_url: p.image_url,
-        category_id: p.category_id,
-        category_slug: (p.categories as { slug: string } | null)?.slug ?? null,
-      }));
+      productResults = (prodRows ?? []).map((p) => {
+        const cat = p.categories as { slug: string; name: string; icon_key: string | null } | null;
+        return {
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          price: p.price,
+          show_price: p.show_price,
+          image_url: p.image_url,
+          is_veg: p.is_veg,
+          category_id: p.category_id,
+          category_slug: cat?.slug ?? null,
+          category_name: cat?.name ?? null,
+        };
+      });
     }
 
     // Log analytics fire-and-forget
@@ -341,6 +354,45 @@ export const searchItems = createServerFn({ method: "GET" })
 
     return { results, productResults, term: raw };
   });
+
+/**
+ * What people are actually searching for, from the last 14 days.
+ *
+ * `search_analytics` has been recorded on every search since launch and never
+ * read once -- the "Trending" chips were a hardcoded array that had drifted
+ * out of date (it still offered categories that no longer exist). This reads
+ * the real thing.
+ *
+ * Only terms that FOUND something are suggested: proposing a search we know
+ * returns nothing would be a dead end. (Zero-result terms are valuable too,
+ * but as a demand signal for the admin, not as a suggestion to customers.)
+ */
+export const getTrendingSearches = createServerFn({ method: "GET" }).handler(async () => {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabaseAdmin
+    .from("search_analytics")
+    .select("normalized_term, term, result_count, created_at")
+    .gte("created_at", since)
+    .gt("result_count", 0)
+    .limit(1000);
+  // Suggestions are a nicety -- a failure here should leave the search page
+  // working, not error it out.
+  if (error) return [];
+
+  const counts = new Map<string, { label: string; n: number }>();
+  for (const row of data ?? []) {
+    const key = (row.normalized_term || row.term || "").trim();
+    if (key.length < 3) continue;
+    const existing = counts.get(key);
+    if (existing) existing.n += 1;
+    else counts.set(key, { label: (row.term || key).trim(), n: 1 });
+  }
+  return [...counts.values()]
+    .sort((a, b) => b.n - a.n)
+    .slice(0, 6)
+    .map((c) => c.label);
+});
 
 // =============================================================================
 // Create order (with optional scheduling)
