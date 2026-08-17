@@ -79,11 +79,15 @@ export function ProductCard({
     <div
       className={
         view === "grid"
-          ? // Full-bleed across the card's top edge, with only the top corners
-            // rounded, so the image reads as the card's photo rather than as a
-            // tile floating inside a padded box. Matches how Swiggy and Zomato
-            // present a card: image, then title directly beneath it.
-            "relative grid aspect-[4/3] w-full shrink-0 place-items-center overflow-hidden rounded-t-2xl"
+          ? // Full-bleed across the card's top edge: image, then title directly
+            // beneath it, the way Swiggy and Zomato present a card.
+            //
+            // Deliberately square-cornered. The card is rounded at --radius-xl
+            // (20px) and clips its children, so giving the image its own
+            // rounded-2xl (28px) curved it *more* than the card and left
+            // wedges of card background showing at the two top corners.
+            // Letting the card do the clipping makes the fit exact.
+            "relative grid aspect-[4/3] w-full shrink-0 place-items-center overflow-hidden"
           : "relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl"
       }
       style={safeImageUrl ? undefined : { background: visual.gradient }}

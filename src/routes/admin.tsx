@@ -33,11 +33,10 @@ import {
 import { NotificationOptIn } from "@/components/NotificationOptIn";
 import { toUserMessage } from "@/lib/errors";
 import { BulkImageUpload } from "@/components/BulkImageUpload";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { StaffProfileMenu } from "@/components/StaffProfileMenu";
 import {
   Loader2,
   ShieldAlert,
-  LogOut,
   Plus,
   Trash2,
   Search,
@@ -46,7 +45,6 @@ import {
   AlertTriangle,
   UserPlus,
   ShieldCheck,
-  User,
 } from "lucide-react";
 
 type AdminTab = "dashboard" | "demand" | "catalog" | "team" | "notifications" | "config";
@@ -374,28 +372,14 @@ function AdminBoard({ email }: { email: string }) {
   return (
     <div className="min-h-[100dvh] px-4 py-5 md:px-8 md:py-6">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="text-display text-xl font-semibold md:text-2xl">Admin console</div>
-          {/* Who am I signed in as, and with what. The staff board has shown
-              this all along; admin had no profile line at all, so on a shared
-              device there was no way to tell whose session you were in. */}
-          <div className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-[color:var(--text-tertiary)]">
-            <User className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">
-              {email}
-              {rolesQ.data?.roles?.length ? ` · ${rolesQ.data.roles.join(", ")}` : ""}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <button
-            onClick={() => supabase.auth.signOut().then(() => window.location.assign("/"))}
-            className="tap-scale flex min-h-11 items-center gap-1 rounded-full border border-[color:var(--border-strong)] px-3 py-2 text-xs font-semibold"
-          >
-            <LogOut className="h-3.5 w-3.5" /> Sign out
-          </button>
-        </div>
+        {/* Identity lives in the profile menu now, not here as well -- the
+            same "don't say it twice" the orders list needed. */}
+        <div className="text-display text-xl font-semibold md:text-2xl">Admin console</div>
+        <StaffProfileMenu
+          email={email}
+          roles={rolesQ.data?.roles}
+          onSignOut={() => supabase.auth.signOut().then(() => window.location.assign("/"))}
+        />
       </div>
 
       <div className="mb-5 flex flex-wrap gap-2">
