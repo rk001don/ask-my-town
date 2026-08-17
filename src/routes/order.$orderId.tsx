@@ -62,12 +62,7 @@ function Confirmation() {
         {/* Hero: reflects the order's real state, not a fixed "confirmed" */}
         <div className="card-surface gradient-hero relative overflow-hidden p-5">
           <div
-            className="absolute -right-10 -top-10 h-40 w-40 rounded-full"
-            style={{
-              background: isCancelled
-                ? "radial-gradient(circle, oklch(0.65 0.2 25 / 0.3), transparent 65%)"
-                : "radial-gradient(circle, oklch(0.78 0.15 155 / 0.35), transparent 65%)",
-            }}
+            className={`${isCancelled ? "danger-halo" : "success-halo"} absolute -right-10 -top-10 h-40 w-40 rounded-full`}
           />
           <div className="relative flex items-start gap-3">
             <div

@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AppHeader } from "@/components/AppHeader";
 import { trackOrder } from "@/lib/api.functions";
-import { cancelMyOrder, getMyOrders } from "@/lib/auth.functions";
+import { cancelMyOrder, getMyOrders, getMyProfile } from "@/lib/auth.functions";
 import { EmptyState, ErrorState, CardSkeleton } from "@/components/States";
 import {
   CUSTOMER_ORDER_STEPS,
@@ -18,6 +18,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, Check, Clock, Sparkles, LogOut } from "lucide-react";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 import { NotificationOptIn } from "@/components/NotificationOptIn";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { toUserMessage } from "@/lib/errors";
 
@@ -68,6 +69,7 @@ function Activity() {
 function MyActivity() {
   const fetchOrders = useServerFn(getMyOrders);
   const cancelOrderFn = useServerFn(cancelMyOrder);
+  const profileFn = useServerFn(getMyProfile);
   const qc = useQueryClient();
   const nav = useNavigate();
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
@@ -80,14 +82,35 @@ function MyActivity() {
   });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
       const u = data.session?.user;
-      // Prefer a real email; phone+PIN accounts use a synthetic internal
-      // email, so fall back to the phone number for those.
-      const email = u?.email && !u.email.endsWith("@customers.mytown.internal") ? u.email : null;
-      setIdentity(email ?? u?.phone ?? u?.user_metadata?.phone ?? null);
-    });
-  }, []);
+      if (!u) return;
+
+      // A person's name is what they expect to see, not the credential they
+      // happened to sign in with. Someone who signed up by phone was shown
+      // either their own phone number back or -- when Auth had no phone on
+      // the user row, which is the case for PIN accounts -- nothing at all.
+      // The profile has held their real name the whole time.
+      let display: string | null = null;
+      try {
+        const profile = await profileFn();
+        display = profile?.name?.trim() || null;
+      } catch {
+        // Profile lookup is a nicety; fall through to the credential below.
+      }
+
+      if (!display) {
+        const email = u.email && !u.email.endsWith("@customers.mytown.internal") ? u.email : null;
+        display = email ?? u.phone ?? (u.user_metadata?.phone as string | undefined) ?? null;
+      }
+      if (!cancelled) setIdentity(display);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [profileFn]);
 
   async function signOut() {
     setSigningOut(true);
@@ -138,6 +161,15 @@ function MyActivity() {
             <LogOut className="h-3.5 w-3.5" />
             Sign out
           </button>
+        </div>
+        <div className="glass mb-3 flex items-center justify-between gap-3 rounded-2xl p-4">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">Appearance</div>
+            <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">
+              Light, dark, or match your device.
+            </p>
+          </div>
+          <ThemeToggle />
         </div>
         <NotificationOptIn />
       </div>

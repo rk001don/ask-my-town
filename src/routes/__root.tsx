@@ -12,6 +12,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppShell } from "@/components/AppShell";
 import { Toaster } from "sonner";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 
 function NotFoundComponent() {
   return (
@@ -67,7 +68,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { name: "theme-color", content: "#1a1a1f" },
+      // Browser chrome (Android address bar, iOS status bar) follows the
+      // active theme rather than being pinned dark against a light page.
+      { name: "theme-color", content: "#faf8f2", media: "(prefers-color-scheme: light)" },
+      { name: "theme-color", content: "#1a1a1f", media: "(prefers-color-scheme: dark)" },
       { title: "MyTown — Need Anything? MyTown!" },
       {
         name: "description",
@@ -129,6 +133,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     // and React's blocking behavior; local fallback fonts (see
     // --font-display/--font-sans in styles.css) cover the brief gap.
     scripts: [
+      // Must be first and must stay synchronous: it stamps the saved theme on
+      // <html> before the browser paints. Anything later means a light flash
+      // on every load for dark-mode users.
+      { children: THEME_INIT_SCRIPT },
       {
         children:
           "(function(){var l=document.createElement('link');l.rel='stylesheet';l.media='print';l.href='https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter+Tight:wght@400;500;600;700&display=swap';l.onload=function(){l.media='all';};document.head.appendChild(l);})();",

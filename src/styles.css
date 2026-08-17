@@ -5,8 +5,12 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * MyTown design system — CRED-leaning dark glass + warm amber merchandising.
- * All tokens are oklch. Never write ad-hoc colors in components.
+ * MyTown design system — warm amber merchandising over a neutral ground,
+ * in both a light and a dark theme.
+ *
+ * All tokens are oklch and every one of them is defined per-theme below.
+ * Never write an ad-hoc colour in a component: a literal can only ever be
+ * correct in one theme, so it silently breaks the other.
  */
 
 @theme inline {
@@ -48,34 +52,80 @@
   --color-elevated: var(--bg-elevated);
   --color-elevated-2: var(--bg-elevated-2);
 
-  --shadow-soft: 0 1px 2px oklch(0 0 0 / 0.25), 0 8px 24px oklch(0 0 0 / 0.28);
-  --shadow-glow: 0 10px 40px -12px oklch(0.78 0.16 60 / 0.55);
+  /* Point Tailwind's shadow utilities at the themed tokens rather than fixed
+     values -- a shadow tuned for a dark ground reads as a smudge on white. */
+  --shadow-soft: var(--shadow-elevation);
+  --shadow-glow: var(--shadow-accent-glow);
 }
 
+/*
+ * THEMES
+ *
+ * Three states have to work, not two: an explicit choice stamps
+ * data-theme="light"/"dark" on <html>, and the default "system" setting stamps
+ * nothing at all -- so the bare :root block below must be a complete, usable
+ * palette on its own.
+ *
+ * Light is the base because that's what a customer browsing a food catalogue
+ * in daylight gets by default, and it's the ground Swiggy/Zomato use. Dark is
+ * redefined token-for-token underneath. Nothing outside these blocks may
+ * hardcode a colour -- if a component needs one, it needs a token here.
+ */
 :root {
-  /* Dark by default — MyTown ships one theme (spec: no dark toggle) */
-  --bg-base: oklch(0.135 0.015 260);
-  --bg-elevated: oklch(0.185 0.018 260);
-  --bg-elevated-2: oklch(0.225 0.02 260);
-  --bg-glass: oklch(0.18 0.02 260 / 0.72);
+  /* ---------- LIGHT (default) ---------- */
+  --bg-base: oklch(0.985 0.006 75);
+  --bg-elevated: oklch(1 0 0);
+  --bg-elevated-2: oklch(0.965 0.008 75);
+  --bg-glass: oklch(1 0 0 / 0.82);
 
-  --text-primary: oklch(0.98 0.005 260);
-  --text-secondary: oklch(0.82 0.015 260);
-  --text-muted: oklch(0.62 0.02 260);
-  --text-tertiary: oklch(0.5 0.02 260);
+  --text-primary: oklch(0.22 0.015 60);
+  --text-secondary: oklch(0.44 0.015 60);
+  --text-muted: oklch(0.58 0.014 60);
+  --text-tertiary: oklch(0.68 0.012 60);
 
-  --accent-primary: oklch(0.82 0.16 70); /* warm amber */
-  --accent-primary-strong: oklch(0.75 0.19 55);
-  --accent-secondary: oklch(0.72 0.19 30); /* coral */
-  --on-accent: oklch(0.145 0.02 60);
+  /* The dark theme's amber is far too light to sit on white -- these are
+     darkened to stay legible as text and as a solid button ground. */
+  --accent-primary: oklch(0.62 0.15 55);
+  --accent-primary-strong: oklch(0.55 0.17 45);
+  --accent-secondary: oklch(0.56 0.19 28);
+  --on-accent: oklch(1 0 0);
 
-  --success: oklch(0.78 0.15 155);
-  --warning: oklch(0.82 0.16 85);
-  --danger: oklch(0.68 0.22 25);
-  --info: oklch(0.75 0.13 220);
+  --success: oklch(0.5 0.13 155);
+  --warning: oklch(0.62 0.15 75);
+  --danger: oklch(0.53 0.2 25);
+  --info: oklch(0.55 0.13 240);
 
-  --border-subtle: oklch(1 0 0 / 0.08);
-  --border-strong: oklch(1 0 0 / 0.16);
+  /* Dark-on-light, the inverse of the dark theme's white-on-dark. */
+  --border-subtle: oklch(0.22 0.015 60 / 0.1);
+  --border-strong: oklch(0.22 0.015 60 / 0.2);
+
+  --shadow-elevation: 0 1px 2px oklch(0.3 0.02 60 / 0.06), 0 8px 24px oklch(0.3 0.02 60 / 0.08);
+  --shadow-accent-glow: 0 10px 30px -12px oklch(0.62 0.15 55 / 0.45);
+
+  /* Ambient page wash, painted by body. Kept as a token so each theme can
+     tune its own intensity instead of one value being wrong in the other. */
+  --wash-1: oklch(0.82 0.16 70 / 0.1);
+  --wash-2: oklch(0.72 0.19 30 / 0.07);
+
+  /* Hero banner + loading shimmer. Both were previously hardcoded dark
+     values, which on a light ground read as a black slab and a black flash. */
+  --hero-1: oklch(0.97 0.03 75);
+  --hero-2: oklch(0.95 0.04 45);
+  --hero-3: oklch(0.94 0.03 20);
+  --skeleton-base: oklch(0.93 0.008 75);
+  --skeleton-shine: oklch(0.97 0.006 75);
+
+  /* Per-item placeholder tiles (see lib/catalog-display.ts). Eight variants so
+     a product grid doesn't read as one repeating texture; soft tints here so
+     they sit on a light card as "photo pending" rather than as dark slabs. */
+  --ph-0: linear-gradient(150deg, oklch(0.94 0.05 60), oklch(0.9 0.06 40));
+  --ph-1: linear-gradient(150deg, oklch(0.94 0.05 20), oklch(0.9 0.06 10));
+  --ph-2: linear-gradient(150deg, oklch(0.95 0.05 95), oklch(0.91 0.06 75));
+  --ph-3: linear-gradient(150deg, oklch(0.94 0.05 150), oklch(0.9 0.05 135));
+  --ph-4: linear-gradient(150deg, oklch(0.94 0.04 300), oklch(0.9 0.05 290));
+  --ph-5: linear-gradient(150deg, oklch(0.94 0.04 240), oklch(0.9 0.05 250));
+  --ph-6: linear-gradient(150deg, oklch(0.95 0.05 40), oklch(0.91 0.06 350));
+  --ph-7: linear-gradient(150deg, oklch(0.94 0.04 185), oklch(0.9 0.05 205));
 
   --radius: 16px;
 
@@ -89,6 +139,185 @@
   --z-overlay: 50; /* floating bars that sit above nav but below any modal: the cart bar */
   --z-modal: 60; /* anything that must cover everything else: sheets, dialogs, full-screen previews.
                     Always above --z-overlay so a modal never visually collides with the cart bar. */
+}
+
+/* ---------- DARK ----------
+   Only the tokens are redefined; no component styles live in here. The two
+   blocks are identical on purpose: the media query serves everyone on the
+   default "system" setting, and the [data-theme] block lets an explicit
+   choice beat the OS in either direction. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg-base: oklch(0.135 0.015 260);
+    --bg-elevated: oklch(0.185 0.018 260);
+    --bg-elevated-2: oklch(0.225 0.02 260);
+    --bg-glass: oklch(0.18 0.02 260 / 0.72);
+
+    --text-primary: oklch(0.98 0.005 260);
+    --text-secondary: oklch(0.82 0.015 260);
+    --text-muted: oklch(0.62 0.02 260);
+    --text-tertiary: oklch(0.5 0.02 260);
+
+    --accent-primary: oklch(0.82 0.16 70);
+    --accent-primary-strong: oklch(0.75 0.19 55);
+    --accent-secondary: oklch(0.72 0.19 30);
+    --on-accent: oklch(0.145 0.02 60);
+
+    --success: oklch(0.78 0.15 155);
+    --warning: oklch(0.82 0.16 85);
+    --danger: oklch(0.68 0.22 25);
+    --info: oklch(0.75 0.13 220);
+
+    --border-subtle: oklch(1 0 0 / 0.08);
+    --border-strong: oklch(1 0 0 / 0.16);
+
+    --shadow-elevation: 0 1px 2px oklch(0 0 0 / 0.25), 0 8px 24px oklch(0 0 0 / 0.28);
+    --shadow-accent-glow: 0 10px 40px -12px oklch(0.78 0.16 60 / 0.55);
+
+    --wash-1: oklch(0.82 0.16 70 / 0.1);
+    --wash-2: oklch(0.72 0.19 30 / 0.08);
+
+    --hero-1: oklch(0.22 0.03 60);
+    --hero-2: oklch(0.18 0.025 30);
+    --hero-3: oklch(0.16 0.02 260);
+    --skeleton-base: oklch(0.22 0.02 260);
+    --skeleton-shine: oklch(0.28 0.02 260);
+
+    --ph-0: linear-gradient(
+      150deg,
+      oklch(0.3 0.07 55) 0%,
+      oklch(0.22 0.05 30) 65%,
+      oklch(0.18 0.03 260) 100%
+    );
+    --ph-1: linear-gradient(
+      150deg,
+      oklch(0.29 0.06 20) 0%,
+      oklch(0.21 0.05 10) 65%,
+      oklch(0.17 0.03 280) 100%
+    );
+    --ph-2: linear-gradient(
+      150deg,
+      oklch(0.3 0.06 95) 0%,
+      oklch(0.22 0.05 70) 65%,
+      oklch(0.18 0.03 250) 100%
+    );
+    --ph-3: linear-gradient(
+      150deg,
+      oklch(0.28 0.06 145) 0%,
+      oklch(0.21 0.04 130) 65%,
+      oklch(0.17 0.03 250) 100%
+    );
+    --ph-4: linear-gradient(
+      150deg,
+      oklch(0.28 0.06 300) 0%,
+      oklch(0.21 0.05 290) 65%,
+      oklch(0.17 0.03 260) 100%
+    );
+    --ph-5: linear-gradient(
+      150deg,
+      oklch(0.29 0.06 240) 0%,
+      oklch(0.21 0.05 250) 65%,
+      oklch(0.17 0.03 270) 100%
+    );
+    --ph-6: linear-gradient(
+      150deg,
+      oklch(0.3 0.07 40) 0%,
+      oklch(0.22 0.05 350) 65%,
+      oklch(0.18 0.03 270) 100%
+    );
+    --ph-7: linear-gradient(
+      150deg,
+      oklch(0.28 0.05 180) 0%,
+      oklch(0.21 0.04 200) 65%,
+      oklch(0.17 0.03 260) 100%
+    );
+
+    --ph-0: linear-gradient(
+      150deg,
+      oklch(0.3 0.07 55) 0%,
+      oklch(0.22 0.05 30) 65%,
+      oklch(0.18 0.03 260) 100%
+    );
+    --ph-1: linear-gradient(
+      150deg,
+      oklch(0.29 0.06 20) 0%,
+      oklch(0.21 0.05 10) 65%,
+      oklch(0.17 0.03 280) 100%
+    );
+    --ph-2: linear-gradient(
+      150deg,
+      oklch(0.3 0.06 95) 0%,
+      oklch(0.22 0.05 70) 65%,
+      oklch(0.18 0.03 250) 100%
+    );
+    --ph-3: linear-gradient(
+      150deg,
+      oklch(0.28 0.06 145) 0%,
+      oklch(0.21 0.04 130) 65%,
+      oklch(0.17 0.03 250) 100%
+    );
+    --ph-4: linear-gradient(
+      150deg,
+      oklch(0.28 0.06 300) 0%,
+      oklch(0.21 0.05 290) 65%,
+      oklch(0.17 0.03 260) 100%
+    );
+    --ph-5: linear-gradient(
+      150deg,
+      oklch(0.29 0.06 240) 0%,
+      oklch(0.21 0.05 250) 65%,
+      oklch(0.17 0.03 270) 100%
+    );
+    --ph-6: linear-gradient(
+      150deg,
+      oklch(0.3 0.07 40) 0%,
+      oklch(0.22 0.05 350) 65%,
+      oklch(0.18 0.03 270) 100%
+    );
+    --ph-7: linear-gradient(
+      150deg,
+      oklch(0.28 0.05 180) 0%,
+      oklch(0.21 0.04 200) 65%,
+      oklch(0.17 0.03 260) 100%
+    );
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg-base: oklch(0.135 0.015 260);
+  --bg-elevated: oklch(0.185 0.018 260);
+  --bg-elevated-2: oklch(0.225 0.02 260);
+  --bg-glass: oklch(0.18 0.02 260 / 0.72);
+
+  --text-primary: oklch(0.98 0.005 260);
+  --text-secondary: oklch(0.82 0.015 260);
+  --text-muted: oklch(0.62 0.02 260);
+  --text-tertiary: oklch(0.5 0.02 260);
+
+  --accent-primary: oklch(0.82 0.16 70);
+  --accent-primary-strong: oklch(0.75 0.19 55);
+  --accent-secondary: oklch(0.72 0.19 30);
+  --on-accent: oklch(0.145 0.02 60);
+
+  --success: oklch(0.78 0.15 155);
+  --warning: oklch(0.82 0.16 85);
+  --danger: oklch(0.68 0.22 25);
+  --info: oklch(0.75 0.13 220);
+
+  --border-subtle: oklch(1 0 0 / 0.08);
+  --border-strong: oklch(1 0 0 / 0.16);
+
+  --shadow-elevation: 0 1px 2px oklch(0 0 0 / 0.25), 0 8px 24px oklch(0 0 0 / 0.28);
+  --shadow-accent-glow: 0 10px 40px -12px oklch(0.78 0.16 60 / 0.55);
+
+  --wash-1: oklch(0.82 0.16 70 / 0.1);
+  --wash-2: oklch(0.72 0.19 30 / 0.08);
+
+  --hero-1: oklch(0.22 0.03 60);
+  --hero-2: oklch(0.18 0.025 30);
+  --hero-3: oklch(0.16 0.02 260);
+  --skeleton-base: oklch(0.22 0.02 260);
+  --skeleton-shine: oklch(0.28 0.02 260);
 }
 
 @layer base {
@@ -139,8 +368,8 @@
   }
   body {
     background-image:
-      radial-gradient(1200px 600px at 100% -10%, oklch(0.82 0.16 70 / 0.1), transparent 60%),
-      radial-gradient(900px 500px at -10% 30%, oklch(0.72 0.19 30 / 0.08), transparent 60%);
+      radial-gradient(1200px 600px at 100% -10%, var(--wash-1), transparent 60%),
+      radial-gradient(900px 500px at -10% 30%, var(--wash-2), transparent 60%);
     background-attachment: fixed;
     min-height: 100dvh;
   }
@@ -193,11 +422,46 @@
 }
 
 @utility gradient-hero {
+  background: linear-gradient(135deg, var(--hero-1) 0%, var(--hero-2) 55%, var(--hero-3) 100%);
+}
+
+/* Translucent accent washes used behind icons and empty-state medallions.
+   Built with color-mix from the themed accents so they resolve correctly on
+   both grounds -- the literals these replace were the dark theme's bright
+   amber, which only happened to look acceptable on white. */
+@utility accent-wash {
   background: linear-gradient(
-    135deg,
-    oklch(0.22 0.03 60) 0%,
-    oklch(0.18 0.025 30) 55%,
-    oklch(0.16 0.02 260) 100%
+    140deg,
+    color-mix(in oklab, var(--accent-primary) 18%, transparent),
+    color-mix(in oklab, var(--accent-secondary) 16%, transparent)
+  );
+}
+@utility accent-wash-strong {
+  background: linear-gradient(
+    140deg,
+    color-mix(in oklab, var(--accent-primary) 32%, transparent),
+    color-mix(in oklab, var(--accent-secondary) 30%, transparent)
+  );
+}
+@utility accent-halo {
+  background: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--accent-primary) 30%, transparent),
+    transparent 65%
+  );
+}
+@utility success-halo {
+  background: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--success) 34%, transparent),
+    transparent 65%
+  );
+}
+@utility danger-halo {
+  background: radial-gradient(
+    circle,
+    color-mix(in oklab, var(--danger) 30%, transparent),
+    transparent 65%
   );
 }
 
@@ -244,9 +508,9 @@
 @utility skeleton {
   background: linear-gradient(
     90deg,
-    oklch(0.22 0.02 260) 0%,
-    oklch(0.28 0.02 260) 50%,
-    oklch(0.22 0.02 260) 100%
+    var(--skeleton-base) 0%,
+    var(--skeleton-shine) 50%,
+    var(--skeleton-base) 100%
   );
   background-size: 200% 100%;
   animation: mt-shimmer 1.4s ease-in-out infinite;
