@@ -10,7 +10,8 @@ import {
 import { MyTownLogo } from "@/components/MyTownLogo";
 import { getBestSellers, getCategories, getProducts } from "@/lib/api.functions";
 import { CategoryTile } from "@/components/CategoryTile";
-import { ProductCard } from "@/components/ProductCard";
+import { ProductCard, type ProductRow } from "@/components/ProductCard";
+import { ProductSheet } from "@/components/ProductSheet";
 import { TileSkeleton, ShelfSkeleton, ErrorState } from "@/components/States";
 import { openAskSheet } from "@/components/AskFAB";
 import { APP_NAME, APP_TAGLINE, APP_SUBTEXT, TOWN_NAME, waLink } from "@/lib/constants";
@@ -76,6 +77,10 @@ function Home() {
   const trendingQ = useQuery(trendingProductsOptions);
   const cartCount = useCartCount();
   const [mounted, setMounted] = useState(false);
+  // Tapping a shelf card opened nothing at all: the sheet was only wired up on
+  // category pages, so the two shelves people see first were the one place a
+  // product had no detail view.
+  const [openProduct, setOpenProduct] = useState<ProductRow | null>(null);
   useEffect(() => setMounted(true), []);
 
   return (
@@ -191,7 +196,12 @@ function Home() {
             <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-4 pb-1">
               {(popularQ.data ?? []).map((p) => (
                 <div key={p.id} className="w-[152px] shrink-0">
-                  <ProductCard product={p} categoryName={p.categories?.name} view="grid" />
+                  <ProductCard
+                    product={p}
+                    categoryName={p.categories?.name}
+                    view="grid"
+                    onOpen={setOpenProduct}
+                  />
                 </div>
               ))}
             </div>
@@ -250,7 +260,12 @@ function Home() {
             <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-4 pb-1">
               {(trendingQ.data ?? []).map((p) => (
                 <div key={p.id} className="w-[152px] shrink-0">
-                  <ProductCard product={p} categoryName={p.categories?.name} view="grid" />
+                  <ProductCard
+                    product={p}
+                    categoryName={p.categories?.name}
+                    view="grid"
+                    onOpen={setOpenProduct}
+                  />
                 </div>
               ))}
             </div>
@@ -310,6 +325,14 @@ function Home() {
           ))}
         </ol>
       </section>
+      {openProduct && (
+        <ProductSheet
+          product={openProduct}
+          categoryName={openProduct.categories?.name}
+          categoryIcon={openProduct.categories?.icon_key}
+          onClose={() => setOpenProduct(null)}
+        />
+      )}
     </div>
   );
 }

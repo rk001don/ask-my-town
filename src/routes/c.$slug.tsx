@@ -8,7 +8,7 @@ import { openAskSheet } from "@/components/AskFAB";
 import { ProductCard, type ProductRow } from "@/components/ProductCard";
 import { ProductSheet } from "@/components/ProductSheet";
 import { EmptyState, ErrorState, CardSkeleton } from "@/components/States";
-import { Grid2X2, List, Sparkles } from "lucide-react";
+import { Grid2X2, List, Sparkles, X } from "lucide-react";
 import { CATALOG_VIEW_KEY, type CatalogView } from "@/lib/catalog-display";
 import { useEffect, useMemo, useState } from "react";
 
@@ -72,7 +72,17 @@ function titleize(slug: string) {
     .join(" ");
 }
 
-const GROUP_ORDER = ["breakfast", "lunch", "dinner", "snack"];
+// Menu reading order, not alphabetical: a customer scans a food page the way
+// a menu card is laid out.
+const GROUP_ORDER = [
+  "breakfast",
+  "lunch",
+  "dinner",
+  "side-dishes",
+  "curries",
+  "rice-chinese",
+  "snack",
+];
 
 // "popular"/"trending" are curation flags used to build the Home/Explore
 // shelves (see getProducts({tag})) -- they describe *which* products are
@@ -91,10 +101,6 @@ const CURATION_FLAGS = new Set(["popular", "trending"]);
 // category page. Fold them into one group.
 const GROUP_KEY_ALIASES: Record<string, string> = {
   "local-assistance": "local-service",
-  // "side-dishes" and "curries" describe the same thing to a customer, and as
-  // separate filter chips they read as a distinction without a difference
-  // ("Curries & Accompaniments" next to "Curries & Gravies"). One group.
-  "side-dishes": "curries",
 };
 
 /** Meal-time order first, then anything else, with the catch-all last. */
@@ -130,7 +136,12 @@ const GROUP_LABELS: Record<string, string> = {
   stationery: "Stationery",
   remittance: "Bookings & Courier",
   "rice-chinese": "Rice & Chinese",
-  curries: "Curries & Sides",
+  // These two were previously folded together and labelled "Curries & Sides",
+  // which described neither: the "side-dishes" tag is Chicken 65, Manchurian
+  // and fries -- starters -- while "curries" is the gravy bowls you order
+  // alongside a bread. Separating them is both truer and simpler to scan.
+  curries: "Curries",
+  "side-dishes": "Starters",
   juice: "Fresh Juices",
   shake: "Milkshakes",
   "soft-drink": "Beverages",
@@ -143,7 +154,7 @@ const GROUP_LABELS: Record<string, string> = {
   "personal-care": "Personal Care",
   rental: "Rentals",
   eseva: "e-Seva & Documentation",
-  "local-service": "Local Assistance",
+  "local-service": "Everyday Help",
 };
 
 function Category() {
@@ -267,18 +278,22 @@ function Category() {
                   category whose items actually carry a veg/non-veg flag (food
                   does; rentals and e-Seva don't). */}
               {hasVegData ? (
+                // A real switch, not a chip that merely looks pressed: "veg
+                // only" is a mode you leave on while you browse, and a track
+                // with a knob says on/off at a glance the way a chip never
+                // quite does. Same control Swiggy and Zomato both use.
                 <button
                   type="button"
                   onClick={() => setVegOnly((v) => !v)}
                   aria-pressed={vegOnly}
-                  className={`tap-scale flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-[13px] font-semibold ${
+                  className={`tap-scale flex shrink-0 items-center gap-2 rounded-full border py-1.5 pl-3 pr-2 text-[13px] font-semibold transition-colors ${
                     vegOnly
-                      ? "border-[color:var(--success)] bg-[color:var(--success)]/15 text-[color:var(--success)]"
+                      ? "border-[color:var(--success)] bg-[color:var(--success)]/12 text-[color:var(--success)]"
                       : "border-[color:var(--border-strong)] surface-muted text-[color:var(--text-secondary)]"
                   }`}
                 >
                   <span
-                    className="grid h-3.5 w-3.5 place-items-center rounded-[3px] border-[1.5px]"
+                    className="grid h-3.5 w-3.5 shrink-0 place-items-center rounded-[3px] border-[1.5px]"
                     style={{ borderColor: "var(--success)" }}
                   >
                     <span
@@ -287,6 +302,18 @@ function Category() {
                     />
                   </span>
                   Veg only
+                  <span
+                    aria-hidden="true"
+                    className="relative h-4 w-7 shrink-0 rounded-full transition-colors"
+                    style={{
+                      background: vegOnly ? "var(--success)" : "var(--border-strong)",
+                    }}
+                  >
+                    <span
+                      className="absolute top-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition-[left] duration-200"
+                      style={{ left: vegOnly ? "0.875rem" : "0.125rem" }}
+                    />
+                  </span>
                 </button>
               ) : (
                 <p className="text-xs text-[color:var(--text-secondary)]">Switch view anytime</p>
@@ -322,13 +349,18 @@ function Category() {
           {hasProducts && allGroupKeys.length > 1 && (
             <div className="sticky top-[var(--app-header-h,3.5rem)] z-[var(--z-sticky)] -mx-4 bg-[color:var(--bg-base)]/95 px-4 py-2 backdrop-blur">
               <div className="no-scrollbar -mx-1 flex items-center gap-2 overflow-x-auto px-1">
+                {/* "Clear" spelled out sat in the chip row looking like one
+                    more category to pick. As a round X it reads as the one
+                    control that undoes the others, and costs no width. */}
                 {activeGroups.size > 0 && (
                   <button
                     type="button"
                     onClick={() => setActiveGroups(new Set())}
-                    className="tap-scale flex-shrink-0 rounded-full border border-[color:var(--border-strong)] px-3 py-1.5 text-[13px] font-semibold whitespace-nowrap text-[color:var(--text-secondary)]"
+                    aria-label={`Clear ${activeGroups.size} filter${activeGroups.size === 1 ? "" : "s"}`}
+                    title="Clear filters"
+                    className="tap-scale grid h-8 w-8 flex-shrink-0 place-items-center rounded-full border border-[color:var(--accent-primary)] text-[color:var(--accent-primary)]"
                   >
-                    Clear
+                    <X className="h-4 w-4" strokeWidth={2.5} />
                   </button>
                 )}
                 {allGroupKeys.map((groupKey) => {

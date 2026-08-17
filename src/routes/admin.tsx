@@ -33,6 +33,7 @@ import {
 import { NotificationOptIn } from "@/components/NotificationOptIn";
 import { toUserMessage } from "@/lib/errors";
 import { BulkImageUpload } from "@/components/BulkImageUpload";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Loader2,
   ShieldAlert,
@@ -373,12 +374,15 @@ function AdminBoard({ email }: { email: string }) {
     <div className="min-h-[100dvh] px-4 py-5 md:px-8 md:py-6">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="text-display text-xl font-semibold md:text-2xl">Admin console</div>
-        <button
-          onClick={() => supabase.auth.signOut().then(() => window.location.assign("/"))}
-          className="tap-scale flex min-h-11 items-center gap-1 rounded-full border border-[color:var(--border-strong)] px-3 py-2 text-xs font-semibold"
-        >
-          <LogOut className="h-3.5 w-3.5" /> Sign out
-        </button>
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            onClick={() => supabase.auth.signOut().then(() => window.location.assign("/"))}
+            className="tap-scale flex min-h-11 items-center gap-1 rounded-full border border-[color:var(--border-strong)] px-3 py-2 text-xs font-semibold"
+          >
+            <LogOut className="h-3.5 w-3.5" /> Sign out
+          </button>
+        </div>
       </div>
 
       <div className="mb-5 flex flex-wrap gap-2">

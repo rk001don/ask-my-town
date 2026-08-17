@@ -62,7 +62,7 @@ export function ItemCard({
             loading="lazy"
           />
         ) : (
-          <Icon className="h-10 w-10 text-white/90" strokeWidth={1.8} />
+          <Icon className="h-10 w-10" style={{ color: "var(--ph-ink)" }} strokeWidth={1.8} />
         )}
         <button
           onClick={() => setShowNotes((v) => !v)}

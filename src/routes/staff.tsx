@@ -38,6 +38,7 @@ import {
   Users,
   AlertTriangle,
 } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 import { toUserMessage } from "@/lib/errors";
 
@@ -611,6 +612,10 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
           </div>
         </div>
         <div className="flex items-center gap-1">
+          {/* Staff work a full shift on this screen, often outdoors in
+              daylight and then in the evening -- the same reason customers
+              got a theme control, only more so. */}
+          <ThemeToggle />
           <button
             onClick={() => qc.invalidateQueries({ queryKey: ["staff-orders"] })}
             className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"

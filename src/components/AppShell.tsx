@@ -143,7 +143,7 @@ function MobileCartBar({ onDismiss }: { onDismiss: () => void }) {
               <div className="truncate text-sm font-bold leading-tight">
                 {cartCount} item{cartCount === 1 ? "" : "s"} · ₹{total}
               </div>
-              <div className="truncate text-[11px] font-medium opacity-80">Tap to review</div>
+              <div className="truncate text-[11px] font-medium opacity-90">Tap to review</div>
             </div>
           </div>
           <span className="flex shrink-0 items-center gap-1 rounded-full on-accent-veil px-3.5 py-2 text-xs font-bold text-[color:var(--on-accent)]">
