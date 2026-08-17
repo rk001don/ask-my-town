@@ -274,7 +274,7 @@ function Category() {
                   className={`tap-scale flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-[13px] font-semibold ${
                     vegOnly
                       ? "border-[color:var(--success)] bg-[color:var(--success)]/15 text-[color:var(--success)]"
-                      : "border-[color:var(--border-strong)] bg-black/20 text-[color:var(--text-secondary)]"
+                      : "border-[color:var(--border-strong)] surface-muted text-[color:var(--text-secondary)]"
                   }`}
                 >
                   <span
@@ -292,7 +292,7 @@ function Category() {
                 <p className="text-xs text-[color:var(--text-secondary)]">Switch view anytime</p>
               )}
               <div
-                className="flex shrink-0 rounded-full border border-[color:var(--border-strong)] bg-black/20 p-1"
+                className="flex shrink-0 rounded-full border border-[color:var(--border-strong)] surface-muted p-1"
                 aria-label="Catalog view"
               >
                 <button

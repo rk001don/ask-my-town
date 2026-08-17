@@ -134,7 +134,7 @@ function Confirmation() {
                   "Our team will call or WhatsApp you to confirm shortly."}
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-2">
-                <div className="inline-flex items-center rounded-full border border-[color:var(--border-strong)] bg-black/25 px-3 py-1.5 text-[13px] font-mono font-semibold tracking-wide">
+                <div className="inline-flex items-center rounded-full border border-[color:var(--border-strong)] surface-muted px-3 py-1.5 text-[13px] font-mono font-semibold tracking-wide">
                   {orderId}
                 </div>
                 {/* Window label only, deliberately no time — requested_date
@@ -142,7 +142,7 @@ function Confirmation() {
                     ones), so it's not shown here on its own; requested_window
                     is only ever set for an explicitly scheduled order. */}
                 {!isCancelled && order.requested_window && (
-                  <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold capitalize">
+                  <div className="inline-flex items-center rounded-full surface-muted px-3 py-1.5 text-[13px] font-semibold capitalize">
                     Scheduled: {order.requested_window}
                   </div>
                 )}
@@ -150,7 +150,7 @@ function Confirmation() {
                   !order.requested_window &&
                   status !== "received" &&
                   status !== "completed" && (
-                    <div className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold text-[color:var(--text-secondary)]">
+                    <div className="inline-flex items-center gap-1.5 rounded-full surface-muted px-3 py-1.5 text-[13px] font-semibold text-[color:var(--text-secondary)]">
                       <Clock className="h-3.5 w-3.5" />
                       {DELIVERY_ETA_LABEL}
                     </div>

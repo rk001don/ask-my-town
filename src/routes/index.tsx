@@ -95,14 +95,14 @@ function Home() {
             target="_blank"
             rel="noreferrer noopener"
             aria-label="Chat on WhatsApp"
-            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
+            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
           >
             <MessageCircle className="h-5 w-5" />
           </a>
           <Link
             to="/cart"
             aria-label="Cart"
-            className="tap-scale relative grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:bg-white/5"
+            className="tap-scale relative grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
           >
             <ShoppingBag className="h-5 w-5" />
             {cartCount > 0 && (
@@ -143,7 +143,7 @@ function Home() {
                     key={c.id}
                     to="/c/$slug"
                     params={{ slug: c.slug }}
-                    className="tap-scale flex-shrink-0 rounded-full border border-[color:var(--border-strong)] bg-black/20 px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap"
+                    className="tap-scale flex-shrink-0 rounded-full border border-[color:var(--border-strong)] surface-muted px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap"
                   >
                     {c.name}
                   </Link>

@@ -57,7 +57,7 @@ export function ServiceFeeBreakdown({ subtotal }: { subtotal: number }) {
                 <div className="text-base font-semibold">How the service fee works</div>
                 <button
                   onClick={() => setShowInfo(false)}
-                  className="tap-scale grid h-9 w-9 place-items-center rounded-full hover:bg-white/5"
+                  className="tap-scale grid h-9 w-9 place-items-center rounded-full hover:surface-subtle"
                   aria-label="Close"
                 >
                   <X className="h-4 w-4" />

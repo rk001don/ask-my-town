@@ -181,7 +181,7 @@ function AuthPage() {
 
           {/* Method toggle — exactly one form visible at a time, not stacked.
               Email is the default/priority path per the requested order. */}
-          <div className="mt-5 grid grid-cols-2 gap-1 rounded-full border border-[color:var(--border-strong)] bg-black/20 p-1">
+          <div className="mt-5 grid grid-cols-2 gap-1 rounded-full border border-[color:var(--border-strong)] surface-muted p-1">
             <button
               type="button"
               onClick={() => setAuthMethod("email")}
@@ -220,7 +220,7 @@ function AuthPage() {
                 type="button"
                 onClick={google}
                 disabled={googleBusy}
-                className="tap-scale flex w-full items-center justify-center gap-2 rounded-full border border-[color:var(--border-strong)] bg-white/5 px-4 py-3 font-semibold disabled:opacity-50"
+                className="tap-scale flex w-full items-center justify-center gap-2 rounded-full border border-[color:var(--border-strong)] surface-subtle px-4 py-3 font-semibold disabled:opacity-50"
               >
                 {googleBusy ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -262,7 +262,7 @@ function AuthPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
-                    className="mt-1 w-full rounded-2xl border border-[color:var(--border-subtle)] bg-black/20 px-4 py-3 outline-none focus:border-[color:var(--accent-primary)]"
+                    className="mt-1 w-full rounded-2xl border border-[color:var(--border-subtle)] surface-muted px-4 py-3 outline-none focus:border-[color:var(--accent-primary)]"
                     placeholder="you@example.com"
                   />
                 </label>
@@ -275,7 +275,7 @@ function AuthPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                    className="mt-1 w-full rounded-2xl border border-[color:var(--border-subtle)] bg-black/20 px-4 py-3 outline-none focus:border-[color:var(--accent-primary)]"
+                    className="mt-1 w-full rounded-2xl border border-[color:var(--border-subtle)] surface-muted px-4 py-3 outline-none focus:border-[color:var(--accent-primary)]"
                     placeholder="At least 6 characters"
                   />
                 </label>
@@ -311,14 +311,14 @@ function AuthPage() {
                     onChange={(e) => setPinName(e.target.value)}
                     required
                     minLength={2}
-                    className="mt-1 w-full rounded-2xl border border-[color:var(--border-subtle)] bg-black/20 px-4 py-3 outline-none focus:border-[color:var(--accent-primary)]"
+                    className="mt-1 w-full rounded-2xl border border-[color:var(--border-subtle)] surface-muted px-4 py-3 outline-none focus:border-[color:var(--accent-primary)]"
                     placeholder="e.g. Karthik Kumar"
                   />
                 </label>
               )}
               <label className="block">
                 <span className="text-xs text-[color:var(--text-secondary)]">Phone number</span>
-                <div className="mt-1 flex items-center gap-2 rounded-2xl border border-[color:var(--border-subtle)] bg-black/20 !px-0">
+                <div className="mt-1 flex items-center gap-2 rounded-2xl border border-[color:var(--border-subtle)] surface-muted !px-0">
                   <span className="border-r border-[color:var(--border-subtle)] px-3 py-3 text-sm font-semibold text-[color:var(--text-secondary)]">
                     +91
                   </span>
@@ -340,7 +340,7 @@ function AuthPage() {
                   inputMode="numeric"
                   maxLength={6}
                   type="password"
-                  className="mt-1 w-full rounded-2xl border border-[color:var(--border-subtle)] bg-black/20 px-4 py-3 text-center text-lg tracking-[0.4em] outline-none focus:border-[color:var(--accent-primary)]"
+                  className="mt-1 w-full rounded-2xl border border-[color:var(--border-subtle)] surface-muted px-4 py-3 text-center text-lg tracking-[0.4em] outline-none focus:border-[color:var(--accent-primary)]"
                   placeholder="••••••"
                 />
               </label>
