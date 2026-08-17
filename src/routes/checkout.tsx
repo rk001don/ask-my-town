@@ -99,6 +99,13 @@ function Checkout() {
   })();
 
   const [form, setForm] = useState<CheckoutForm>(initial);
+  // Fields the customer has edited here. The profile prefill below must never
+  // overwrite something they are in the middle of correcting.
+  const touchedRef = useRef<Set<keyof CheckoutForm>>(new Set());
+  function update(field: keyof CheckoutForm, value: string) {
+    touchedRef.current.add(field);
+    setForm((f) => ({ ...f, [field]: value }));
+  }
   const [busy, setBusy] = useState(false);
   // For a signed-in customer the account is the truth, not this device's last
   // typed values. Reading only localStorage meant the checkout form and the
@@ -116,13 +123,21 @@ function Checkout() {
       try {
         const profile = await profileFn();
         if (!profile || cancelled) return;
-        setForm((f) => ({
-          ...f,
-          name: f.name || (profile.name ?? ""),
-          phone: f.phone || (profile.phone ?? ""),
-          address: f.address || (profile.address ?? ""),
-          landmark: f.landmark || (profile.landmark ?? ""),
-        }));
+        setForm((f) => {
+          const next = { ...f };
+          // Account wins over this device's remembered values, rather than
+          // merely filling gaps. Two reasons: filling gaps leaves the two
+          // "Your details" screens showing different answers, which is the
+          // reported problem; and on a shared phone localStorage holds
+          // whoever checked out last, so prefilling a signed-in customer with
+          // it hands them someone else's name and address.
+          const t = touchedRef.current;
+          if (!t.has("name") && profile.name) next.name = profile.name;
+          if (!t.has("phone") && profile.phone) next.phone = profile.phone;
+          if (!t.has("address") && profile.address) next.address = profile.address;
+          if (!t.has("landmark")) next.landmark = profile.landmark ?? "";
+          return next;
+        });
       } catch {
         /* profile is a convenience here; the form still works */
       }
@@ -375,7 +390,7 @@ function Checkout() {
         <Field label="Your name" error={errors.name}>
           <input
             value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            onChange={(e) => update("name", e.target.value)}
             autoComplete="name"
             className="mt-input"
             placeholder="e.g. Priya R."
@@ -389,9 +404,7 @@ function Checkout() {
             </span>
             <input
               value={form.phone}
-              onChange={(e) =>
-                setForm({ ...form, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })
-              }
+              onChange={(e) => update("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
               autoComplete="tel"
               inputMode="numeric"
               maxLength={10}
@@ -404,7 +417,7 @@ function Checkout() {
         <Field label="Delivery address" error={errors.address}>
           <textarea
             value={form.address}
-            onChange={(e) => setForm({ ...form, address: e.target.value })}
+            onChange={(e) => update("address", e.target.value)}
             autoComplete="street-address"
             rows={3}
             className="mt-input"
@@ -415,7 +428,7 @@ function Checkout() {
         <Field label="Landmark" hint="Optional">
           <input
             value={form.landmark}
-            onChange={(e) => setForm({ ...form, landmark: e.target.value })}
+            onChange={(e) => update("landmark", e.target.value)}
             className="mt-input"
             placeholder="Near the temple, opposite school…"
           />
