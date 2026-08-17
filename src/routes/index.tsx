@@ -155,7 +155,7 @@ function Home() {
                     key={c.id}
                     to="/c/$slug"
                     params={{ slug: c.slug }}
-                    className="tap-scale flex-shrink-0 rounded-full border border-[color:var(--border-strong)] surface-muted px-3.5 py-1.5 text-[13px] font-semibold whitespace-nowrap"
+                    className="tap-scale flex min-h-10 flex-shrink-0 items-center rounded-full border border-[color:var(--border-strong)] surface-muted px-3.5 text-[13px] font-semibold whitespace-nowrap"
                   >
                     {c.name}
                   </Link>
@@ -190,7 +190,7 @@ function Home() {
             <h2 className="text-display text-lg font-semibold">Popular picks</h2>
             <Link
               to="/explore"
-              className="text-xs font-semibold text-[color:var(--accent-primary)]"
+              className="inline-flex min-h-9 items-center px-1 text-xs font-semibold text-[color:var(--accent-primary)]"
             >
               See all
             </Link>
@@ -220,7 +220,10 @@ function Home() {
       <section className="mt-8">
         <div className="flex items-baseline justify-between px-4">
           <h2 className="text-display text-lg font-semibold">Categories</h2>
-          <Link to="/explore" className="text-xs font-semibold text-[color:var(--accent-primary)]">
+          <Link
+            to="/explore"
+            className="inline-flex min-h-9 items-center px-1 text-xs font-semibold text-[color:var(--accent-primary)]"
+          >
             See all
           </Link>
         </div>
@@ -254,7 +257,7 @@ function Home() {
             <h2 className="text-display text-lg font-semibold">Trending picks</h2>
             <Link
               to="/explore"
-              className="text-xs font-semibold text-[color:var(--accent-primary)]"
+              className="inline-flex min-h-9 items-center px-1 text-xs font-semibold text-[color:var(--accent-primary)]"
             >
               See all
             </Link>

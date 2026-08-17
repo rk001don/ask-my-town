@@ -7,7 +7,7 @@ import { clearCart, useCart } from "@/lib/cart-store";
 import { createOrder, getLocations } from "@/lib/api.functions";
 import { getMyProfile, linkCustomerToMe } from "@/lib/auth.functions";
 import { rememberGuestOrder } from "@/lib/guest-orders";
-import { isValidIndianPhone } from "@/lib/phone";
+import { isValidIndianPhone, normalizeIndianPhone } from "@/lib/phone";
 import { formatTimeRange12h } from "@/lib/time";
 import { ServiceFeeBreakdown, StickyFeeSummary } from "@/components/ServiceFeeBreakdown";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,18 +84,19 @@ function Checkout() {
     phone: string;
     address: string;
     landmark: string;
+    pincode: string;
     notes: string;
   };
   const initial: CheckoutForm = (() => {
     if (typeof window === "undefined")
-      return { name: "", phone: "", address: "", landmark: "", notes: "" };
+      return { name: "", phone: "", address: "", landmark: "", pincode: "", notes: "" };
     try {
       const raw = localStorage.getItem(RECENT_KEY);
       if (raw) return { notes: "", ...JSON.parse(raw) };
     } catch {
       /* localStorage unavailable (private browsing, quota) -- fall through to blank form */
     }
-    return { name: "", phone: "", address: "", landmark: "", notes: "" };
+    return { name: "", phone: "", address: "", landmark: "", pincode: "", notes: "" };
   })();
 
   const [form, setForm] = useState<CheckoutForm>(initial);
@@ -136,6 +137,7 @@ function Checkout() {
           if (!t.has("phone") && profile.phone) next.phone = profile.phone;
           if (!t.has("address") && profile.address) next.address = profile.address;
           if (!t.has("landmark")) next.landmark = profile.landmark ?? "";
+          if (!t.has("pincode") && profile.pincode) next.pincode = profile.pincode;
           return next;
         });
       } catch {
@@ -211,6 +213,7 @@ function Checkout() {
             phone: form.phone.trim(),
             address: form.address.trim(),
             landmark: form.landmark?.trim() || undefined,
+            pincode: form.pincode?.trim() || undefined,
           },
           items: items.map((i) => ({
             productId: i.productId,
@@ -238,6 +241,7 @@ function Checkout() {
             phone: form.phone.trim(),
             address: form.address.trim(),
             landmark: form.landmark?.trim() ?? "",
+            pincode: form.pincode?.trim() ?? "",
           }),
         );
       } catch {
@@ -404,10 +408,18 @@ function Checkout() {
             </span>
             <input
               value={form.phone}
-              onChange={(e) => update("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
+              // normalizeIndianPhone already strips +91/91/0 and separators, and the
+              // server validates with the same helper. Doing it here too means a
+              // pasted "+91 98765 43210" lands as the right ten digits instead of
+              // keeping the country code and dropping the last two.
+              onChange={(e) =>
+                update(
+                  "phone",
+                  normalizeIndianPhone(e.target.value).replace(/\D/g, "").slice(0, 10),
+                )
+              }
               autoComplete="tel"
               inputMode="numeric"
-              maxLength={10}
               className="w-full bg-transparent pr-3 outline-none"
               placeholder="10-digit mobile"
             />
@@ -431,6 +443,22 @@ function Checkout() {
             onChange={(e) => update("landmark", e.target.value)}
             className="mt-input"
             placeholder="Near the temple, opposite school…"
+          />
+        </Field>
+
+        {/* Optional, and stays optional. A pincode is what makes an address
+            machine-readable -- it is what a serviceability check and a second
+            town will both key off -- but demanding one from someone who
+            doesn't know theirs would cost orders today for a benefit that
+            arrives later. */}
+        <Field label="Pincode" hint="Optional" error={errors.pincode}>
+          <input
+            value={form.pincode}
+            onChange={(e) => update("pincode", e.target.value.replace(/\D/g, "").slice(0, 6))}
+            autoComplete="postal-code"
+            inputMode="numeric"
+            className="mt-input"
+            placeholder="6-digit pincode"
           />
         </Field>
 

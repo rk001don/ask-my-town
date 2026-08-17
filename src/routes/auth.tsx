@@ -315,7 +315,7 @@ function AuthPage() {
               <button
                 type="button"
                 onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
-                className="mt-4 w-full text-center text-sm text-[color:var(--text-secondary)] underline"
+                className="mt-4 flex min-h-11 w-full items-center justify-center text-center text-sm text-[color:var(--text-secondary)] underline"
               >
                 {mode === "signup" ? "Have an account? Sign in" : "New here? Create an account"}
               </button>
@@ -387,7 +387,7 @@ function AuthPage() {
 
           <p className="mt-4 text-center text-xs text-[color:var(--text-tertiary)]">
             You can also{" "}
-            <Link to="/activity" className="underline">
+            <Link to="/activity" className="inline-flex min-h-9 items-center underline">
               track without an account
             </Link>{" "}
             using your phone number.

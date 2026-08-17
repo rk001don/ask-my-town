@@ -49,7 +49,7 @@ export function ThemeToggle() {
             aria-label={label}
             title={label}
             onClick={() => pick(value)}
-            className={`tap-scale grid h-8 w-9 place-items-center rounded-full transition-colors ${
+            className={`tap-scale grid h-9 w-10 place-items-center rounded-full transition-colors ${
               active
                 ? "accent-gradient"
                 : "text-[color:var(--text-muted)] hover:text-[color:var(--text-primary)]"

@@ -254,7 +254,7 @@ function ProfileDialog({
 }) {
   const profileFn = useServerFn(getMyProfile);
   const saveFn = useServerFn(updateMyProfile);
-  const [form, setForm] = useState({ name: "", phone: "", address: "", landmark: "" });
+  const [form, setForm] = useState({ name: "", phone: "", address: "", landmark: "", pincode: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -268,6 +268,7 @@ function ProfileDialog({
           phone: p?.phone ?? "",
           address: p?.address ?? "",
           landmark: p?.landmark ?? "",
+          pincode: p?.pincode ?? "",
         });
       })
       .catch(() => {})
@@ -303,6 +304,7 @@ function ProfileDialog({
               ["phone", "Mobile", "10-digit number"],
               ["address", "Address", "House, street, area"],
               ["landmark", "Landmark (optional)", "Near…"],
+              ["pincode", "Pincode (optional)", "6-digit pincode"],
             ] as const
           ).map(([key, label, placeholder]) => (
             <label key={key} className="block">

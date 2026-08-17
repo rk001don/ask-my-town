@@ -68,7 +68,7 @@ export const signUpWithPin = createServerFn({ method: "POST" })
     // anyway, and it is theirs to correct.
     const { data: recentGuest } = await supabaseAdmin
       .from("customers")
-      .select("address, landmark")
+      .select("address, landmark, pincode")
       .eq("phone", phone)
       .is("user_id", null)
       .order("created_at", { ascending: false })
@@ -79,6 +79,7 @@ export const signUpWithPin = createServerFn({ method: "POST" })
       phone,
       address: recentGuest?.[0]?.address ?? "",
       landmark: recentGuest?.[0]?.landmark ?? null,
+      pincode: recentGuest?.[0]?.pincode ?? null,
       user_id: created.user!.id,
     });
     if (custErr)
@@ -97,7 +98,7 @@ export const getMyProfile = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("customers")
-      .select("id, name, phone, address, landmark")
+      .select("id, name, phone, address, landmark, pincode")
       .eq("user_id", context.userId)
       .maybeSingle();
     if (error) failFrom("auth:96", error, "We couldn't load your profile. Please try again.");
@@ -117,15 +118,28 @@ export const getMyProfile = createServerFn({ method: "GET" })
  */
 export const updateMyProfile = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { name: string; phone?: string; address?: string; landmark?: string }) =>
-    z
-      .object({
-        name: z.string().trim().min(2, "Enter your name").max(80),
-        phone: z.string().trim().max(20).optional(),
-        address: z.string().trim().max(300).optional(),
-        landmark: z.string().trim().max(160).optional(),
-      })
-      .parse(data),
+  .inputValidator(
+    (data: {
+      name: string;
+      phone?: string;
+      address?: string;
+      landmark?: string;
+      pincode?: string;
+    }) =>
+      z
+        .object({
+          name: z.string().trim().min(2, "Enter your name").max(80),
+          phone: z.string().trim().max(20).optional(),
+          address: z.string().trim().max(300).optional(),
+          landmark: z.string().trim().max(160).optional(),
+          pincode: z
+            .string()
+            .trim()
+            .regex(/^[1-9][0-9]{5}$/, "Enter a valid 6-digit pincode, or leave it blank.")
+            .optional()
+            .or(z.literal("").transform(() => undefined)),
+        })
+        .parse(data),
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -137,10 +151,12 @@ export const updateMyProfile = createServerFn({ method: "POST" })
       phone?: string;
       address?: string;
       landmark?: string | null;
+      pincode?: string | null;
     } = { name: data.name };
     if (data.phone) patch.phone = normalizeIndianPhone(data.phone);
     if (data.address !== undefined) patch.address = data.address;
     if (data.landmark !== undefined) patch.landmark = data.landmark || null;
+    if (data.pincode !== undefined) patch.pincode = data.pincode || null;
 
     const { data: existing } = await supabaseAdmin
       .from("customers")
@@ -161,6 +177,7 @@ export const updateMyProfile = createServerFn({ method: "POST" })
         phone: patch.phone ?? "",
         address: patch.address ?? "",
         landmark: patch.landmark ?? null,
+        pincode: patch.pincode ?? null,
       });
       if (error) failFrom("auth:updateMyProfile.insert", error, "We couldn't save your details.");
     }
