@@ -6,6 +6,7 @@ import { EmptyState, ErrorState } from "@/components/States";
 import { clearCart, useCart } from "@/lib/cart-store";
 import { createOrder, getLocations } from "@/lib/api.functions";
 import { linkCustomerToMe } from "@/lib/auth.functions";
+import { rememberGuestOrder } from "@/lib/guest-orders";
 import { isValidIndianPhone } from "@/lib/phone";
 import { formatTimeRange12h } from "@/lib/time";
 import { ServiceFeeBreakdown, StickyFeeSummary } from "@/components/ServiceFeeBreakdown";
@@ -193,9 +194,15 @@ function Checkout() {
         const { data: sess } = await supabase.auth.getSession();
         if (sess.session) {
           await linkCustomerToMe({ data: { orderId: res.orderId } });
+        } else {
+          // Placed as a guest: remember the ID on this device so that signing
+          // in later attaches this order automatically, with no phone matching
+          // and nothing for the customer to type. SessionSync does the claim.
+          rememberGuestOrder(res.orderId);
         }
       } catch {
-        /* non-fatal */
+        /* non-fatal -- the order exists either way, and can still be claimed
+           by ID from the account screen */
       }
       await navigate({ to: "/order/$orderId", params: { orderId: res.orderId } });
       // Clear only after we've actually left this page -- clearing first made
