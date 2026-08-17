@@ -62,8 +62,7 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "MyTown — Need Anything? MyTown!" },
       {
         property: "og:description",
-        content:
-          "Hyperlocal assisted commerce for Karimangalam & nearby areas. Just tell us what you need — food, groceries, tickets, rentals, local help — MyTown handles the rest.",
+        content: `Hyperlocal assisted commerce for ${TOWN_NAME} & nearby areas. Just tell us what you need — food, groceries, tickets, rentals, local help — ${APP_NAME} handles the rest.`,
       },
     ],
   }),

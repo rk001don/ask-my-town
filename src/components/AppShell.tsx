@@ -4,6 +4,7 @@ import { AskFAB } from "@/components/AskFAB";
 import { MyTownLogo } from "@/components/MyTownLogo";
 import { useCart, useCartCount } from "@/lib/cart-store";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { TOWN_NAME } from "@/lib/constants";
 
 const TABS = [
   { to: "/", label: "Home", icon: Home },
@@ -84,7 +85,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           })}
         </nav>
         <div className="mt-auto px-2 text-xs text-[color:var(--text-tertiary)]">
-          <Store className="mb-1 h-4 w-4" /> Karimangalam & nearby
+          <Store className="mb-1 h-4 w-4" /> {TOWN_NAME} & nearby
         </div>
       </aside>
 

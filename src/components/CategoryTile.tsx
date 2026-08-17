@@ -36,10 +36,24 @@ export function CategoryTile({ slug, name, iconKey, imageUrl, compact }: Props) 
           <Icon className="h-6 w-6 text-[color:var(--accent-primary)]" strokeWidth={2.2} />
         )}
       </div>
+      {/* Wraps between words, never inside one. `break-words hyphens-auto`
+          let a name split mid-word ("Everyda-y Help") on the narrow home-page
+          tiles, which is what made the row look broken. The fixed two-line box
+          also keeps every tile in a row the same height regardless of whether
+          its name wraps. */}
+      {/* Two elements, not one: `line-clamp` needs `display:-webkit-box` on the
+          text itself, so centring it with flex on the same element silently
+          disables the clamp -- a long name then runs to four lines and makes
+          its tile taller than the rest of the row. The wrapper owns the fixed
+          height and centring; the inner element owns the clamp. */}
       <div
-        className={`${compact ? "text-[12px]" : "text-[13px]"} w-full break-words hyphens-auto font-medium leading-tight line-clamp-2`}
+        className={`flex w-full items-center justify-center ${compact ? "min-h-[2rem]" : "min-h-[2.25rem]"}`}
       >
-        {name}
+        <div
+          className={`${compact ? "text-[12px]" : "text-[13px]"} line-clamp-2 font-medium leading-tight`}
+        >
+          {name}
+        </div>
       </div>
     </Link>
   );

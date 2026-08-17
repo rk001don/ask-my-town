@@ -18,11 +18,20 @@ import {
   type OrderStatus,
   SUPPORT_PHONE_DISPLAY,
 } from "@/lib/constants";
-import { isValidIndianPhone } from "@/lib/phone";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, Check, Clock, Sparkles, LogOut, Pencil, PackagePlus, X } from "lucide-react";
+import {
+  Search,
+  BadgeCheck,
+  Check,
+  Clock,
+  Sparkles,
+  LogOut,
+  Pencil,
+  PackagePlus,
+  X,
+} from "lucide-react";
 import { CancelOrderDialog } from "@/components/CancelOrderDialog";
 import { NotificationOptIn } from "@/components/NotificationOptIn";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -467,7 +476,21 @@ function GuestTracker() {
   return (
     <div>
       <AppHeader title="Orders" showBack={false} />
-      <div className="rise p-4">
+      <div className="px-4 pt-2">
+        {/* Appearance isn't account data -- it's a device preference, and
+            gating it behind sign-in meant a guest had no way to leave a theme
+            they couldn't read. */}
+        <div className="glass mb-3 flex items-center justify-between gap-3 rounded-2xl p-4">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">Appearance</div>
+            <p className="mt-0.5 text-xs text-[color:var(--text-secondary)]">
+              Light, dark, or match your device.
+            </p>
+          </div>
+          <ThemeToggle />
+        </div>
+      </div>
+      <div className="rise px-4 pb-4">
         <h2 className="text-display text-2xl font-bold">Track your order</h2>
         <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
           Enter the order ID from your confirmation, like MT-4A9F2C.{" "}
@@ -606,8 +629,18 @@ function OrderCard({ order, onCancel }: { order: Order; onCancel?: (orderId: str
           </button>
         )}
         {idx >= CUSTOMER_ORDER_STEPS.length - 1 && (
-          <span className="inline-flex items-center gap-1 text-xs text-[color:var(--success)]">
-            <Check className="h-3.5 w-3.5" /> Done
+          // A badge, not loose green text. "Done" set in the same size and
+          // weight as everything around it read as a stray word rather than
+          // as the order's outcome.
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
+            style={{
+              background: "color-mix(in oklab, var(--success) 16%, transparent)",
+              color: "var(--success)",
+            }}
+          >
+            <BadgeCheck className="h-3.5 w-3.5" />
+            Delivered
           </span>
         )}
       </div>
