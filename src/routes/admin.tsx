@@ -46,6 +46,7 @@ import {
   AlertTriangle,
   UserPlus,
   ShieldCheck,
+  User,
 } from "lucide-react";
 
 type AdminTab = "dashboard" | "demand" | "catalog" | "team" | "notifications" | "config";
@@ -373,7 +374,19 @@ function AdminBoard({ email }: { email: string }) {
   return (
     <div className="min-h-[100dvh] px-4 py-5 md:px-8 md:py-6">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="text-display text-xl font-semibold md:text-2xl">Admin console</div>
+        <div className="min-w-0">
+          <div className="text-display text-xl font-semibold md:text-2xl">Admin console</div>
+          {/* Who am I signed in as, and with what. The staff board has shown
+              this all along; admin had no profile line at all, so on a shared
+              device there was no way to tell whose session you were in. */}
+          <div className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-[color:var(--text-tertiary)]">
+            <User className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">
+              {email}
+              {rolesQ.data?.roles?.length ? ` · ${rolesQ.data.roles.join(", ")}` : ""}
+            </span>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <button

@@ -79,7 +79,11 @@ export function ProductCard({
     <div
       className={
         view === "grid"
-          ? "relative grid aspect-[4/3] w-full shrink-0 place-items-center overflow-hidden rounded-2xl"
+          ? // Full-bleed across the card's top edge, with only the top corners
+            // rounded, so the image reads as the card's photo rather than as a
+            // tile floating inside a padded box. Matches how Swiggy and Zomato
+            // present a card: image, then title directly beneath it.
+            "relative grid aspect-[4/3] w-full shrink-0 place-items-center overflow-hidden rounded-t-2xl"
           : "relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl"
       }
       style={safeImageUrl ? undefined : { background: visual.gradient }}
@@ -108,7 +112,7 @@ export function ProductCard({
       {/* Grid only. The list thumbnail is 64px and clips its overflow, so the
           same overlay there rendered as a truncated "Bestse..."; in list view
           the badge moves inline beside the name instead. */}
-      {bestSeller && view === "grid" && <BestSellerBadge className="absolute left-1.5 top-1.5" />}
+      {bestSeller && view === "grid" && <BestSellerBadge className="absolute left-2 top-2" />}
     </div>
   );
 
@@ -135,12 +139,12 @@ export function ProductCard({
         : {})}
       className={`scroll-mt-20 ${interactive ? "tap-scale cursor-pointer" : ""} ${
         view === "grid"
-          ? "card-surface rise flex h-full min-h-[250px] flex-col gap-3 p-3"
+          ? "card-surface rise flex h-full min-h-[250px] flex-col overflow-hidden"
           : "card-surface rise flex items-start gap-3 p-3"
       } ${highlighted ? "ring-2 ring-[color:var(--accent-primary)] transition-shadow duration-500" : ""}`}
     >
       {image}
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <div className={`flex min-w-0 flex-1 flex-col gap-1 ${view === "grid" ? "p-3" : ""}`}>
         {/* Veg/non-veg marker sits inline above the dish name, the way every
             Indian food app places it. It used to be a flex sibling of the
             image and the text block, which in grid view (a flex-col card)

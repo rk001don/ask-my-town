@@ -1,13 +1,15 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Search as SearchIcon, ShoppingBag, User } from "lucide-react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, MessageCircle, Search as SearchIcon, ShoppingBag, User } from "lucide-react";
 import { MyTownLogo } from "./MyTownLogo";
 import { useCartCount } from "@/lib/cart-store";
+import { waLink } from "@/lib/constants";
 import { useEffect, useRef, useState } from "react";
 
 type Props = {
   title?: string;
   showBack?: boolean;
   showSearch?: boolean;
+  showChat?: boolean;
   showCart?: boolean;
   transparent?: boolean;
 };
@@ -16,11 +18,13 @@ export function AppHeader({
   title,
   showBack = true,
   showSearch = true,
+  showChat = false,
   showCart = true,
   transparent = false,
 }: Props) {
   const cartCount = useCartCount();
   const navigate = useNavigate();
+  const loc = useLocation();
   const [bump, setBump] = useState(false);
   const [signedIn, setSignedIn] = useState(false);
   const headerRef = useRef<HTMLElement | null>(null);
@@ -100,13 +104,39 @@ export function AppHeader({
             <SearchIcon className="h-5 w-5" />
           </Link>
         )}
-        <Link
-          to={signedIn ? "/activity" : "/auth"}
-          aria-label={signedIn ? "My orders" : "Sign in"}
-          className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
-        >
-          <User className="h-5 w-5" />
-        </Link>
+        {showChat && (
+          <a
+            href={waLink()}
+            target="_blank"
+            rel="noreferrer noopener"
+            aria-label="Chat on WhatsApp"
+            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
+          >
+            <MessageCircle className="h-5 w-5" />
+          </a>
+        )}
+        {/* Signing in from the header used to drop people on the home screen
+            whatever they were doing -- the single most common way to lose your
+            place in the app. The current path rides along so auth can put them
+            back exactly where they were. */}
+        {signedIn ? (
+          <Link
+            to="/activity"
+            aria-label="My orders"
+            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
+          >
+            <User className="h-5 w-5" />
+          </Link>
+        ) : (
+          <Link
+            to="/auth"
+            search={{ redirect: `${loc.pathname}${loc.searchStr ?? ""}` }}
+            aria-label="Sign in"
+            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
+          >
+            <User className="h-5 w-5" />
+          </Link>
+        )}
         {showCart && (
           <Link
             to="/cart"

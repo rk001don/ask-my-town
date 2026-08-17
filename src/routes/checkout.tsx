@@ -5,13 +5,13 @@ import { AppHeader } from "@/components/AppHeader";
 import { EmptyState, ErrorState } from "@/components/States";
 import { clearCart, useCart } from "@/lib/cart-store";
 import { createOrder, getLocations } from "@/lib/api.functions";
-import { linkCustomerToMe } from "@/lib/auth.functions";
+import { getMyProfile, linkCustomerToMe } from "@/lib/auth.functions";
 import { rememberGuestOrder } from "@/lib/guest-orders";
 import { isValidIndianPhone } from "@/lib/phone";
 import { formatTimeRange12h } from "@/lib/time";
 import { ServiceFeeBreakdown, StickyFeeSummary } from "@/components/ServiceFeeBreakdown";
 import { supabase } from "@/integrations/supabase/client";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { toUserMessage } from "@/lib/errors";
@@ -79,7 +79,14 @@ function Checkout() {
   const priceableItems = items.filter((i) => i.showPrice && i.unitPrice != null);
   const itemsSubtotal = priceableItems.reduce((n, i) => n + (i.unitPrice ?? 0) * i.quantity, 0);
 
-  const initial = (() => {
+  type CheckoutForm = {
+    name: string;
+    phone: string;
+    address: string;
+    landmark: string;
+    notes: string;
+  };
+  const initial: CheckoutForm = (() => {
     if (typeof window === "undefined")
       return { name: "", phone: "", address: "", landmark: "", notes: "" };
     try {
@@ -91,8 +98,54 @@ function Checkout() {
     return { name: "", phone: "", address: "", landmark: "", notes: "" };
   })();
 
-  const [form, setForm] = useState(initial);
+  const [form, setForm] = useState<CheckoutForm>(initial);
+  // Fields the customer has edited here. The profile prefill below must never
+  // overwrite something they are in the middle of correcting.
+  const touchedRef = useRef<Set<keyof CheckoutForm>>(new Set());
+  function update(field: keyof CheckoutForm, value: string) {
+    touchedRef.current.add(field);
+    setForm((f) => ({ ...f, [field]: value }));
+  }
   const [busy, setBusy] = useState(false);
+  // For a signed-in customer the account is the truth, not this device's last
+  // typed values. Reading only localStorage meant the checkout form and the
+  // account's own "Your details" could show two different names and addresses
+  // for the same person -- which is exactly what it looked like.
+  //
+  // Only fills blanks: anything already typed in this session wins, so this
+  // can never overwrite what someone is in the middle of correcting.
+  const profileFn = useServerFn(getMyProfile);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess.session || cancelled) return;
+      try {
+        const profile = await profileFn();
+        if (!profile || cancelled) return;
+        setForm((f) => {
+          const next = { ...f };
+          // Account wins over this device's remembered values, rather than
+          // merely filling gaps. Two reasons: filling gaps leaves the two
+          // "Your details" screens showing different answers, which is the
+          // reported problem; and on a shared phone localStorage holds
+          // whoever checked out last, so prefilling a signed-in customer with
+          // it hands them someone else's name and address.
+          const t = touchedRef.current;
+          if (!t.has("name") && profile.name) next.name = profile.name;
+          if (!t.has("phone") && profile.phone) next.phone = profile.phone;
+          if (!t.has("address") && profile.address) next.address = profile.address;
+          if (!t.has("landmark")) next.landmark = profile.landmark ?? "";
+          return next;
+        });
+      } catch {
+        /* profile is a convenience here; the form still works */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [profileFn]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   // One key per checkout attempt (stable across re-renders, fresh on remount)
   // -- lets a genuine network-retry of the same submit land on the same
@@ -337,7 +390,7 @@ function Checkout() {
         <Field label="Your name" error={errors.name}>
           <input
             value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            onChange={(e) => update("name", e.target.value)}
             autoComplete="name"
             className="mt-input"
             placeholder="e.g. Priya R."
@@ -351,9 +404,7 @@ function Checkout() {
             </span>
             <input
               value={form.phone}
-              onChange={(e) =>
-                setForm({ ...form, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })
-              }
+              onChange={(e) => update("phone", e.target.value.replace(/\D/g, "").slice(0, 10))}
               autoComplete="tel"
               inputMode="numeric"
               maxLength={10}
@@ -366,7 +417,7 @@ function Checkout() {
         <Field label="Delivery address" error={errors.address}>
           <textarea
             value={form.address}
-            onChange={(e) => setForm({ ...form, address: e.target.value })}
+            onChange={(e) => update("address", e.target.value)}
             autoComplete="street-address"
             rows={3}
             className="mt-input"
@@ -377,7 +428,7 @@ function Checkout() {
         <Field label="Landmark" hint="Optional">
           <input
             value={form.landmark}
-            onChange={(e) => setForm({ ...form, landmark: e.target.value })}
+            onChange={(e) => update("landmark", e.target.value)}
             className="mt-input"
             placeholder="Near the temple, opposite school…"
           />

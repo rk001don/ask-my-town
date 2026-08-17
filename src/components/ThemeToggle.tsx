@@ -16,12 +16,15 @@ const OPTIONS: { value: ThemeChoice; label: string; Icon: typeof Sun }[] = [
  * once someone had picked a side.
  */
 export function ThemeToggle() {
+  // "system" is both the initial render and the real default, which is what
+  // makes this hydration-safe: server and first client paint agree, so Auto
+  // can be shown as selected straight away. Previously nothing was marked
+  // until after mount, and a control that renders with no option selected
+  // looks like it forgot your choice.
   const [choice, setChoice] = useState<ThemeChoice>("system");
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setChoice(readThemeChoice());
-    setMounted(true);
   }, []);
 
   function pick(next: ThemeChoice) {
@@ -36,9 +39,7 @@ export function ThemeToggle() {
       className="flex rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated-2)] p-1"
     >
       {OPTIONS.map(({ value, label, Icon }) => {
-        // Before hydration we don't know the stored choice, so nothing is
-        // marked active -- picking one at random would visibly flip.
-        const active = mounted && choice === value;
+        const active = choice === value;
         return (
           <button
             key={value}

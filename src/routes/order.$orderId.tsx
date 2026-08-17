@@ -353,10 +353,14 @@ function Confirmation() {
             Track order
           </Link>
         </div>
+        {/* Ordering again is a primary action, so it carries the accent like
+            "Chat with us" rather than sitting as a third outlined button --
+            three identical outlines gave no sense of what to do next. */}
         <Link
           to="/"
-          className="tap-scale block rounded-full border border-[color:var(--border-strong)] py-3 text-center text-sm font-semibold"
+          className="tap-scale accent-gradient flex items-center justify-center gap-1.5 rounded-full py-3 text-center text-sm font-semibold"
         >
+          <Sparkles className="h-4 w-4" />
           Ask again
         </Link>
       </div>

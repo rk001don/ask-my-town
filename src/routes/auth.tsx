@@ -14,6 +14,29 @@ const searchSchema = z.object({
   mode: z.enum(["signin", "signup"]).optional(),
 });
 
+/**
+ * Turn the `redirect` search param into a path we're willing to navigate to.
+ *
+ * Two jobs. It normalises a full href -- the authenticated-route guard passes
+ * `location.href`, which router.navigate treats as a literal path and can't
+ * resolve -- and it refuses anything that isn't a same-origin path, so the
+ * parameter can't be used to bounce someone to another site after signing in.
+ */
+function safeRedirect(raw: string | undefined): string {
+  if (!raw) return "/";
+  try {
+    // Resolving against our own origin makes "//evil.com" and
+    // "https://evil.com" both surface a foreign origin, which we then reject.
+    const url = new URL(raw, window.location.origin);
+    if (url.origin !== window.location.origin) return "/";
+    const path = `${url.pathname}${url.search}${url.hash}`;
+    // Never bounce back to the sign-in screen itself.
+    return path.startsWith("/auth") ? "/" : path || "/";
+  } catch {
+    return "/";
+  }
+}
+
 export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
@@ -64,7 +87,7 @@ function AuthPage() {
       .getSession()
       .then(({ data }) => {
         if (data.session) {
-          nav({ to: search.redirect ?? "/" });
+          nav({ to: safeRedirect(search.redirect) });
           return; // stay on the skeleton; navigation is already in flight
         }
         setCheckingSession(false);
@@ -88,7 +111,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back!");
-        nav({ to: search.redirect ?? "/" });
+        nav({ to: safeRedirect(search.redirect) });
       }
     } catch (err) {
       toast.error(friendlyAuthError(err));
@@ -123,7 +146,7 @@ function AuthPage() {
         });
         if (error) throw error;
         toast.success("Account created!");
-        nav({ to: search.redirect ?? "/" });
+        nav({ to: safeRedirect(search.redirect) });
       } else {
         const phoneDigits = pinPhone.replace(/\D/g, "").slice(-10);
         const { error } = await supabase.auth.signInWithPassword({
@@ -132,7 +155,7 @@ function AuthPage() {
         });
         if (error) throw new Error("Incorrect phone or PIN");
         toast.success("Welcome back!");
-        nav({ to: search.redirect ?? "/" });
+        nav({ to: safeRedirect(search.redirect) });
       }
     } catch (err) {
       toast.error(friendlyAuthError(err));
@@ -146,7 +169,7 @@ function AuthPage() {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: `${window.location.origin}${search.redirect ?? "/"}` },
+        options: { redirectTo: `${window.location.origin}${safeRedirect(search.redirect)}` },
       });
       if (error) throw error;
       // Successful call navigates the browser to Google; nothing left to do here.
@@ -185,30 +208,26 @@ function AuthPage() {
             <button
               type="button"
               onClick={() => setAuthMethod("email")}
-              className="tap-scale rounded-full py-2 text-sm font-semibold transition-colors"
-              style={
-                authMethod === "email"
-                  ? {
-                      background:
-                        "linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))",
-                    }
-                  : { color: "var(--text-secondary)" }
-              }
+              // accent-gradient sets the foreground as well as the background.
+              // The inline gradient here set only the background, so the label
+              // kept --text-primary and rendered dark-on-orange while every
+              // other accent button in the app is white-on-orange.
+              className={`tap-scale rounded-full py-2 text-sm font-semibold transition-colors ${
+                authMethod === "email" ? "accent-gradient" : "text-[color:var(--text-secondary)]"
+              }`}
             >
               Email
             </button>
             <button
               type="button"
               onClick={() => setAuthMethod("phone")}
-              className="tap-scale rounded-full py-2 text-sm font-semibold transition-colors"
-              style={
-                authMethod === "phone"
-                  ? {
-                      background:
-                        "linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))",
-                    }
-                  : { color: "var(--text-secondary)" }
-              }
+              // accent-gradient sets the foreground as well as the background.
+              // The inline gradient here set only the background, so the label
+              // kept --text-primary and rendered dark-on-orange while every
+              // other accent button in the app is white-on-orange.
+              className={`tap-scale rounded-full py-2 text-sm font-semibold transition-colors ${
+                authMethod === "phone" ? "accent-gradient" : "text-[color:var(--text-secondary)]"
+              }`}
             >
               Phone
             </button>

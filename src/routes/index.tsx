@@ -6,6 +6,7 @@ import {
   ArrowRight,
   ShoppingBag,
   Sparkles,
+  User,
 } from "lucide-react";
 import { MyTownLogo } from "@/components/MyTownLogo";
 import { getBestSellers, getCategories, getProducts } from "@/lib/api.functions";
@@ -103,6 +104,13 @@ function Home() {
           >
             <MessageCircle className="h-5 w-5" />
           </a>
+          <Link
+            to="/activity"
+            aria-label="Your account"
+            className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
+          >
+            <User className="h-5 w-5" />
+          </Link>
           <Link
             to="/cart"
             aria-label="Cart"

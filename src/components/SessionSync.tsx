@@ -1,10 +1,13 @@
 import { useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { linkCustomerToMe } from "@/lib/auth.functions";
+import { getMyProfile, linkCustomerToMe, updateMyProfile } from "@/lib/auth.functions";
 import { registerDevice } from "@/lib/notifications.functions";
 import { isUserError } from "@/lib/errors";
 import { forgetGuestOrder, pendingGuestOrders } from "@/lib/guest-orders";
+
+/** Written by checkout; the same key its own prefill reads. */
+const GUEST_DETAILS_KEY = "mytown.customer.v1";
 
 /**
  * Runs once per signed-in session, app-wide. Renders nothing.
@@ -26,6 +29,8 @@ import { forgetGuestOrder, pendingGuestOrders } from "@/lib/guest-orders";
 export function SessionSync() {
   const claimFn = useServerFn(linkCustomerToMe);
   const registerFn = useServerFn(registerDevice);
+  const profileFn = useServerFn(getMyProfile);
+  const saveProfileFn = useServerFn(updateMyProfile);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,8 +81,45 @@ export function SessionSync() {
       }
     }
 
+    /**
+     * Seed a brand-new account from the details this device already has.
+     *
+     * Someone who ordered as a guest has typed their name and address once
+     * already; making them type it again after signing up is the kind of
+     * friction that makes an account feel like a downgrade. Only ever fills
+     * gaps -- an account that already has a name is left alone.
+     */
+    async function seedProfileFromGuestCheckout() {
+      try {
+        const raw = localStorage.getItem(GUEST_DETAILS_KEY);
+        if (!raw) return;
+        const saved = JSON.parse(raw) as {
+          name?: string;
+          phone?: string;
+          address?: string;
+          landmark?: string;
+        };
+        if (!saved?.name?.trim()) return;
+
+        const profile = await profileFn();
+        if (profile?.name?.trim() && profile?.address?.trim()) return; // already set up
+
+        await saveProfileFn({
+          data: {
+            name: profile?.name?.trim() || saved.name.trim(),
+            phone: profile?.phone?.trim() || saved.phone?.trim() || undefined,
+            address: profile?.address?.trim() || saved.address?.trim() || undefined,
+            landmark: profile?.landmark?.trim() || saved.landmark?.trim() || undefined,
+          },
+        });
+      } catch {
+        /* convenience only -- the account still works, they just retype once */
+      }
+    }
+
     async function sync() {
       await claimGuestOrders();
+      await seedProfileFromGuestCheckout();
       await rebindPushDevice();
     }
 
@@ -99,7 +141,7 @@ export function SessionSync() {
       cancelled = true;
       unsubscribe?.();
     };
-  }, [claimFn, registerFn]);
+  }, [claimFn, registerFn, profileFn, saveProfileFn]);
 
   return null;
 }

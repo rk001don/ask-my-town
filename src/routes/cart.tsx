@@ -2,10 +2,19 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AppHeader } from "@/components/AppHeader";
 import { EmptyState } from "@/components/States";
 import { useCart, decrementItem, incrementItem, removeItem, setItemNotes } from "@/lib/cart-store";
-import { ArrowRight, Minus, Plus, ShoppingBag, Sparkles, StickyNote, Trash2 } from "lucide-react";
+import {
+  ArrowRight,
+  Minus,
+  Plus,
+  ShoppingBag,
+  Sparkles,
+  StickyNote,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import { iconFor } from "@/components/icon-map";
 import { ServiceFeeBreakdown } from "@/components/ServiceFeeBreakdown";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { placeholderGradientFor } from "@/lib/catalog-display";
 
 export const Route = createFileRoute("/cart")({
@@ -88,6 +97,12 @@ function Cart() {
           </p>
         </div>
       </div>
+
+      {/* Offered, never enforced -- checkout works perfectly well as a guest,
+          and interrupting someone mid-purchase to make an account is how you
+          lose the order. Carries the current path so signing in returns them
+          here rather than dumping them on the home screen. */}
+      <SignInPrompt />
 
       <div
         className="glass fixed inset-x-0 bottom-0 z-[var(--z-header)] border-t border-[color:var(--border-subtle)] p-4 md:left-56"
@@ -220,5 +235,42 @@ function CartRow({ it }: { it: ReturnType<typeof useCart>["items"][number] }) {
         </div>
       </div>
     </li>
+  );
+}
+
+/** Quiet nudge shown to guests on the cart screen. Renders nothing when signed in. */
+function SignInPrompt() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase.auth.getSession();
+      if (!cancelled) setShow(!data.session);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  if (!show) return null;
+  return (
+    <div className="px-4 pb-2">
+      <Link
+        to="/auth"
+        search={{ redirect: "/cart" }}
+        className="tap-scale flex items-center gap-3 rounded-2xl border border-dashed border-[color:var(--border-strong)] p-3.5"
+      >
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[color:var(--accent-primary)]/10">
+          <UserRound className="h-4 w-4 text-[color:var(--accent-primary)]" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold">Sign in for a faster checkout</span>
+          <span className="block text-xs text-[color:var(--text-secondary)]">
+            Your address fills itself, and every order stays in one place.
+          </span>
+        </span>
+        <ArrowRight className="h-4 w-4 shrink-0 text-[color:var(--text-muted)]" />
+      </Link>
+    </div>
   );
 }
