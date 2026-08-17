@@ -3,7 +3,6 @@ import { ArrowLeft, Search as SearchIcon, ShoppingBag, User } from "lucide-react
 import { MyTownLogo } from "./MyTownLogo";
 import { useCartCount } from "@/lib/cart-store";
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 type Props = {
   title?: string;
@@ -46,10 +45,24 @@ export function AppHeader({
     const t = setTimeout(() => setBump(false), 450);
     return () => clearTimeout(t);
   }, [cartCount]);
+  // Imported lazily on purpose. AppHeader renders on every page, so a static
+  // import pulled the whole Supabase client (~300 kB) into the shared bundle
+  // that every visitor downloads -- including someone browsing the menu who
+  // never signs in. The header only needs it to decide whether to show the
+  // account icon, which can happen a beat later.
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSignedIn(!!s));
-    return () => sub.subscription.unsubscribe();
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
+    import("@/integrations/supabase/client").then(({ supabase }) => {
+      if (cancelled) return;
+      supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+      const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSignedIn(!!s));
+      unsubscribe = () => sub.subscription.unsubscribe();
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, []);
 
   return (
