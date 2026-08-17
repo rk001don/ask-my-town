@@ -13,6 +13,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppShell } from "@/components/AppShell";
 import { Toaster } from "sonner";
 import { THEME_INIT_SCRIPT } from "@/lib/theme";
+import { APP_NAME, TOWN_NAME } from "@/lib/constants";
 
 function NotFoundComponent() {
   return (
@@ -75,15 +76,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "MyTown — Need Anything? MyTown!" },
       {
         name: "description",
-        content:
-          "Hyperlocal assisted commerce for Karimangalam & nearby areas. Just tell us what you need — food, groceries, tickets, rentals, local help — MyTown handles the rest.",
+        content: `Hyperlocal assisted commerce for ${TOWN_NAME} & nearby areas. Just tell us what you need — food, groceries, tickets, rentals, local help — ${APP_NAME} handles the rest.`,
       },
       { name: "author", content: "MyTown" },
       { property: "og:title", content: "MyTown — Need Anything? MyTown!" },
       {
         property: "og:description",
-        content:
-          "Hyperlocal assisted commerce for Karimangalam & nearby areas. Just tell us what you need — food, groceries, tickets, rentals, local help — MyTown handles the rest.",
+        content: `Hyperlocal assisted commerce for ${TOWN_NAME} & nearby areas. Just tell us what you need — food, groceries, tickets, rentals, local help — ${APP_NAME} handles the rest.`,
       },
       { property: "og:type", content: "website" },
       { property: "og:site_name", content: "MyTown" },
@@ -94,8 +93,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:title", content: "MyTown — Need Anything? MyTown!" },
       {
         name: "twitter:description",
-        content:
-          "Hyperlocal assisted commerce for Karimangalam & nearby areas. Just tell us what you need — food, groceries, tickets, rentals, local help — MyTown handles the rest.",
+        content: `Hyperlocal assisted commerce for ${TOWN_NAME} & nearby areas. Just tell us what you need — food, groceries, tickets, rentals, local help — ${APP_NAME} handles the rest.`,
       },
       {
         property: "og:image",

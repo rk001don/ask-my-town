@@ -158,6 +158,74 @@ const GROUP_LABELS: Record<string, string> = {
   "local-service": "Everyday Help",
 };
 
+/**
+ * One diet filter pill: the standard veg/non-veg mark plus a switch track.
+ *
+ * Selecting one clears the other -- they're mutually exclusive, and a food
+ * item is one or the other -- so this stays a pair of switches rather than
+ * becoming a multi-select.
+ */
+function DietToggle({
+  kind,
+  active,
+  onClick,
+}: {
+  kind: "veg" | "nonveg";
+  active: boolean;
+  onClick: () => void;
+}) {
+  const colour = kind === "veg" ? "var(--success)" : "var(--danger)";
+  const label = kind === "veg" ? "Veg" : "Non-veg";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      aria-label={`${label} only`}
+      className="tap-scale flex shrink-0 items-center gap-2 rounded-full border py-1.5 pl-2.5 pr-2 text-[13px] font-semibold transition-colors"
+      style={{
+        borderColor: active ? colour : "var(--border-strong)",
+        background: active ? `color-mix(in oklab, ${colour} 12%, transparent)` : "transparent",
+        color: active ? colour : "var(--text-secondary)",
+      }}
+    >
+      {/* Square for veg, triangle for non-veg -- the marks people already
+          read on packaging and menus, not two identical dots in different
+          colours. */}
+      <span
+        className={`grid h-3.5 w-3.5 shrink-0 place-items-center border-[1.5px] ${
+          kind === "veg" ? "rounded-[3px]" : "rounded-[2px]"
+        }`}
+        style={{ borderColor: colour }}
+      >
+        {kind === "veg" ? (
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: colour }} />
+        ) : (
+          <span
+            className="h-0 w-0"
+            style={{
+              borderLeft: "3px solid transparent",
+              borderRight: "3px solid transparent",
+              borderBottom: `5px solid ${colour}`,
+            }}
+          />
+        )}
+      </span>
+      {label}
+      <span
+        aria-hidden="true"
+        className="relative h-4 w-7 shrink-0 rounded-full transition-colors"
+        style={{ background: active ? colour : "var(--border-strong)" }}
+      >
+        <span
+          className="absolute top-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition-[left] duration-200"
+          style={{ left: active ? "0.875rem" : "0.125rem" }}
+        />
+      </span>
+    </button>
+  );
+}
+
 function Category() {
   const { slug } = Route.useParams();
   const { highlight } = useSearch({ from: "/c/$slug" });
@@ -165,7 +233,10 @@ function Category() {
   const { data: products } = useSuspenseQuery(prodOpts(slug));
   const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<CatalogView>("grid");
-  const [vegOnly, setVegOnly] = useState(false);
+  // Three states, not two: off, veg-only, non-veg-only. A lone "Veg only"
+  // boolean had no way to express "show me only the non-veg", which is half
+  // the reason anyone reaches for this filter in the first place.
+  const [dietFilter, setDietFilter] = useState<"all" | "veg" | "nonveg">("all");
   const [activeGroups, setActiveGroups] = useState<Set<string>>(new Set());
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [openProduct, setOpenProduct] = useState<ProductRow | null>(null);
@@ -246,7 +317,8 @@ function Category() {
   const groups = useMemo(() => {
     const map = new Map<string, ProductRow[]>();
     let visible = products as ProductRow[];
-    if (vegOnly) visible = visible.filter((p) => p.is_veg === true);
+    if (dietFilter === "veg") visible = visible.filter((p) => p.is_veg === true);
+    else if (dietFilter === "nonveg") visible = visible.filter((p) => p.is_veg === false);
     // Chips filter the list in place rather than scrolling to a heading.
     // Nothing selected means everything, which is what makes deselecting the
     // last chip a natural "show me all again".
@@ -264,7 +336,7 @@ function Category() {
     // meal-time groups to a sensible sequence and always sink "other" last.
     const ordered = orderGroupKeys([...map.keys()]);
     return ordered.map((k) => [k, map.get(k)!] as [string, ProductRow[]]);
-  }, [products, vegOnly, activeGroups]);
+  }, [products, dietFilter, activeGroups]);
 
   if (!sub.parent) return null;
 
@@ -287,48 +359,23 @@ function Category() {
         <div className="space-y-6 p-4 pb-24">
           {hasProducts && (
             <div className="flex items-center justify-between gap-3">
-              {/* Veg filter — the one filter an Indian food catalogue is always
-                  expected to have. Only rendered where it means something: a
-                  category whose items actually carry a veg/non-veg flag (food
-                  does; rentals and e-Seva don't). */}
+              {/* Veg AND non-veg, the pair every Indian food app shows. Only
+                  rendered where the data can answer it: a category whose
+                  items carry no veg flag at all (rentals, e-Seva) would
+                  otherwise offer a filter that blanks the page. */}
               {hasVegData ? (
-                // A real switch, not a chip that merely looks pressed: "veg
-                // only" is a mode you leave on while you browse, and a track
-                // with a knob says on/off at a glance the way a chip never
-                // quite does. Same control Swiggy and Zomato both use.
-                <button
-                  type="button"
-                  onClick={() => setVegOnly((v) => !v)}
-                  aria-pressed={vegOnly}
-                  className={`tap-scale flex shrink-0 items-center gap-2 rounded-full border py-1.5 pl-3 pr-2 text-[13px] font-semibold transition-colors ${
-                    vegOnly
-                      ? "border-[color:var(--success)] bg-[color:var(--success)]/12 text-[color:var(--success)]"
-                      : "border-[color:var(--border-strong)] surface-muted text-[color:var(--text-secondary)]"
-                  }`}
-                >
-                  <span
-                    className="grid h-3.5 w-3.5 shrink-0 place-items-center rounded-[3px] border-[1.5px]"
-                    style={{ borderColor: "var(--success)" }}
-                  >
-                    <span
-                      className="h-1.5 w-1.5 rounded-full"
-                      style={{ background: "var(--success)" }}
-                    />
-                  </span>
-                  Veg only
-                  <span
-                    aria-hidden="true"
-                    className="relative h-4 w-7 shrink-0 rounded-full transition-colors"
-                    style={{
-                      background: vegOnly ? "var(--success)" : "var(--border-strong)",
-                    }}
-                  >
-                    <span
-                      className="absolute top-0.5 h-3 w-3 rounded-full bg-white shadow-sm transition-[left] duration-200"
-                      style={{ left: vegOnly ? "0.875rem" : "0.125rem" }}
-                    />
-                  </span>
-                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <DietToggle
+                    kind="veg"
+                    active={dietFilter === "veg"}
+                    onClick={() => setDietFilter((d) => (d === "veg" ? "all" : "veg"))}
+                  />
+                  <DietToggle
+                    kind="nonveg"
+                    active={dietFilter === "nonveg"}
+                    onClick={() => setDietFilter((d) => (d === "nonveg" ? "all" : "nonveg"))}
+                  />
+                </div>
               ) : (
                 <p className="text-xs text-[color:var(--text-secondary)]">Switch view anytime</p>
               )}
@@ -402,21 +449,23 @@ function Category() {
           )}
           {/* Veg filter on, nothing matched: say so and offer the way out,
               rather than leaving an apparently-broken blank page. */}
-          {hasProducts && groups.length === 0 && (vegOnly || activeGroups.size > 0) && (
-            <div className="rounded-2xl border border-dashed border-[color:var(--border-strong)] px-4 py-10 text-center">
-              <p className="text-sm font-semibold">Nothing matches those filters</p>
-              <button
-                type="button"
-                onClick={() => {
-                  setVegOnly(false);
-                  setActiveGroups(new Set());
-                }}
-                className="tap-scale mt-3 rounded-full border border-[color:var(--border-strong)] px-4 py-2 text-[13px] font-semibold"
-              >
-                Show everything
-              </button>
-            </div>
-          )}
+          {hasProducts &&
+            groups.length === 0 &&
+            (dietFilter !== "all" || activeGroups.size > 0) && (
+              <div className="rounded-2xl border border-dashed border-[color:var(--border-strong)] px-4 py-10 text-center">
+                <p className="text-sm font-semibold">Nothing matches those filters</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDietFilter("all");
+                    setActiveGroups(new Set());
+                  }}
+                  className="tap-scale mt-3 rounded-full border border-[color:var(--border-strong)] px-4 py-2 text-[13px] font-semibold"
+                >
+                  Show everything
+                </button>
+              </div>
+            )}
           {/* Priced catalog — the primary content, always shown first when it exists */}
           {hasProducts &&
             groups.map(([groupKey, items]) => (

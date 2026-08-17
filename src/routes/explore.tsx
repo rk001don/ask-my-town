@@ -1,11 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { getCategories, getProducts } from "@/lib/api.functions";
 import { AppHeader } from "@/components/AppHeader";
 import { CategoryTile } from "@/components/CategoryTile";
-import { ProductCard } from "@/components/ProductCard";
+import { ProductCard, type ProductRow } from "@/components/ProductCard";
+import { ProductSheet } from "@/components/ProductSheet";
 import { TileSkeleton, ShelfSkeleton, ErrorState } from "@/components/States";
 import { useEffect, useState } from "react";
+import { Search as SearchIcon } from "lucide-react";
 
 export const opts = queryOptions({
   queryKey: ["categories", "top"],
@@ -43,10 +45,26 @@ function Explore() {
   const { data } = useSuspenseQuery(opts);
   const trendingQ = useQuery(trendingOpts);
   const [mounted, setMounted] = useState(false);
+  // Trending cards here did nothing when tapped -- the detail sheet was wired
+  // up on category pages and the home shelves but not this one.
+  const [openProduct, setOpenProduct] = useState<ProductRow | null>(null);
   useEffect(() => setMounted(true), []);
   return (
     <div>
       <AppHeader title="Explore" showBack={false} />
+      {/* Same tappable search bar as the home screen. Explore is where people
+          come when they don't know which category a thing lives in, so it's
+          the screen that needs search most, and it was the one screen without
+          it. */}
+      <div className="px-4 pt-3">
+        <Link
+          to="/search"
+          className="tap-scale flex min-h-11 items-center gap-2.5 rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated)] px-4 py-2.5 text-[14px] text-[color:var(--text-muted)]"
+        >
+          <SearchIcon className="h-4 w-4 shrink-0" />
+          Search for idli, medicines, help…
+        </Link>
+      </div>
       <div className="p-4">
         <h2 className="text-display text-2xl font-bold">What do you need today?</h2>
         <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
@@ -66,7 +84,12 @@ function Explore() {
             <div className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-4 pb-1">
               {(trendingQ.data ?? []).map((p) => (
                 <div key={p.id} className="w-[152px] shrink-0">
-                  <ProductCard product={p} categoryName={p.categories?.name} view="grid" />
+                  <ProductCard
+                    product={p}
+                    categoryName={p.categories?.name}
+                    view="grid"
+                    onOpen={setOpenProduct}
+                  />
                 </div>
               ))}
             </div>
@@ -87,6 +110,14 @@ function Explore() {
             />
           ))}
         </div>
+      )}
+      {openProduct && (
+        <ProductSheet
+          product={openProduct}
+          categoryName={openProduct.categories?.name}
+          categoryIcon={openProduct.categories?.icon_key}
+          onClose={() => setOpenProduct(null)}
+        />
       )}
     </div>
   );

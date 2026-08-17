@@ -109,7 +109,6 @@ function Confirmation() {
       <AppHeader
         title={isCancelled ? "Cancelled" : (STATUS_COPY[status]?.label ?? "Order")}
         showCart={false}
-        showBack={false}
       />
       <div className="rise space-y-5 p-4">
         {/* Delivered gets its own hero rather than the tracking hero with a

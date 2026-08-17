@@ -6,7 +6,7 @@ export const SUPPORT_PHONE_DISPLAY = "+91 80722 83367";
 export const WHATSAPP_DEFAULT_MSG = "Hi MyTown, I need help with something.";
 export const APP_NAME = "MyTown";
 export const APP_TAGLINE = "Need Anything? MyTown!";
-export const APP_SUBTEXT = "Serving Karimangalam & nearby areas — just tell us what you need.";
+export const APP_SUBTEXT = `Serving ${TOWN_NAME} & nearby areas — just tell us what you need.`;
 
 export function waLink(text = WHATSAPP_DEFAULT_MSG) {
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;

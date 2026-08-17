@@ -5,6 +5,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { EmptyState, ErrorState } from "@/components/States";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search as SearchIcon, X, Sparkles as SparklesIcon, ChevronRight } from "lucide-react";
+import { TOWN_NAME } from "@/lib/constants";
 import { iconFor } from "@/components/icon-map";
 import { openAskSheet } from "@/components/AskFAB";
 import { catalogVisualFor, placeholderGradientFor } from "@/lib/catalog-display";
@@ -172,7 +173,7 @@ function SearchPage() {
           {trending.length > 0 && (
             <>
               <h3 className="mt-6 text-xs font-semibold uppercase tracking-wider text-[color:var(--text-muted)]">
-                Trending in Karimangalam
+                Trending in {TOWN_NAME}
               </h3>
               <div className="mt-2 flex flex-wrap gap-2">
                 {trending.map((t) => (
