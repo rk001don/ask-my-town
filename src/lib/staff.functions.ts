@@ -109,7 +109,7 @@ export const listStaffOrders = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("orders")
       .select(
-        "id, status, notes, created_at, updated_at, requested_date, requested_window, service_fee_estimate, service_fee_final, cancellation_reason, assigned_staff_id, assigned_staff_email, customer:customers(name,phone,address,landmark), items:order_items(item_name,quantity,notes,is_freeform,unit_price,attachments:order_attachments(id,file_path,file_type))",
+        "id, status, notes, created_at, updated_at, requested_date, requested_window, service_fee_estimate, service_fee_final, cancellation_reason, assigned_staff_id, assigned_staff_email, contact_name, contact_phone, delivery_address, delivery_landmark, customer:customers(name,phone,address,landmark), items:order_items(item_name,quantity,notes,is_freeform,unit_price,attachments:order_attachments(id,file_path,file_type))",
       )
       // Oldest first -- whoever's been waiting longest gets served first,
       // same first-come-first-served principle every delivery queue runs on.
