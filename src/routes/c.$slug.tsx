@@ -1,7 +1,8 @@
 import { createFileRoute, notFound, useSearch } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { getProducts, getSubcategories } from "@/lib/api.functions";
+import { getCategoryBestSellerIds, getProducts, getSubcategories } from "@/lib/api.functions";
 import { AppHeader } from "@/components/AppHeader";
 import { ItemCard } from "@/components/ItemCard";
 import { openAskSheet } from "@/components/AskFAB";
@@ -168,6 +169,19 @@ function Category() {
   const [activeGroups, setActiveGroups] = useState<Set<string>>(new Set());
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
   const [openProduct, setOpenProduct] = useState<ProductRow | null>(null);
+  // Best-effort and non-blocking: the page renders identically without it, so
+  // a slow or failed lookup never delays the catalogue.
+  const bestSellersFn = useServerFn(getCategoryBestSellerIds);
+  const [bestSellerIds, setBestSellerIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    bestSellersFn({ data: { categorySlug: slug } })
+      .then((ids) => !cancelled && setBestSellerIds(new Set(ids)))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [bestSellersFn, slug]);
   useEffect(() => {
     setMounted(true);
     const saved = window.localStorage.getItem(CATALOG_VIEW_KEY);
@@ -425,6 +439,7 @@ function Category() {
                       key={p.id}
                       id={`product-${p.id}`}
                       highlighted={p.id === highlightedId}
+                      bestSeller={bestSellerIds.has(p.id)}
                       product={p}
                       categoryName={sub.parent!.name}
                       categoryIcon={sub.parent!.icon_key}

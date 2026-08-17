@@ -1,4 +1,4 @@
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, Star } from "lucide-react";
 import { useState } from "react";
 import { catalogVisualFor, type CatalogView } from "@/lib/catalog-display";
 import {
@@ -25,6 +25,21 @@ export type ProductRow = {
   categories?: { name: string; icon_key?: string | null } | null;
 };
 
+/**
+ * Earned from real order counts (see getCategoryBestSellerIds), never set by
+ * hand -- so it stays absent until the sales data actually supports the claim.
+ */
+function BestSellerBadge({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full bg-[color:var(--accent-primary)] px-2 py-0.5 text-[10px] font-bold whitespace-nowrap text-[color:var(--on-accent)] shadow-sm ${className}`}
+    >
+      <Star className="h-2.5 w-2.5 fill-current" strokeWidth={0} />
+      Bestseller
+    </span>
+  );
+}
+
 export function ProductCard({
   product,
   categoryName,
@@ -32,6 +47,7 @@ export function ProductCard({
   view = "list",
   id,
   highlighted = false,
+  bestSeller = false,
   onOpen,
 }: {
   product: ProductRow;
@@ -40,6 +56,8 @@ export function ProductCard({
   view?: CatalogView;
   id?: string;
   highlighted?: boolean;
+  /** Top seller in its category over the last 30 days. Earned, never set by hand. */
+  bestSeller?: boolean;
   /** Opens the detail sheet. Omit to keep the card non-interactive. */
   onOpen?: (product: ProductRow) => void;
 }) {
@@ -62,7 +80,7 @@ export function ProductCard({
       className={
         view === "grid"
           ? "relative grid aspect-[4/3] w-full shrink-0 place-items-center overflow-hidden rounded-2xl"
-          : "grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl"
+          : "relative grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl"
       }
       style={safeImageUrl ? undefined : { background: visual.gradient }}
     >
@@ -87,6 +105,10 @@ export function ProductCard({
           strokeWidth={1.5}
         />
       )}
+      {/* Grid only. The list thumbnail is 64px and clips its overflow, so the
+          same overlay there rendered as a truncated "Bestse..."; in list view
+          the badge moves inline beside the name instead. */}
+      {bestSeller && view === "grid" && <BestSellerBadge className="absolute left-1.5 top-1.5" />}
     </div>
   );
 
@@ -137,6 +159,7 @@ export function ProductCard({
             />
           </span>
         )}
+        {bestSeller && view === "list" && <BestSellerBadge className="self-start" />}
         <div className="min-w-0 break-words text-[15px] font-semibold leading-snug">
           {product.name}
         </div>
