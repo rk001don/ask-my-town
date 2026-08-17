@@ -781,42 +781,101 @@ export const createOrder = createServerFn({ method: "POST" })
       );
     }
 
-    // Upsert customer by phone
+    // Resolve which customer record this order belongs to.
+    //
+    // Identity is the signed-in account when there is one, and only otherwise
+    // the phone number. This ordering is the whole fix: matching on phone
+    // first meant that whoever typed a number at checkout took over the
+    // account that owned it -- overwriting its name and address, and pushing
+    // their order into that account's order list.
     const phone = data.customer.phone;
-    const { data: existing } = await supabaseAdmin
-      .from("customers")
-      .select("id")
-      .eq("phone", phone)
-      .maybeSingle();
+    const { getOptionalUserId } = await import("@/lib/optional-auth.server");
+    const userId = await getOptionalUserId();
+    let customerId: string | undefined;
 
-    let customerId = existing?.id;
-    if (!customerId) {
-      const { data: inserted, error } = await supabaseAdmin
+    if (userId) {
+      // Signed in: always this user's own record, whatever phone they typed.
+      const { data: mine } = await supabaseAdmin
         .from("customers")
-        .insert({
-          name: data.customer.name,
-          phone,
-          address: data.customer.address,
-          landmark: data.customer.landmark || null,
-        })
         .select("id")
-        .single();
-      if (error)
-        failFrom(
-          "createOrder.customer",
-          error,
-          "We couldn't save your details. Please check them and try again.",
-        );
-      customerId = inserted!.id;
+        .eq("user_id", userId)
+        .maybeSingle();
+      customerId = mine?.id;
+      if (customerId) {
+        // Their own record, so the checkout form is theirs to update.
+        await supabaseAdmin
+          .from("customers")
+          .update({
+            name: data.customer.name,
+            phone,
+            address: data.customer.address,
+            landmark: data.customer.landmark || null,
+          })
+          .eq("id", customerId);
+      } else {
+        const { data: inserted, error } = await supabaseAdmin
+          .from("customers")
+          .insert({
+            name: data.customer.name,
+            phone,
+            address: data.customer.address,
+            landmark: data.customer.landmark || null,
+            user_id: userId,
+          })
+          .select("id")
+          .single();
+        if (error)
+          failFrom(
+            "createOrder.customerForUser",
+            error,
+            "We couldn't save your details. Please check them and try again.",
+          );
+        customerId = inserted!.id;
+      }
     } else {
-      await supabaseAdmin
+      // Guest: reuse a guest record for this number, but never an account's.
+      // `.limit(1)` rather than .maybeSingle() because phone is not unique --
+      // duplicate guest rows are possible and must not turn into an error at
+      // checkout.
+      const { data: guests } = await supabaseAdmin
         .from("customers")
-        .update({
-          name: data.customer.name,
-          address: data.customer.address,
-          landmark: data.customer.landmark || null,
-        })
-        .eq("id", customerId);
+        .select("id")
+        .eq("phone", phone)
+        .is("user_id", null)
+        .order("created_at", { ascending: true })
+        .limit(1);
+      customerId = guests?.[0]?.id;
+      if (customerId) {
+        await supabaseAdmin
+          .from("customers")
+          .update({
+            name: data.customer.name,
+            address: data.customer.address,
+            landmark: data.customer.landmark || null,
+          })
+          .eq("id", customerId)
+          // Belt and braces: even if the row were claimed between the select
+          // and here, this update can never land on an account.
+          .is("user_id", null);
+      } else {
+        const { data: inserted, error } = await supabaseAdmin
+          .from("customers")
+          .insert({
+            name: data.customer.name,
+            phone,
+            address: data.customer.address,
+            landmark: data.customer.landmark || null,
+          })
+          .select("id")
+          .single();
+        if (error)
+          failFrom(
+            "createOrder.customer",
+            error,
+            "We couldn't save your details. Please check them and try again.",
+          );
+        customerId = inserted!.id;
+      }
     }
 
     // Generate order id
@@ -870,6 +929,14 @@ export const createOrder = createServerFn({ method: "POST" })
       requested_window: requestedWindow,
       service_fee_estimate: serviceFeeEstimate,
       idempotency_key: data.idempotencyKey ?? null,
+      // Snapshot of what was actually given at checkout. Delivery details used
+      // to be read back off the customer row, so editing a profile silently
+      // rewrote the address of every past order -- and an order moved between
+      // customer records lost them altogether.
+      contact_name: data.customer.name,
+      contact_phone: phone,
+      delivery_address: data.customer.address,
+      delivery_landmark: data.customer.landmark || null,
     });
     if (orderErr) {
       // Unique-violation on idempotency_key means a concurrent retry of this
@@ -984,20 +1051,35 @@ export const createOrder = createServerFn({ method: "POST" })
 // =============================================================================
 // Track order
 // =============================================================================
+/**
+ * Look up a single order by its ID.
+ *
+ * Phone-number lookup used to be accepted here and returned that number's last
+ * twenty orders, joined to the customer row -- so anyone who knew your mobile
+ * number could read your name, full address, landmark and order history, with
+ * only a rate limit in the way. A phone number is not a secret and cannot be
+ * an access credential.
+ *
+ * The order ID is: it is random, issued at checkout, and known only to the
+ * person who placed the order and to us. Signed-in customers don't need it at
+ * all -- getMyOrders lists their orders from their session.
+ */
 export const trackOrder = createServerFn({ method: "GET" })
-  .inputValidator((data: { phone?: string; orderId?: string }) =>
+  .inputValidator((data: { orderId: string }) =>
     z
       .object({
-        phone: z.string().trim().max(20).optional(),
-        orderId: z.string().trim().max(20).optional(),
+        orderId: z
+          .string()
+          .trim()
+          .min(3, "Enter the order ID from your confirmation, e.g. MT-4821.")
+          .max(20, "That doesn't look like an order ID."),
       })
-      .refine((v) => v.phone || v.orderId, { message: "Provide phone or order ID" })
       .parse(data),
   )
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const bucket = `track_order:${data.orderId ?? data.phone ?? "unknown"}`;
+    const bucket = `track_order:${data.orderId}`;
     const { data: allowed, error: rlErr } = await supabaseAdmin.rpc("mytown_check_rate_limit", {
       p_bucket: bucket,
       p_max_hits: 20,
@@ -1018,24 +1100,14 @@ export const trackOrder = createServerFn({ method: "GET" })
     let query = supabaseAdmin
       .from("orders")
       .select(
-        "id, status, notes, created_at, confirmed_at, completed_at, updated_at, requested_date, requested_window, service_fee_estimate, cancelled_at, cancellation_reason, refund_status, customer:customers(id,name,phone,address,landmark), items:order_items(id,item_name,category,subcategory,quantity,notes,is_freeform,unit_price)",
+        // Reads the order's own contact snapshot rather than joining the
+        // customer row: what matters here is where this order was going, not
+        // whatever the account's profile says today.
+        "id, status, notes, created_at, confirmed_at, completed_at, updated_at, requested_date, requested_window, service_fee_estimate, cancelled_at, cancellation_reason, refund_status, contact_name, contact_phone, delivery_address, delivery_landmark, items:order_items(id,item_name,category,subcategory,quantity,notes,is_freeform,unit_price)",
       )
-      .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(1);
 
-    if (data.orderId) {
-      query = query.eq("id", data.orderId.toUpperCase());
-    }
-    if (data.phone) {
-      const phone = normalizeIndianPhone(data.phone);
-      const { data: cust } = await supabaseAdmin
-        .from("customers")
-        .select("id")
-        .eq("phone", phone)
-        .maybeSingle();
-      if (!cust) return { orders: [] };
-      query = query.eq("customer_id", cust.id);
-    }
+    query = query.eq("id", data.orderId.toUpperCase());
     const { data: rows, error } = await query;
     if (error) failFrom("trackOrder", error, "We couldn't load this order. Please try again.");
     return { orders: rows ?? [] };

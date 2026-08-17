@@ -55,32 +55,38 @@ export const signUpWithPin = createServerFn({ method: "POST" })
       failFrom("auth:54", error, "We couldn't create your account. Please try again.");
     }
 
-    // Link (or create) the customers row for this phone to the new account,
-    // same as the email/Google linking path -- so past guest orders under
-    // this phone become visible once they sign in.
-    const { data: existingCustomer } = await supabaseAdmin
+    // Give the new account its own customer record.
+    //
+    // This used to claim whatever guest record matched the phone number, which
+    // is unsafe now that guest records are shared by number: a second person
+    // signing up with a number someone else had used at checkout would inherit
+    // that person's address and orders. Past guest orders are instead claimed
+    // one at a time from the account screen, using the order ID as proof.
+    //
+    // Address is seeded from the most recent guest order on this number purely
+    // as a convenience -- it is the address this person is about to type
+    // anyway, and it is theirs to correct.
+    const { data: recentGuest } = await supabaseAdmin
       .from("customers")
-      .select("id, user_id")
+      .select("address, landmark")
       .eq("phone", phone)
-      .maybeSingle();
-    if (existingCustomer && !existingCustomer.user_id) {
-      // The name typed on this signup form is what the customer just told
-      // us about themselves -- it should win over whatever was on file from
-      // an earlier guest order (which may be blank, or someone else's name
-      // if the phone was reused at checkout).
-      await supabaseAdmin
-        .from("customers")
-        .update({ user_id: created.user!.id, name: data.name })
-        .eq("id", existingCustomer.id)
-        .is("user_id", null);
-    } else if (!existingCustomer) {
-      await supabaseAdmin.from("customers").insert({
-        name: data.name,
-        phone,
-        address: "",
-        user_id: created.user!.id,
-      });
-    }
+      .is("user_id", null)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    const { error: custErr } = await supabaseAdmin.from("customers").insert({
+      name: data.name,
+      phone,
+      address: recentGuest?.[0]?.address ?? "",
+      landmark: recentGuest?.[0]?.landmark ?? null,
+      user_id: created.user!.id,
+    });
+    if (custErr)
+      failFrom(
+        "auth:signUpWithPin.customer",
+        custErr,
+        "We couldn't finish signing you up. Please try again.",
+      );
 
     return { email }; // client immediately calls signInWithPassword with this + the PIN
   });
@@ -96,6 +102,69 @@ export const getMyProfile = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) failFrom("auth:96", error, "We couldn't load your profile. Please try again.");
     return data;
+  });
+
+/**
+ * Update the signed-in user's own name and address.
+ *
+ * Needed on its own terms -- people move house, and names were previously only
+ * settable by placing an order -- but also as the repair path for accounts
+ * whose profile was overwritten by someone else's checkout before identity was
+ * separated from phone number.
+ *
+ * Scoped by user_id on the write, so this can only ever touch the caller's own
+ * record.
+ */
+export const updateMyProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { name: string; phone?: string; address?: string; landmark?: string }) =>
+    z
+      .object({
+        name: z.string().trim().min(2, "Enter your name").max(80),
+        phone: z.string().trim().max(20).optional(),
+        address: z.string().trim().max(300).optional(),
+        landmark: z.string().trim().max(160).optional(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (data.phone && !isValidIndianPhone(data.phone)) {
+      throw userError("Enter a valid 10-digit mobile number");
+    }
+    const patch: {
+      name: string;
+      phone?: string;
+      address?: string;
+      landmark?: string | null;
+    } = { name: data.name };
+    if (data.phone) patch.phone = normalizeIndianPhone(data.phone);
+    if (data.address !== undefined) patch.address = data.address;
+    if (data.landmark !== undefined) patch.landmark = data.landmark || null;
+
+    const { data: existing } = await supabaseAdmin
+      .from("customers")
+      .select("id")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await supabaseAdmin
+        .from("customers")
+        .update(patch)
+        .eq("user_id", context.userId);
+      if (error) failFrom("auth:updateMyProfile", error, "We couldn't save your details.");
+    } else {
+      const { error } = await supabaseAdmin.from("customers").insert({
+        user_id: context.userId,
+        name: data.name,
+        phone: patch.phone ?? "",
+        address: patch.address ?? "",
+        landmark: patch.landmark ?? null,
+      });
+      if (error) failFrom("auth:updateMyProfile.insert", error, "We couldn't save your details.");
+    }
+    return { ok: true as const };
   });
 
 // List the signed-in user's orders (RLS enforces ownership via customers.user_id).
@@ -173,55 +242,99 @@ export const cancelMyOrder = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
-// Link the customer row behind a just-created order to the signed-in user (idempotent).
-// SECURITY: does NOT accept a bare phone number from the client — that would let any
-// signed-in account claim any unclaimed phone's order history just by guessing/knowing
-// the number. Instead it requires the orderId that was just returned by createOrder in
-// this same session, and verifies server-side (a) that order exists, (b) it was created
-// recently, and (c) its linked customer isn't already claimed by someone else.
+/**
+ * Move one guest order onto the signed-in user's account.
+ *
+ * SECURITY: does not accept a phone number. A number is not a secret, so
+ * accepting one would let any account claim any stranger's order history by
+ * knowing or guessing it. The order ID is the credential -- it is random,
+ * issued at checkout, and known only to the person who placed the order.
+ *
+ * This re-points the ORDER, where it used to stamp the signed-in user onto the
+ * order's customer row. That was unsafe once guest records are shared by phone
+ * number: claiming the record handed over every other guest order sitting on
+ * it too. Moving the single order claims exactly what the order ID proves.
+ * Its delivery details travel with it, because the order snapshots them.
+ */
 export const linkCustomerToMe = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: { orderId: string }) =>
-    z.object({ orderId: z.string().trim().min(3).max(20) }).parse(data),
+    z
+      .object({
+        orderId: z
+          .string()
+          .trim()
+          .min(3, "Enter the order ID from your confirmation, e.g. MT-4821.")
+          .max(20, "That doesn't look like an order ID."),
+      })
+      .parse(data),
   )
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    const orderId = data.orderId.toUpperCase();
     const { data: order, error: orderErr } = await supabaseAdmin
       .from("orders")
-      .select("id, customer_id, created_at")
-      .eq("id", data.orderId)
+      .select("id, customer_id, contact_name, contact_phone, delivery_address, delivery_landmark")
+      .eq("id", orderId)
       .maybeSingle();
     if (orderErr) failFrom("auth:193", orderErr, "We couldn't load that order. Please try again.");
-    if (!order) throw userError("Order not found");
+    if (!order) throw userError("We couldn't find an order with that ID. Check it and try again.");
 
-    const createdAtMs = new Date(order.created_at).getTime();
-    if (Date.now() - createdAtMs > 30 * 60 * 1000) {
-      throw userError("This order is too old to link automatically.");
-    }
-
-    const { data: customer, error: custErr } = await supabaseAdmin
+    const { data: currentOwner, error: custErr } = await supabaseAdmin
       .from("customers")
       .select("id, user_id")
       .eq("id", order.customer_id)
       .maybeSingle();
     if (custErr)
       failFrom("auth:206", custErr, "We couldn't verify your account. Please try again.");
-    if (!customer) throw userError("Customer record not found");
 
-    // Already linked to someone else — never overwrite.
-    if (customer.user_id && customer.user_id !== context.userId) {
-      throw userError("This order belongs to a different account.");
+    if (currentOwner?.user_id === context.userId) {
+      return { ok: true as const }; // already on this account
     }
-    if (customer.user_id === context.userId) {
-      return { ok: true as const }; // already linked to this same user, nothing to do
+    // Belongs to a real account that isn't the caller's -- never move it.
+    if (currentOwner?.user_id) {
+      throw userError("That order is already saved to a different account.");
+    }
+
+    // The caller's own customer record, created on demand. Seeded from the
+    // order's contact snapshot so a customer who signs up right after
+    // checking out doesn't have to retype their address.
+    const { data: mine } = await supabaseAdmin
+      .from("customers")
+      .select("id")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+
+    let myCustomerId = mine?.id;
+    if (!myCustomerId) {
+      const { data: inserted, error: insErr } = await supabaseAdmin
+        .from("customers")
+        .insert({
+          user_id: context.userId,
+          name: order.contact_name ?? "",
+          phone: order.contact_phone ?? "",
+          address: order.delivery_address ?? "",
+          landmark: order.delivery_landmark,
+        })
+        .select("id")
+        .single();
+      if (insErr)
+        failFrom(
+          "auth:linkCustomer.insert",
+          insErr,
+          "We couldn't link this order to your account.",
+        );
+      myCustomerId = inserted!.id;
     }
 
     const { error } = await supabaseAdmin
-      .from("customers")
-      .update({ user_id: context.userId })
-      .eq("id", customer.id)
-      .is("user_id", null);
+      .from("orders")
+      .update({ customer_id: myCustomerId })
+      .eq("id", orderId)
+      // Re-checks ownership at write time, so a concurrent claim can't be
+      // overtaken between the read above and this update.
+      .eq("customer_id", order.customer_id);
     if (error) failFrom("auth:222", error, "We couldn't link this order to your account.");
     return { ok: true as const };
   });

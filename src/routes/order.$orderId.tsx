@@ -137,8 +137,8 @@ function Confirmation() {
               </div>
               <div className="text-display mt-3 text-2xl font-bold">Delivered</div>
               <p className="mt-1 text-sm text-[color:var(--text-secondary)]">
-                {order.customer?.name
-                  ? `Thanks, ${order.customer.name.split(" ")[0]} — hope it was all good.`
+                {order.contact_name
+                  ? `Thanks, ${order.contact_name.split(" ")[0]} — hope it was all good.`
                   : "Thanks for ordering with MyTown."}
               </p>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">

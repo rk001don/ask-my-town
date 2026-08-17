@@ -70,6 +70,12 @@ type StaffOrderRow = {
   assigned_staff_id?: string | null;
   assigned_staff_email?: string | null;
   assigned_staff_name?: string | null;
+  // Contact details as given for this order. Nullable because orders placed
+  // before the snapshot existed only have them on the customer row.
+  contact_name?: string | null;
+  contact_phone?: string | null;
+  delivery_address?: string | null;
+  delivery_landmark?: string | null;
   customer: {
     name: string;
     phone: string;
@@ -196,18 +202,24 @@ function StaffOrderCard({
           Cancelled{o.cancellation_reason ? ` — ${o.cancellation_reason}` : ""}
         </div>
       )}
-      <div className="mt-2 text-sm font-semibold">{o.customer?.name}</div>
+      {/* The details given for THIS order, not the account's profile as it
+          stands today -- an address edited after checkout must not silently
+          redirect a delivery that's already out. Falls back to the customer
+          row for orders placed before orders carried their own snapshot. */}
+      <div className="mt-2 text-sm font-semibold">{o.contact_name ?? o.customer?.name}</div>
       <a
-        href={`tel:${o.customer?.phone ?? ""}`}
+        href={`tel:${o.contact_phone ?? o.customer?.phone ?? ""}`}
         className="tap-scale mt-1 inline-flex items-center gap-1.5 rounded-full bg-[color:var(--accent-primary)]/10 px-2.5 py-1 text-xs font-medium text-[color:var(--accent-primary)]"
       >
-        <Phone className="h-3 w-3" /> {o.customer?.phone}
+        <Phone className="h-3 w-3" /> {o.contact_phone ?? o.customer?.phone}
       </a>
       <div className="mt-1.5 flex items-start gap-1.5 text-xs text-[color:var(--text-secondary)]">
         <MapPin className="mt-0.5 h-3 w-3 flex-shrink-0" />
         <span className="line-clamp-2">
-          {o.customer?.address}
-          {o.customer?.landmark ? ` · ${o.customer.landmark}` : ""}
+          {o.delivery_address ?? o.customer?.address}
+          {(o.delivery_landmark ?? o.customer?.landmark)
+            ? ` · ${o.delivery_landmark ?? o.customer?.landmark}`
+            : ""}
         </span>
       </div>
 
