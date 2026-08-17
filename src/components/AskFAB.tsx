@@ -3,7 +3,6 @@ import { Sparkles, X, Send, Paperclip, Loader2 } from "lucide-react";
 import { addFreeformAsk } from "@/lib/cart-store";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { toUserMessage } from "@/lib/errors";
 
 let openSheet: ((prefill?: string) => void) | null = null;
@@ -74,6 +73,10 @@ export function AskFAB({ hideMobileTrigger = false }: { hideMobileTrigger?: bool
     setUploading(true);
     try {
       const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      // Lazy: AskFAB is on every page but this runs only when someone
+      // actually attaches a photo, so the client shouldn't be in the bundle
+      // everyone downloads.
+      const { supabase } = await import("@/integrations/supabase/client");
       const { error } = await supabase.storage
         .from("ask-attachments")
         .upload(path, file, { upsert: false });

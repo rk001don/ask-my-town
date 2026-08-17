@@ -58,6 +58,37 @@ async function assertStaff(
   return roles;
 }
 
+/**
+ * Display names for staff, cached in memory.
+ *
+ * The staff board polls, and each refresh was pulling the full user directory
+ * (up to 200 records) purely to resolve two or three "Claimed by" names. Staff
+ * names change on the order of never, so re-fetching them every few seconds is
+ * pure waste -- on the mobile data this board is actually used on, it's the
+ * most expensive thing the page does.
+ *
+ * A module-level cache lives as long as the warm serverless instance does; a
+ * cold start simply refetches. Five minutes is well inside "a new staffer
+ * appears in the list promptly" while removing essentially all of the traffic.
+ */
+const STAFF_NAME_TTL_MS = 5 * 60_000;
+let staffNameCache: { at: number; names: Record<string, string> } | null = null;
+
+async function getStaffDisplayNames(): Promise<Record<string, string>> {
+  if (staffNameCache && Date.now() - staffNameCache.at < STAFF_NAME_TTL_MS) {
+    return staffNameCache.names;
+  }
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+  const names = Object.fromEntries(
+    (usersData?.users ?? [])
+      .map((u) => [u.id, u.user_metadata?.full_name || u.user_metadata?.name])
+      .filter(([, name]) => !!name),
+  ) as Record<string, string>;
+  staffNameCache = { at: Date.now(), names };
+  return names;
+}
+
 export const listStaffOrders = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -93,20 +124,7 @@ export const listStaffOrders = createServerFn({ method: "GET" })
     // email/password and PIN accounts don't collect one); anyone without one
     // falls back to the email-derived name on the client, same as before.
     const assigneeIds = [...new Set(orders.map((o) => o.assigned_staff_id).filter((v) => !!v))];
-    let assigneeNames: Record<string, string> = {};
-    if (assigneeIds.length > 0) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: usersData } = await supabaseAdmin.auth.admin.listUsers({
-        page: 1,
-        perPage: 200,
-      });
-      assigneeNames = Object.fromEntries(
-        (usersData?.users ?? [])
-          .filter((u) => assigneeIds.includes(u.id))
-          .map((u) => [u.id, u.user_metadata?.full_name || u.user_metadata?.name])
-          .filter(([, name]) => !!name),
-      );
-    }
+    const assigneeNames = assigneeIds.length > 0 ? await getStaffDisplayNames() : {};
     const ordersWithNames = orders.map((o) => ({
       ...o,
       assigned_staff_name: o.assigned_staff_id

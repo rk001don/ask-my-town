@@ -25,6 +25,23 @@ export default defineConfig(async ({ command }) => {
 
   return {
     plugins,
+    build: {
+      rollupOptions: {
+        output: {
+          // Supabase's client is ~300 kB and is imported statically by four
+          // routes (auth, activity, admin, staff), which is enough for Rollup
+          // to hoist it into the chunk EVERY visitor downloads -- including
+          // someone browsing the menu who never signs in.
+          //
+          // Forcing it into its own chunk means it's fetched only by the
+          // routes that actually need it. On the mobile connections this app
+          // is used on, that's the single largest saving available.
+          manualChunks(id: string) {
+            if (id.includes("node_modules/@supabase/")) return "supabase";
+          },
+        },
+      },
+    },
     resolve: {
       dedupe: [
         "react",
