@@ -6,6 +6,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { ItemCard } from "@/components/ItemCard";
 import { openAskSheet } from "@/components/AskFAB";
 import { ProductCard, type ProductRow } from "@/components/ProductCard";
+import { ProductSheet } from "@/components/ProductSheet";
 import { EmptyState, ErrorState, CardSkeleton } from "@/components/States";
 import { Grid2X2, List, Sparkles } from "lucide-react";
 import { CATALOG_VIEW_KEY, type CatalogView } from "@/lib/catalog-display";
@@ -99,20 +100,20 @@ function groupKeyFor(tags: string[] | null | undefined): string {
 }
 
 const GROUP_LABELS: Record<string, string> = {
-  tiffin: "Breakfast tiffin",
+  tiffin: "Breakfast Tiffin",
   meals: "Meals",
-  restaurant: "Restaurant favourites",
-  snacks: "Snacks & beverages",
-  groceries: "Groceries & essentials",
-  health: "Health & wellness",
+  restaurant: "Restaurant Favourites",
+  snacks: "Snacks & Beverages",
+  groceries: "Groceries & Essentials",
+  health: "Health & Wellness",
   cosmetics: "Personal care",
-  salon: "At-home services",
-  utility: "Recharge & utility",
+  salon: "Salon & Grooming",
+  utility: "Recharge & Bill Payments",
   stationery: "Stationery",
-  remittance: "Bookings & courier",
+  remittance: "Bookings & Courier",
   "rice-chinese": "Rice & Chinese",
-  "side-dishes": "Side Dishes",
-  curries: "Curry & Gravies",
+  "side-dishes": "Curries & Accompaniments",
+  curries: "Curries & Gravies",
   juice: "Fresh Juices",
   shake: "Milkshakes",
   "soft-drink": "Beverages",
@@ -137,21 +138,28 @@ function Category() {
   const [view, setView] = useState<CatalogView>("grid");
   const [vegOnly, setVegOnly] = useState(false);
   const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const [openProduct, setOpenProduct] = useState<ProductRow | null>(null);
   useEffect(() => {
     setMounted(true);
     const saved = window.localStorage.getItem(CATALOG_VIEW_KEY);
     if (saved === "grid" || saved === "list") setView(saved);
   }, []);
 
-  // Coming from search: land on the actual dish the customer tapped, not
-  // just the generic category page it lives in -- scroll to it and give it
-  // a moment of visual emphasis so it's obvious which of many cards matched.
+  // Coming from search: open the dish the customer actually tapped.
+  //
+  // This used to only scroll and flash a ring, which left them looking at a
+  // category page and hunting for the row that matched -- the exact "it takes
+  // me to the folder, not the product" complaint. Now the detail sheet opens
+  // directly, and the scroll still happens underneath so closing it leaves
+  // them in the right place.
   useEffect(() => {
     if (!highlight || !mounted) return;
+    const match = (products as ProductRow[]).find((p) => p.id === highlight);
     const t = requestAnimationFrame(() => {
       document
         .getElementById(`product-${highlight}`)
         ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      if (match) setOpenProduct(match);
     });
     setHighlightedId(highlight);
     const fade = setTimeout(() => setHighlightedId(null), 2200);
@@ -159,7 +167,7 @@ function Category() {
       cancelAnimationFrame(t);
       clearTimeout(fade);
     };
-  }, [highlight, mounted]);
+  }, [highlight, mounted, products]);
 
   function chooseView(next: CatalogView) {
     setView(next);
@@ -329,6 +337,7 @@ function Category() {
                 >
                   {items.map((p) => (
                     <ProductCard
+                      onOpen={setOpenProduct}
                       key={p.id}
                       id={`product-${p.id}`}
                       highlighted={p.id === highlightedId}
@@ -384,6 +393,14 @@ function Category() {
             </span>
           </button>
         </div>
+      )}
+      {openProduct && (
+        <ProductSheet
+          product={openProduct}
+          categoryName={sub.parent.name}
+          categoryIcon={sub.parent.icon_key}
+          onClose={() => setOpenProduct(null)}
+        />
       )}
     </div>
   );
