@@ -127,6 +127,12 @@
   --ph-6: linear-gradient(150deg, oklch(0.95 0.05 40), oklch(0.91 0.06 350));
   --ph-7: linear-gradient(150deg, oklch(0.94 0.04 185), oklch(0.9 0.05 205));
 
+  /* Ink for the icon drawn on a placeholder tile. This has to be a token, not
+     a fixed white: the light tiles above sit around L=0.92, so the white the
+     dark theme needs disappears completely on them -- which is exactly why the
+     grid looked blank-tiled in light mode. Warm dark ink here, white in dark. */
+  --ph-ink: oklch(0.42 0.05 55 / 0.5);
+
   --radius: 16px;
 
   /* Centralized stacking order for fixed/sticky elements -- pick the layer
@@ -232,54 +238,7 @@
       oklch(0.17 0.03 260) 100%
     );
 
-    --ph-0: linear-gradient(
-      150deg,
-      oklch(0.3 0.07 55) 0%,
-      oklch(0.22 0.05 30) 65%,
-      oklch(0.18 0.03 260) 100%
-    );
-    --ph-1: linear-gradient(
-      150deg,
-      oklch(0.29 0.06 20) 0%,
-      oklch(0.21 0.05 10) 65%,
-      oklch(0.17 0.03 280) 100%
-    );
-    --ph-2: linear-gradient(
-      150deg,
-      oklch(0.3 0.06 95) 0%,
-      oklch(0.22 0.05 70) 65%,
-      oklch(0.18 0.03 250) 100%
-    );
-    --ph-3: linear-gradient(
-      150deg,
-      oklch(0.28 0.06 145) 0%,
-      oklch(0.21 0.04 130) 65%,
-      oklch(0.17 0.03 250) 100%
-    );
-    --ph-4: linear-gradient(
-      150deg,
-      oklch(0.28 0.06 300) 0%,
-      oklch(0.21 0.05 290) 65%,
-      oklch(0.17 0.03 260) 100%
-    );
-    --ph-5: linear-gradient(
-      150deg,
-      oklch(0.29 0.06 240) 0%,
-      oklch(0.21 0.05 250) 65%,
-      oklch(0.17 0.03 270) 100%
-    );
-    --ph-6: linear-gradient(
-      150deg,
-      oklch(0.3 0.07 40) 0%,
-      oklch(0.22 0.05 350) 65%,
-      oklch(0.18 0.03 270) 100%
-    );
-    --ph-7: linear-gradient(
-      150deg,
-      oklch(0.28 0.05 180) 0%,
-      oklch(0.21 0.04 200) 65%,
-      oklch(0.17 0.03 260) 100%
-    );
+    --ph-ink: oklch(1 0 0 / 0.42);
   }
 }
 
@@ -318,6 +277,59 @@
   --hero-3: oklch(0.16 0.02 260);
   --skeleton-base: oklch(0.22 0.02 260);
   --skeleton-shine: oklch(0.28 0.02 260);
+
+  /* These were missing from this block entirely, so choosing Dark on a device
+     set to light kept the pale placeholder tiles and painted them onto dark
+     cards -- bright slabs in a dark grid. */
+  --ph-0: linear-gradient(
+    150deg,
+    oklch(0.3 0.07 55) 0%,
+    oklch(0.22 0.05 30) 65%,
+    oklch(0.18 0.03 260) 100%
+  );
+  --ph-1: linear-gradient(
+    150deg,
+    oklch(0.29 0.06 20) 0%,
+    oklch(0.21 0.05 10) 65%,
+    oklch(0.17 0.03 280) 100%
+  );
+  --ph-2: linear-gradient(
+    150deg,
+    oklch(0.3 0.06 95) 0%,
+    oklch(0.22 0.05 70) 65%,
+    oklch(0.18 0.03 250) 100%
+  );
+  --ph-3: linear-gradient(
+    150deg,
+    oklch(0.28 0.06 145) 0%,
+    oklch(0.21 0.04 130) 65%,
+    oklch(0.17 0.03 250) 100%
+  );
+  --ph-4: linear-gradient(
+    150deg,
+    oklch(0.28 0.06 300) 0%,
+    oklch(0.21 0.05 290) 65%,
+    oklch(0.17 0.03 260) 100%
+  );
+  --ph-5: linear-gradient(
+    150deg,
+    oklch(0.29 0.06 240) 0%,
+    oklch(0.21 0.05 250) 65%,
+    oklch(0.17 0.03 270) 100%
+  );
+  --ph-6: linear-gradient(
+    150deg,
+    oklch(0.3 0.07 40) 0%,
+    oklch(0.22 0.05 350) 65%,
+    oklch(0.18 0.03 270) 100%
+  );
+  --ph-7: linear-gradient(
+    150deg,
+    oklch(0.28 0.05 180) 0%,
+    oklch(0.21 0.04 200) 65%,
+    oklch(0.17 0.03 260) 100%
+  );
+  --ph-ink: oklch(1 0 0 / 0.42);
 }
 
 @layer base {
@@ -446,8 +458,12 @@
    That surface is the same orange in both themes, so its overlays must stay
    white-based -- surface-muted would mix from --text-primary and turn into a
    dark smudge on orange in the light theme. */
+/* Overlay drawn on a fixed-colour accent surface (the orange cart bar), where
+   a theme-derived surface-* would invert into a dark smudge in light mode.
+   Recessed rather than milky: a white veil on orange greys the whole bar out,
+   which is what made the cart bar read as faded instead of solid. */
 @utility on-accent-veil {
-  background: rgb(255 255 255 / 0.16);
+  background: rgb(0 0 0 / 0.14);
 }
 
 @utility surface-subtle {

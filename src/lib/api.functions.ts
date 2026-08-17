@@ -311,6 +311,7 @@ export const searchItems = createServerFn({ method: "GET" })
       category_id: string;
       category_slug?: string | null;
       category_name?: string | null;
+      category_icon?: string | null;
       is_veg?: boolean | null;
       description?: string | null;
     }> = [];
@@ -348,6 +349,7 @@ export const searchItems = createServerFn({ method: "GET" })
           category_id: p.category_id,
           category_slug: cat?.slug ?? null,
           category_name: cat?.name ?? null,
+          category_icon: cat?.icon_key ?? null,
         };
       });
     }

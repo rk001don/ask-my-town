@@ -77,11 +77,13 @@ export function ProductCard({
         />
       ) : (
         // Sized and dimmed to read as "no photo yet" rather than as the
-        // card's artwork. At h-12 and 90% white it was the loudest element on
-        // every card, which is what made a grid of placeholder cards look
-        // like a repeating pattern instead of a list of dishes.
+        // card's artwork. The colour comes from --ph-ink, not a fixed white:
+        // the light theme's placeholder tiles are pale tints, so a white icon
+        // on them was effectively invisible -- which is what made the grid
+        // look like a wall of empty tiles in light mode.
         <VisualIcon
-          className={view === "grid" ? "h-8 w-8 text-white/45" : "h-6 w-6 text-white/45"}
+          className={view === "grid" ? "h-8 w-8" : "h-6 w-6"}
+          style={{ color: "var(--ph-ink)" }}
           strokeWidth={1.5}
         />
       )}

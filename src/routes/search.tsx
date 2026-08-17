@@ -4,16 +4,24 @@ import { getTrendingSearches, searchItems } from "@/lib/api.functions";
 import { AppHeader } from "@/components/AppHeader";
 import { EmptyState, ErrorState } from "@/components/States";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Search as SearchIcon,
-  X,
-  Sparkles as SparklesIcon,
-  Utensils,
-  ChevronRight,
-} from "lucide-react";
+import { Search as SearchIcon, X, Sparkles as SparklesIcon, ChevronRight } from "lucide-react";
 import { iconFor } from "@/components/icon-map";
 import { openAskSheet } from "@/components/AskFAB";
-import { placeholderGradientFor } from "@/lib/catalog-display";
+import { catalogVisualFor, placeholderGradientFor } from "@/lib/catalog-display";
+
+/** The catalogue's per-product icon, on a placeholder tile in search results. */
+function SearchResultIcon({
+  name,
+  categoryIcon,
+  className,
+}: {
+  name: string;
+  categoryIcon?: string | null;
+  className?: string;
+}) {
+  const { Icon } = catalogVisualFor(name, null, categoryIcon);
+  return <Icon className={className} style={{ color: "var(--ph-ink)" }} strokeWidth={1.5} />;
+}
 
 export const Route = createFileRoute("/search")({
   head: () => ({
@@ -219,7 +227,13 @@ function SearchPage() {
                       decoding="async"
                     />
                   ) : (
-                    <Utensils className="h-5 w-5 text-white/45" strokeWidth={1.5} />
+                    // Same per-product icon the catalogue uses, so a dish looks
+                    // the same in search as it does on its category page.
+                    <SearchResultIcon
+                      name={p.name}
+                      categoryIcon={p.category_icon}
+                      className="h-5 w-5"
+                    />
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
