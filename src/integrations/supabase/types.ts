@@ -137,33 +137,33 @@ export type Database = {
       }
       customers: {
         Row: {
-          pincode: string | null
           address: string
           created_at: string
           id: string
           landmark: string | null
           name: string
           phone: string
+          pincode: string | null
           user_id: string | null
         }
         Insert: {
-          pincode?: string | null
           address: string
           created_at?: string
           id?: string
           landmark?: string | null
           name: string
           phone: string
+          pincode?: string | null
           user_id?: string | null
         }
         Update: {
-          pincode?: string | null
           address?: string
           created_at?: string
           id?: string
           landmark?: string | null
           name?: string
           phone?: string
+          pincode?: string | null
           user_id?: string | null
         }
         Relationships: []
@@ -486,13 +486,13 @@ export type Database = {
           completed_at: string | null
           confirmed_at: string | null
           contact_name: string | null
-          delivery_pincode: string | null
           contact_phone: string | null
           created_at: string
           customer_id: string
           delivery_address: string | null
           delivery_batch_id: string | null
           delivery_landmark: string | null
+          delivery_pincode: string | null
           group_order_id: string | null
           id: string
           idempotency_key: string | null
@@ -520,13 +520,13 @@ export type Database = {
           completed_at?: string | null
           confirmed_at?: string | null
           contact_name?: string | null
-          delivery_pincode?: string | null
           contact_phone?: string | null
           created_at?: string
           customer_id: string
           delivery_address?: string | null
           delivery_batch_id?: string | null
           delivery_landmark?: string | null
+          delivery_pincode?: string | null
           group_order_id?: string | null
           id: string
           idempotency_key?: string | null
@@ -554,13 +554,13 @@ export type Database = {
           completed_at?: string | null
           confirmed_at?: string | null
           contact_name?: string | null
-          delivery_pincode?: string | null
           contact_phone?: string | null
           created_at?: string
           customer_id?: string
           delivery_address?: string | null
           delivery_batch_id?: string | null
           delivery_landmark?: string | null
+          delivery_pincode?: string | null
           group_order_id?: string | null
           id?: string
           idempotency_key?: string | null
