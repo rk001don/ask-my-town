@@ -33,6 +33,14 @@ const opts = (orderId: string) =>
   });
 
 export const Route = createFileRoute("/order/$orderId")({
+  // `placed` is set only by the checkout success navigation. It is the one
+  // case where "back" must NOT retrace history: the entry below this page is
+  // the cart, now emptied, so back would land on an empty-cart screen right
+  // after a successful order. Every other way in -- the Orders list, a shared
+  // link -- wants the natural immediate-previous, which is what an undefined
+  // backTo gives (AppHeader falls through to history.back()).
+  validateSearch: (search: Record<string, unknown>): { placed?: boolean } =>
+    search.placed === true || search.placed === "true" ? { placed: true } : {},
   loader: ({ context, params }) => context.queryClient.ensureQueryData(opts(params.orderId)),
   head: ({ params }) => ({
     meta: [{ title: `Order ${params.orderId} — MyTown` }, { name: "robots", content: "noindex" }],
@@ -43,6 +51,9 @@ export const Route = createFileRoute("/order/$orderId")({
 
 function Confirmation() {
   const { orderId } = Route.useParams();
+  const { placed } = Route.useSearch();
+  // See validateSearch: home only right after placing; otherwise natural back.
+  const backTo = placed ? "/" : undefined;
   const { data } = useSuspenseQuery(opts(orderId));
   // Hooks must run unconditionally: the "order not found" branch below returns
   // early, so anything hook-based has to be called before it.
@@ -52,7 +63,7 @@ function Confirmation() {
   if (!order) {
     return (
       <div>
-        <AppHeader title="Order" showCart={false} backTo="/" />
+        <AppHeader title="Order" showCart={false} backTo={backTo} />
         <EmptyState
           title="Order not found"
           message="We can't find that order. Check the ID and try again."
@@ -109,7 +120,7 @@ function Confirmation() {
       <AppHeader
         title={isCancelled ? "Cancelled" : (STATUS_COPY[status]?.label ?? "Order")}
         showCart={false}
-        backTo="/"
+        backTo={backTo}
       />
       <div className="rise space-y-5 p-4">
         {/* Delivered gets its own hero rather than the tracking hero with a
