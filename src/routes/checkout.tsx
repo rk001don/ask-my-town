@@ -261,7 +261,15 @@ function Checkout() {
         /* non-fatal -- the order exists either way, and can still be claimed
            by ID from the account screen */
       }
-      await navigate({ to: "/order/$orderId", params: { orderId: res.orderId } });
+      // `replace` so the finished checkout drops out of history. Without it
+      // the stack was /cart -> /checkout -> /order, and backing out of the
+      // order landed on a checkout whose cart had just been emptied, which
+      // bounced to /cart -- pressing back again just repeated the bounce.
+      await navigate({
+        to: "/order/$orderId",
+        params: { orderId: res.orderId },
+        replace: true,
+      });
       // Clear only after we've actually left this page -- clearing first made
       // checkout's own "cart is empty" state flash for a frame before the
       // route transition finished, since items.length dropped to 0 while

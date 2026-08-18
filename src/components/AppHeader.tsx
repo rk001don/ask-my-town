@@ -8,6 +8,9 @@ import { useEffect, useRef, useState } from "react";
 type Props = {
   title?: string;
   showBack?: boolean;
+  /** Explicit destination for Back. Without it, Back unwinds browser history,
+   *  which is wrong on a page you arrive at by completing something. */
+  backTo?: string;
   showSearch?: boolean;
   showChat?: boolean;
   showCart?: boolean;
@@ -17,6 +20,7 @@ type Props = {
 export function AppHeader({
   title,
   showBack = true,
+  backTo,
   showSearch = true,
   showChat = false,
   showCart = true,
@@ -78,7 +82,13 @@ export function AppHeader({
         {showBack && (
           <button
             aria-label="Back"
-            onClick={() => (history.length > 1 ? history.back() : navigate({ to: "/" }))}
+            onClick={() =>
+              backTo
+                ? navigate({ to: backTo })
+                : history.length > 1
+                  ? history.back()
+                  : navigate({ to: "/" })
+            }
             className="tap-scale grid min-h-11 min-w-11 place-items-center rounded-full p-2 hover:surface-subtle"
           >
             <ArrowLeft className="h-5 w-5" />

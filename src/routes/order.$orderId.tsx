@@ -52,7 +52,7 @@ function Confirmation() {
   if (!order) {
     return (
       <div>
-        <AppHeader title="Order" showCart={false} />
+        <AppHeader title="Order" showCart={false} backTo="/" />
         <EmptyState
           title="Order not found"
           message="We can't find that order. Check the ID and try again."
@@ -109,6 +109,7 @@ function Confirmation() {
       <AppHeader
         title={isCancelled ? "Cancelled" : (STATUS_COPY[status]?.label ?? "Order")}
         showCart={false}
+        backTo="/"
       />
       <div className="rise space-y-5 p-4">
         {/* Delivered gets its own hero rather than the tracking hero with a
@@ -353,12 +354,13 @@ function Confirmation() {
             Track order
           </Link>
         </div>
-        {/* Ordering again is a primary action, so it carries the accent like
-            "Chat with us" rather than sitting as a third outlined button --
-            three identical outlines gave no sense of what to do next. */}
+        {/* Secondary, matching "Track order". A second full-width accent
+            button competed with "Chat with us" and made the page read as if
+            it wanted you to order again immediately -- this is just the way
+            back to browsing. */}
         <Link
           to="/"
-          className="tap-scale accent-gradient flex items-center justify-center gap-1.5 rounded-full py-3 text-center text-sm font-semibold"
+          className="tap-scale flex items-center justify-center gap-1.5 rounded-full border border-[color:var(--border-strong)] py-3 text-center text-sm font-semibold"
         >
           <Sparkles className="h-4 w-4" />
           Ask again

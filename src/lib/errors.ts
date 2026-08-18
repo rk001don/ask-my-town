@@ -23,7 +23,13 @@
  * which drops classes and non-standard properties but always preserves
  * `message`.
  */
-const USER_MESSAGE_PREFIX = "MTUSER:";
+// The invisible-separator codepoint makes this effectively untypable: a
+// message that merely *starts with* the literal text "MTUSER:" -- echoed user
+// input, a library that happens to format errors that way -- would otherwise
+// promote itself to customer-facing, which is exactly the fail-open this
+// module exists to prevent. U+2063 survives JSON and HTTP transport intact,
+// which a control character would not reliably do.
+const USER_MESSAGE_PREFIX = "\u2063MTUSER:";
 
 /**
  * Marks a message as safe to show to the person using the app.
