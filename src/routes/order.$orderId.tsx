@@ -1,8 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { useServerFn } from "@tanstack/react-start";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { queryOptions, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { submitOrderRating, trackOrder } from "@/lib/api.functions";
 import {
   CUSTOMER_ORDER_STEPS,
@@ -77,14 +77,18 @@ function Confirmation() {
   // Hooks must run unconditionally: the "order not found" branch below returns
   // early, so anything hook-based has to be called before it.
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const rateFn = useServerFn(submitOrderRating);
   const order = data.orders[0];
-  // Optimistic only -- set the moment a star is tapped, before the request
-  // resolves, so the tap feels instant. Falls back to the order's own value
-  // (from a previous visit) until then.
-  const [optimisticRating, setOptimisticRating] = useState<number | null>(null);
   const starRefs = useRef<(SVGSVGElement | null)[]>([]);
-  const displayedRating = optimisticRating ?? order?.rating ?? null;
+  // Driven straight from the query cache, not a separate optimistic-only
+  // useState. A local-state-only version looked instant on THIS mount, but
+  // local state dies the moment the component unmounts -- leave the order
+  // page for the Orders list and come back inside the 30s staleTime window,
+  // and useSuspenseQuery serves the still-cached OLD order object, showing
+  // the rating from before the tap. `rate()` below patches the cache itself,
+  // so the new value survives navigating away and back, not just this mount.
+  const displayedRating = order?.rating ?? null;
 
   // Replays the star-fill animation WITHOUT remounting anything. An earlier
   // version keyed the whole row on the rating value, forcing React to tear
@@ -178,20 +182,34 @@ function Confirmation() {
    * Tapping a different star re-sends and overwrites, so changing your mind
    * costs nothing.
    */
+  function patchCachedRating(rating: number | null) {
+    queryClient.setQueryData(opts(orderId).queryKey, (old: typeof data | undefined) =>
+      old ? { orders: old.orders.map((o) => (o.id === order.id ? { ...o, rating } : o)) } : old,
+    );
+  }
+
   async function rate(n: number) {
-    setOptimisticRating(n);
+    const previous = order.rating;
+    patchCachedRating(n); // instant, and survives leaving and returning to this page
     try {
       await rateFn({ data: { orderId, rating: n } });
     } catch {
-      setOptimisticRating(null); // the stars settle back to whatever's true
+      patchCachedRating(previous); // the stars settle back to whatever's true
       toast.error("Couldn't save your rating. Please try again.");
     }
   }
   const itemCount = order.items.reduce((n, it) => n + (it.quantity ?? 1), 0);
   // Day and month only: "Delivered 17 Aug" is what a customer wants to
   // recognise the order by. A timestamp to the minute is receipt detail.
+  // `timeZone` pinned to Asia/Kolkata deliberately -- without it this reads
+  // in whatever the environment defaults to (UTC on the server), which for
+  // an order delivered late at night IST can show the wrong calendar day.
   const deliveredOn = order.completed_at
-    ? new Date(order.completed_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })
+    ? new Date(order.completed_at).toLocaleDateString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "numeric",
+        month: "short",
+      })
     : null;
   const currentIdx = CUSTOMER_ORDER_STEPS.findIndex((s) => s.key === customerFacingStatus(status));
 
