@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { type PushUiState, initialPushUiState } from "@/lib/push-permission";
 import { useServerFn } from "@tanstack/react-start";
 import { Bell, BellRing, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -18,9 +19,11 @@ export function NotifyMeButton({ orderId }: { orderId: string }) {
   const getKeyFn = useServerFn(getVapidPublicKey);
   const subscribeFn = useServerFn(subscribeToOrderPush);
   const registerDeviceFn = useServerFn(registerDevice);
-  const [state, setState] = useState<"idle" | "loading" | "subscribed" | "unsupported" | "blocked">(
-    "idle",
-  );
+  // Read synchronously instead of defaulting to "idle" and asyncing to the
+  // truth a moment later -- see push-permission.ts. That async-only version
+  // is what made an already-subscribed customer see "Notify me" flash on
+  // before flipping to "Notifying you", on every order page they opened.
+  const [state, setState] = useState<PushUiState>(initialPushUiState);
 
   useEffect(() => {
     if (
