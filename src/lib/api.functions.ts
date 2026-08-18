@@ -1110,7 +1110,7 @@ export const trackOrder = createServerFn({ method: "GET" })
         // Reads the order's own contact snapshot rather than joining the
         // customer row: what matters here is where this order was going, not
         // whatever the account's profile says today.
-        "id, status, notes, created_at, confirmed_at, completed_at, updated_at, requested_date, requested_window, service_fee_estimate, cancelled_at, cancellation_reason, refund_status, contact_name, contact_phone, delivery_address, delivery_landmark, items:order_items(id,item_name,category,subcategory,quantity,notes,is_freeform,unit_price)",
+        "id, status, notes, created_at, confirmed_at, completed_at, updated_at, requested_date, requested_window, service_fee_estimate, cancelled_at, cancellation_reason, refund_status, contact_name, contact_phone, delivery_address, delivery_landmark, rating, items:order_items(id,item_name,category,subcategory,quantity,notes,is_freeform,unit_price)",
       )
       .limit(1);
 
@@ -1118,4 +1118,51 @@ export const trackOrder = createServerFn({ method: "GET" })
     const { data: rows, error } = await query;
     if (error) failFrom("trackOrder", error, "We couldn't load this order. Please try again.");
     return { orders: rows ?? [] };
+  });
+
+/**
+ * One-tap rating for a delivered order. No sign-in required, on the same
+ * trust model as trackOrder itself: the order ID is already the credential
+ * that lets someone view this page at all, so it's what gates writing to it
+ * too. Only ever settable once the order is actually delivered, and callable
+ * again to change a tap made in error -- there's no separate "submit" step,
+ * so the last tap has to be able to win.
+ */
+export const submitOrderRating = createServerFn({ method: "POST" })
+  .inputValidator((data: { orderId: string; rating: number }) =>
+    z
+      .object({
+        orderId: z.string().trim().min(3).max(20),
+        rating: z.number().int().min(1).max(5),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const bucket = `rate_order:${data.orderId}`;
+    const { data: allowed, error: rlErr } = await supabaseAdmin.rpc("mytown_check_rate_limit", {
+      p_bucket: bucket,
+      p_max_hits: 20,
+      p_window_seconds: 60,
+    });
+    if (rlErr)
+      failFrom(
+        "submitOrderRating.rateLimit",
+        rlErr,
+        "We couldn't save that right now. Please try again.",
+      );
+    if (!allowed) throw userError("Too many attempts. Please try again in a while.");
+
+    const { data: updated, error } = await supabaseAdmin
+      .from("orders")
+      .update({ rating: data.rating })
+      .eq("id", data.orderId.toUpperCase())
+      .eq("status", "completed")
+      .select("id")
+      .maybeSingle();
+    if (error)
+      failFrom("submitOrderRating", error, "We couldn't save your rating. Please try again.");
+    if (!updated) throw userError("This order can't be rated yet.");
+    return { ok: true };
   });
