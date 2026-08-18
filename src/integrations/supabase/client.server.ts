@@ -4,6 +4,7 @@
 // For user-authenticated queries (with RLS), use the auth middleware instead.
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
+import { describeServiceRoleKeyProblem, serviceRoleKeyWarning } from "./service-role-key";
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith("sb_publishable_") || value.startsWith("sb_secret_");
@@ -45,6 +46,12 @@ function createSupabaseAdminClient() {
     console.error(`[Supabase] ${message}`);
     throw new Error(message);
   }
+
+  // A publishable key here builds a client that answers as `anon` while
+  // claiming to bypass RLS, and almost nothing visibly breaks. Say so loudly
+  // at startup -- see service-role-key.ts for why this warns and not throws.
+  const keyProblem = describeServiceRoleKeyProblem(SUPABASE_SERVICE_ROLE_KEY);
+  if (keyProblem) console.error(serviceRoleKeyWarning(keyProblem));
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     global: {

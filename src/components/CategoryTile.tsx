@@ -18,11 +18,11 @@ export function CategoryTile({ slug, name, iconKey, imageUrl, compact }: Props) 
     <Link
       to="/c/$slug"
       params={{ slug }}
-      className={`tap-scale group flex flex-col items-center justify-center gap-2 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] text-center ${
+      className={`tap-scale group flex flex-col items-center justify-center gap-2 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] text-center transition-colors duration-150 hover:border-[color:var(--accent-primary)] ${
         // A four-across tile is ~84px wide, so 12px of padding each side left
         // only 60px for the label -- narrower than a word like "Chocolates".
         // Tightening the compact tile buys back 8px without the tiles
-        // touching. The roomier 2-column Explore grid keeps the larger inset.
+        // touching. The roomier 3-column Explore grid keeps the larger inset.
         compact ? "px-2 py-3" : "p-3"
       }`}
     >
@@ -39,7 +39,10 @@ export function CategoryTile({ slug, name, iconKey, imageUrl, compact }: Props) 
             onError={() => setImageFailed(true)}
           />
         ) : (
-          <Icon className="h-6 w-6 text-[color:var(--accent-primary)]" strokeWidth={2.2} />
+          <Icon
+            className="h-6 w-6 text-[color:var(--accent-primary)] transition-transform duration-150 group-hover:scale-110"
+            strokeWidth={2.2}
+          />
         )}
       </div>
       {/* Two elements, not one: `line-clamp` needs `display:-webkit-box` on the

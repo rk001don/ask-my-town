@@ -1,0 +1,91 @@
+name: CI
+
+# Nothing gated pull requests before this: db-sync ran on main only, so a PR
+# could be merged with a type error, a lint failure or a broken build and the
+# first sign of trouble was the production deploy.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  # A new push supersedes the run in flight for the same ref.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, lint and unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
+      - name: Build
+        run: npm run build
+
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The catalogue is fetched by server functions that use the Supabase
+      # SERVICE ROLE key, which is a real secret and so is NOT in the committed
+      # .env -- it lives in .env.local, which is gitignored. Without it every
+      # catalogue call throws and every page renders empty, which is what made
+      # seven of these tests fail with "element(s) not found" rather than with
+      # anything to do with the behaviour under test.
+      #
+      # So: check for the secret first and skip the suite when it is missing
+      # (forks, and this repo until the secret is added) instead of leaving a
+      # permanently red gate that people learn to ignore.
+      - id: creds
+        name: Check for Supabase service-role key
+        env:
+          KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -n "$KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=End-to-end skipped::SUPABASE_SERVICE_ROLE_KEY is not set for this repository, so the catalogue cannot load and the suite would fail for a reason unrelated to the change. Add the secret to enable it."
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.creds.outputs.present == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+        if: steps.creds.outputs.present == 'true'
+      - run: npx playwright install --with-deps chromium
+        if: steps.creds.outputs.present == 'true'
+
+      # Only the service-role key is injected. The CONNECTION values are the
+      # publishable ones and live in the committed .env, which is what local
+      # dev already reads -- passing them as secrets too looked safer but was
+      # the opposite: an unset secret expands to an EMPTY STRING and overrides
+      # the .env value, so the client could not initialise at all.
+      - name: Run end-to-end suite
+        if: steps.creds.outputs.present == 'true'
+        run: npm run e2e
+        env:
+          CI: "true"
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - uses: actions/upload-artifact@v4
+        if: failure() && steps.creds.outputs.present == 'true'
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

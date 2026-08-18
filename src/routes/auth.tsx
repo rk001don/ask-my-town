@@ -8,34 +8,12 @@ import { friendlyAuthError } from "@/lib/auth-errors";
 import { AppHeader } from "@/components/AppHeader";
 import { toast } from "sonner";
 import { Loader2, LogIn, KeyRound } from "lucide-react";
+import { safeRedirect } from "@/lib/safe-redirect";
 
 const searchSchema = z.object({
   redirect: z.string().optional(),
   mode: z.enum(["signin", "signup"]).optional(),
 });
-
-/**
- * Turn the `redirect` search param into a path we're willing to navigate to.
- *
- * Two jobs. It normalises a full href -- the authenticated-route guard passes
- * `location.href`, which router.navigate treats as a literal path and can't
- * resolve -- and it refuses anything that isn't a same-origin path, so the
- * parameter can't be used to bounce someone to another site after signing in.
- */
-function safeRedirect(raw: string | undefined): string {
-  if (!raw) return "/";
-  try {
-    // Resolving against our own origin makes "//evil.com" and
-    // "https://evil.com" both surface a foreign origin, which we then reject.
-    const url = new URL(raw, window.location.origin);
-    if (url.origin !== window.location.origin) return "/";
-    const path = `${url.pathname}${url.search}${url.hash}`;
-    // Never bounce back to the sign-in screen itself.
-    return path.startsWith("/auth") ? "/" : path || "/";
-  } catch {
-    return "/";
-  }
-}
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
