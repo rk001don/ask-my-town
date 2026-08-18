@@ -99,7 +99,7 @@ function Explore() {
       {!mounted ? (
         <TileSkeleton count={12} />
       ) : (
-        <div className="grid grid-cols-2 gap-3 px-4 pb-8 md:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-3 gap-3 px-4 pb-8 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
           {data.map((c) => (
             <CategoryTile
               key={c.id}

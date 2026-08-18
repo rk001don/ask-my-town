@@ -10,7 +10,10 @@ export default defineConfig({
   retries: 1,
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? [["github"], ["list"]] : [["list"]],
-  timeout: 30_000,
+  // 60s, not 30s: the dev server compiles each route on first request, so a
+  // test whose first navigation is a cold route pays a one-off compile cost
+  // that has nothing to do with the behaviour under test.
+  timeout: 60_000,
   expect: { timeout: 8_000 },
   use: {
     baseURL: `http://localhost:${PORT}`,

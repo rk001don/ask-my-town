@@ -19,16 +19,19 @@ test.describe("browsing", () => {
     expect(clipped).toEqual([]);
   });
 
-  test("no screen scrolls sideways", async ({ page }) => {
-    for (const path of ["/", "/explore", "/c/food", "/cart", "/activity"]) {
+  // One test per screen rather than one loop over all five: a loop shares a
+  // single timeout budget with every route it visits, so a slow first compile
+  // on route four fails a test that is really about route one.
+  for (const path of ["/", "/explore", "/c/food", "/cart", "/activity"]) {
+    test(`${path} does not scroll sideways`, async ({ page }) => {
       await page.goto(path);
       await page.waitForTimeout(400);
       const overflows = await page.evaluate(
         () => document.documentElement.scrollWidth > window.innerWidth + 1,
       );
       expect(overflows, `${path} scrolls horizontally`).toBe(false);
-    }
-  });
+    });
+  }
 
   test("a category page filters in place", async ({ page }) => {
     await page.goto("/c/food");
