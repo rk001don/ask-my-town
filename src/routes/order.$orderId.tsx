@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { useServerFn } from "@tanstack/react-start";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
@@ -83,6 +83,45 @@ function Confirmation() {
   // resolves, so the tap feels instant. Falls back to the order's own value
   // (from a previous visit) until then.
   const [optimisticRating, setOptimisticRating] = useState<number | null>(null);
+  const starRefs = useRef<(SVGSVGElement | null)[]>([]);
+  const displayedRating = optimisticRating ?? order?.rating ?? null;
+
+  // Replays the star-fill animation WITHOUT remounting anything. An earlier
+  // version keyed the whole row on the rating value, forcing React to tear
+  // down and recreate all five star buttons on every tap -- real DOM nodes
+  // destroyed and rebuilt for what should be a one-line style change, which
+  // is exactly what a flicker is (this is also what "why does it need a
+  // refresh" was actually about: nothing needed a refresh, the remount just
+  // *looked* like one every time).
+  //
+  // A CSS animation only plays when it's freshly applied, not just because a
+  // className string happens to be unchanged across renders -- so this has
+  // to run in an effect, AFTER the browser has painted the new fill/class
+  // from this render, not inside the click handler (which fires before
+  // React has committed that DOM update at all). Clearing `animation` and
+  // reading a layout property forces the browser to notice before it's
+  // reapplied, which is what makes the replay actually happen.
+  //
+  // Declared here, above the "order not found" early return below, because
+  // hooks must run unconditionally on every render.
+  const isFirstPaintRef = useRef(true);
+  useEffect(() => {
+    if (isFirstPaintRef.current) {
+      // Skip on mount: a rating loaded from a previous visit isn't being
+      // interacted with, so animating it would just be an unprompted flash
+      // on a page someone opened to check on, not to rate again.
+      isFirstPaintRef.current = false;
+      return;
+    }
+    if (!displayedRating) return;
+    for (let i = 0; i < displayedRating; i++) {
+      const el = starRefs.current[i];
+      if (!el) continue;
+      el.style.animation = "none";
+      void el.getBoundingClientRect();
+      el.style.animation = "";
+    }
+  }, [displayedRating]);
 
   if (!order) {
     return (
@@ -131,8 +170,6 @@ function Confirmation() {
     toast.success("Added to your cart");
     navigate({ to: "/cart" });
   }
-
-  const displayedRating = optimisticRating ?? order.rating ?? null;
 
   /**
    * One tap, no confirm step -- Swiggy/Zomato both skip a "submit" button for
@@ -224,12 +261,7 @@ function Confirmation() {
                 <div className="text-xs font-semibold text-[color:var(--text-secondary)]">
                   {displayedRating ? "Your rating" : "How was it?"}
                 </div>
-                {/* `key` forces a remount -- and so a fresh play of badge-bounce --
-                    every time the rating actually changes, but not on the
-                    read-only first paint of a rating from a previous visit,
-                    which would just be a distracting flash on a page someone
-                    is reopening to check on, not interacting with. */}
-                <div key={displayedRating ?? "unrated"} className="flex gap-0.5">
+                <div className="flex gap-0.5">
                   {[1, 2, 3, 4, 5].map((n) => (
                     <button
                       key={n}
@@ -238,6 +270,9 @@ function Confirmation() {
                       className="tap-scale grid h-11 w-11 place-items-center"
                     >
                       <Star
+                        ref={(el) => {
+                          starRefs.current[n - 1] = el;
+                        }}
                         // Gold (--warning), not the app's own orange accent --
                         // a star rating is a universally recognised affordance
                         // in its own right and reads better distinct from
@@ -245,7 +280,8 @@ function Confirmation() {
                         // Each filled star pops slightly after the one before
                         // it -- a left-to-right wave, not five stars blinking
                         // on at once -- matching the fill animation Swiggy and
-                        // Zomato both use.
+                        // Zomato both use. The replay itself is driven by the
+                        // effect above, not this class -- see there for why.
                         className={`h-8 w-8 ${displayedRating && n <= displayedRating ? "badge-bounce" : ""}`}
                         strokeWidth={2}
                         style={

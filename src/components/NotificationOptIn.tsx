@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { type PushUiState, initialPushUiState } from "@/lib/push-permission";
 import { useServerFn } from "@tanstack/react-start";
 import { Bell, BellOff, BellRing, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -21,9 +22,12 @@ function urlBase64ToUint8Array(base64String: string) {
 export function NotificationOptIn() {
   const getKeyFn = useServerFn(getVapidPublicKey);
   const registerFn = useServerFn(registerDevice);
-  const [state, setState] = useState<"idle" | "loading" | "subscribed" | "unsupported" | "blocked">(
-    "idle",
-  );
+  // Read synchronously instead of defaulting to "idle" and asyncing to the
+  // truth a moment later -- see push-permission.ts. That async-only version
+  // is what made this flicker "Turn on" -> "On" on every single mount, which
+  // for a component that remounts on every visit to /activity meant every
+  // tab switch.
+  const [state, setState] = useState<PushUiState>(initialPushUiState);
   const [showHelp, setShowHelp] = useState(false);
 
   // Re-checks permission after the customer changes it in site settings.
