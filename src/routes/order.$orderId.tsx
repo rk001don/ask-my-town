@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { AppHeader } from "@/components/AppHeader";
+import { useServerFn } from "@tanstack/react-start";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { trackOrder } from "@/lib/api.functions";
+import { submitOrderRating, trackOrder } from "@/lib/api.functions";
 import {
   CUSTOMER_ORDER_STEPS,
   DELIVERY_ETA_LABEL,
@@ -17,6 +19,7 @@ import {
   MessageCircle,
   RotateCcw,
   Sparkles,
+  Star,
   XCircle,
 } from "lucide-react";
 import { EmptyState, ErrorState } from "@/components/States";
@@ -62,7 +65,12 @@ function Confirmation() {
   // Hooks must run unconditionally: the "order not found" branch below returns
   // early, so anything hook-based has to be called before it.
   const navigate = useNavigate();
+  const rateFn = useServerFn(submitOrderRating);
   const order = data.orders[0];
+  // Optimistic only -- set the moment a star is tapped, before the request
+  // resolves, so the tap feels instant. Falls back to the order's own value
+  // (from a previous visit) until then.
+  const [optimisticRating, setOptimisticRating] = useState<number | null>(null);
 
   if (!order) {
     return (
@@ -110,6 +118,25 @@ function Confirmation() {
     }
     toast.success("Added to your cart");
     navigate({ to: "/cart" });
+  }
+
+  const displayedRating = optimisticRating ?? order.rating ?? null;
+
+  /**
+   * One tap, no confirm step -- Swiggy/Zomato both skip a "submit" button for
+   * exactly this because a star rating is already the whole interaction; a
+   * second tap to confirm it would just be friction with no new information.
+   * Tapping a different star re-sends and overwrites, so changing your mind
+   * costs nothing.
+   */
+  async function rate(n: number) {
+    setOptimisticRating(n);
+    try {
+      await rateFn({ data: { orderId, rating: n } });
+    } catch {
+      setOptimisticRating(null); // the stars settle back to whatever's true
+      toast.error("Couldn't save your rating. Please try again.");
+    }
   }
   const itemCount = order.items.reduce((n, it) => n + (it.quantity ?? 1), 0);
   // Day and month only: "Delivered 17 Aug" is what a customer wants to
@@ -181,6 +208,31 @@ function Confirmation() {
                 <RotateCcw className="h-4 w-4" />
                 Order this again
               </button>
+              <div className="mt-5 flex flex-col items-center gap-1.5">
+                <div className="text-xs font-semibold text-[color:var(--text-secondary)]">
+                  {displayedRating ? "Your rating" : "How was it?"}
+                </div>
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => rate(n)}
+                      aria-label={`Rate ${n} star${n === 1 ? "" : "s"}`}
+                      className="tap-scale grid h-9 w-9 place-items-center"
+                    >
+                      <Star
+                        className="h-6 w-6"
+                        strokeWidth={2}
+                        style={
+                          displayedRating && n <= displayedRating
+                            ? { fill: "var(--accent-primary)", color: "var(--accent-primary)" }
+                            : { color: "var(--border-strong)" }
+                        }
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         ) : (
@@ -372,14 +424,22 @@ function Confirmation() {
         {/* Secondary, matching "Track order". A second full-width accent
             button competed with "Chat with us" and made the page read as if
             it wanted you to order again immediately -- this is just the way
-            back to browsing. */}
-        <Link
-          to="/"
-          className="tap-scale flex items-center justify-center gap-1.5 rounded-full border border-[color:var(--border-strong)] py-3 text-center text-sm font-semibold"
-        >
-          <Sparkles className="h-4 w-4" />
-          Ask again
-        </Link>
+            back to browsing.
+
+            Hidden once delivered: the hero above already has its own,
+            more prominent "Order this again" that does the real thing --
+            replays the exact order -- rather than just opening the home
+            screen. Having both read as two competing paths to the same
+            intent. */}
+        {!isDelivered && (
+          <Link
+            to="/"
+            className="tap-scale flex items-center justify-center gap-1.5 rounded-full border border-[color:var(--border-strong)] py-3 text-center text-sm font-semibold"
+          >
+            <Sparkles className="h-4 w-4" />
+            Ask again
+          </Link>
+        )}
       </div>
     </div>
   );

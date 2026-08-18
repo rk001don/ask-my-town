@@ -499,6 +499,7 @@ export type Database = {
           location_id: string | null
           notes: string | null
           payment_status: string
+          rating: number | null
           refund_status: string
           requested_date: string
           requested_window: string | null
@@ -533,6 +534,7 @@ export type Database = {
           location_id?: string | null
           notes?: string | null
           payment_status?: string
+          rating?: number | null
           refund_status?: string
           requested_date?: string
           requested_window?: string | null
@@ -567,6 +569,7 @@ export type Database = {
           location_id?: string | null
           notes?: string | null
           payment_status?: string
+          rating?: number | null
           refund_status?: string
           requested_date?: string
           requested_window?: string | null
