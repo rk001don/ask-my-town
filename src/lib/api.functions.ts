@@ -18,13 +18,13 @@ const OrderStatus = z.enum([
 ]);
 
 const CustomerSchema = z.object({
-  name: z.string().trim().min(2, "Name is too short").max(80),
+  name: z.string().trim().min(2, "Enter your full name").max(80),
   phone: z
     .string()
     .trim()
     .refine((v) => isValidIndianPhone(v), "Enter a valid 10-digit mobile number")
     .transform((v) => normalizeIndianPhone(v)),
-  address: z.string().trim().min(6, "Address is too short").max(400),
+  address: z.string().trim().min(6, "Enter your full delivery address").max(400),
   landmark: z.string().trim().max(120).optional().or(z.literal("")),
   pincode: z
     .string()

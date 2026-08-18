@@ -17,9 +17,9 @@ async function assertAdmin(
   userId: string,
 ) {
   const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-  if (error) throw userError("Failed to verify admin role");
+  if (error) throw userError("Couldn't confirm your admin access. Please try again.");
   if (!(data ?? []).some((r) => r.role === "admin")) {
-    throw userError("Forbidden: admin role required");
+    throw userError("You need admin access for this.");
   }
 }
 
@@ -174,7 +174,9 @@ export const sendCampaignNow = createServerFn({ method: "POST" })
         subject: process.env.VAPID_SUBJECT || "mailto:support@example.com",
       };
       if (!vapid.publicKey || !vapid.privateKey) {
-        throw userError("Missing VAPID configuration");
+        throw userError(
+          "Push notifications aren't set up yet — add the VAPID keys to enable this.",
+        );
       }
 
       let sent = 0;
@@ -307,7 +309,7 @@ export const sendTestNotification = createServerFn({ method: "POST" })
       subject: process.env.VAPID_SUBJECT || "mailto:support@example.com",
     };
     if (!vapid.publicKey || !vapid.privateKey) {
-      throw userError("Missing VAPID configuration");
+      throw userError("Push notifications aren't set up yet — add the VAPID keys to enable this.");
     }
     let sent = 0;
     for (const device of devices) {

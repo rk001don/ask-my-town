@@ -18,9 +18,9 @@ async function assertAdmin(
   userId: string,
 ) {
   const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
-  if (error) throw userError("Failed to verify admin role");
+  if (error) throw userError("Couldn't confirm your admin access. Please try again.");
   const isAdmin = (data ?? []).some((r) => r.role === "admin");
-  if (!isAdmin) throw userError("Forbidden: admin role required");
+  if (!isAdmin) throw userError("You need admin access for this.");
 }
 
 const GLOBAL_SCOPE_ID = "00000000-0000-0000-0000-000000000000";
@@ -289,7 +289,7 @@ export const uploadCatalogImage = createServerFn({ method: "POST" })
     await assertAdmin(context.supabase as never, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const bytes = Buffer.from(data.dataBase64, "base64");
-    if (bytes.byteLength > 5 * 1024 * 1024) throw userError("Image must be under 5MB");
+    if (bytes.byteLength > 5 * 1024 * 1024) throw userError("Please choose an image under 5MB.");
     const safeName = data.fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
     const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`;
     const { error } = await supabaseAdmin.storage
@@ -464,7 +464,9 @@ export const grantUserRole = createServerFn({ method: "POST" })
 
     const email = data.email.toLowerCase();
     if (email.endsWith(PIN_EMAIL_SUFFIX)) {
-      throw userError("Phone + PIN accounts can't be staff. Use a real email or Google account.");
+      throw userError(
+        "Staff roles need an email or Google sign-in — phone-only accounts can't be granted one.",
+      );
     }
 
     // Look the account up by email. GoTrue has no direct get-by-email admin
@@ -494,7 +496,9 @@ export const grantUserRole = createServerFn({ method: "POST" })
       // explaining, since it's a rule rather than a fault. Anything else is an
       // internal failure and must not be echoed back verbatim.
       if (insErr.message.includes("cannot be granted")) {
-        throw userError("That account can't hold staff roles (phone + PIN account).");
+        throw userError(
+          "That account signed up with just a phone number, so it can't hold a staff role. Ask them to add an email or Google sign-in first.",
+        );
       }
       failFrom("admin.grantUserRole", insErr, "Couldn't grant that role. Please try again.");
     }
