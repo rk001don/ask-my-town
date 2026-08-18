@@ -268,6 +268,10 @@ function Checkout() {
       await navigate({
         to: "/order/$orderId",
         params: { orderId: res.orderId },
+        // `placed` tells the order page to send "back" home rather than to the
+        // now-empty cart just below it in history. Every other entry point
+        // (Orders list, shared link) omits it and gets natural back.
+        search: { placed: true },
         replace: true,
       });
       // Clear only after we've actually left this page -- clearing first made
