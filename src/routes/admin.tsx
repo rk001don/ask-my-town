@@ -32,6 +32,7 @@ import {
 } from "@/lib/notifications-admin.functions";
 import { NotificationOptIn } from "@/components/NotificationOptIn";
 import { toUserMessage } from "@/lib/errors";
+import { formatOrderTimestamp } from "@/lib/time";
 import { BulkImageUpload } from "@/components/BulkImageUpload";
 import { StaffProfileMenu } from "@/components/StaffProfileMenu";
 import {
@@ -758,12 +759,12 @@ function AdminBoard({ email }: { email: string }) {
                   <p className="mt-2 text-sm text-[color:var(--text-primary)]">{campaign.body}</p>
                   {campaign.scheduled_at && (
                     <div className="mt-2 text-[11px] text-[color:var(--text-tertiary)]">
-                      Scheduled: {new Date(campaign.scheduled_at).toLocaleString()}
+                      Scheduled: {formatOrderTimestamp(campaign.scheduled_at)}
                     </div>
                   )}
                   {campaign.sent_at && (
                     <div className="mt-2 text-[11px] text-[color:var(--text-tertiary)]">
-                      Sent: {new Date(campaign.sent_at).toLocaleString()}
+                      Sent: {formatOrderTimestamp(campaign.sent_at)}
                     </div>
                   )}
                   {sendable && (

@@ -30,6 +30,7 @@ import { NotificationOptIn } from "@/components/NotificationOptIn";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
 import { toUserMessage } from "@/lib/errors";
+import { formatOrderTimestamp } from "@/lib/time";
 
 export const Route = createFileRoute("/activity")({
   head: () => ({
@@ -503,7 +504,7 @@ function OrderCard({ order, onCancel }: { order: Order; onCancel?: (orderId: str
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-xs text-[color:var(--text-muted)]">
-            {new Date(order.created_at!).toLocaleString()}
+            {formatOrderTimestamp(order.created_at!)}
           </div>
           <div className="text-display font-mono text-lg font-semibold tracking-wide">
             {order.id}
