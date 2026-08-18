@@ -4,9 +4,10 @@ const PORT = 5173;
 
 export default defineConfig({
   testDir: "./e2e",
-  // A failing E2E should be a real failure, not a flake someone learns to
-  // ignore -- one retry locally, two in CI where the machine is noisier.
-  retries: process.env.CI ? 2 : 1,
+  // One retry. A failing E2E should be a real failure rather than a flake
+  // people learn to ignore, and two retries turned the first (broken) run into
+  // a ten-minute gate -- 3 attempts x 30s x 9 tests.
+  retries: 1,
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? [["github"], ["list"]] : [["list"]],
   timeout: 30_000,

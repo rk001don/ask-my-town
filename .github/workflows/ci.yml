@@ -47,15 +47,17 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      # Deliberately no Supabase env here. The connection values are the
+      # publishable ones and live in the committed .env, which is what local
+      # dev already reads. Passing them as secrets looked safer but was the
+      # opposite: an unset secret expands to an EMPTY STRING and overrides the
+      # .env value, so the client could not initialise, getSession() never
+      # resolved, and every page sat in its loading skeleton until the test
+      # timed out. Nine of ten tests failed that way on the first run.
       - name: Run end-to-end suite
         run: npm run e2e
         env:
           CI: "true"
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
-          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
