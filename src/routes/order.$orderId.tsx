@@ -29,6 +29,18 @@ import { addCatalogItem, addFreeformAsk } from "@/lib/cart-store";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 
+// One line per score, in the same voice as the rest of the order page ("We
+// got your ask -- our team is on it.") rather than generic "Thanks!" filler.
+// A low score gets something that sounds like it was actually read, not a
+// canned response identical to a five-star one.
+const RATING_THANKS: Record<number, string> = {
+  1: "Sorry it wasn't good. We'll do better next time.",
+  2: "Sorry to hear that. We're on it.",
+  3: "Thanks for letting us know.",
+  4: "Glad it went well!",
+  5: "Woohoo! So glad you loved it.",
+};
+
 const opts = (orderId: string) =>
   queryOptions({
     queryKey: ["order", orderId],
@@ -212,26 +224,48 @@ function Confirmation() {
                 <div className="text-xs font-semibold text-[color:var(--text-secondary)]">
                   {displayedRating ? "Your rating" : "How was it?"}
                 </div>
-                <div className="flex gap-0.5">
+                {/* `key` forces a remount -- and so a fresh play of badge-bounce --
+                    every time the rating actually changes, but not on the
+                    read-only first paint of a rating from a previous visit,
+                    which would just be a distracting flash on a page someone
+                    is reopening to check on, not interacting with. */}
+                <div key={displayedRating ?? "unrated"} className="flex gap-0.5">
                   {[1, 2, 3, 4, 5].map((n) => (
                     <button
                       key={n}
                       onClick={() => rate(n)}
                       aria-label={`Rate ${n} star${n === 1 ? "" : "s"}`}
-                      className="tap-scale grid h-9 w-9 place-items-center"
+                      className="tap-scale grid h-11 w-11 place-items-center"
                     >
                       <Star
-                        className="h-6 w-6"
+                        // Gold (--warning), not the app's own orange accent --
+                        // a star rating is a universally recognised affordance
+                        // in its own right and reads better distinct from
+                        // "just another accent-coloured button" on the page.
+                        // Each filled star pops slightly after the one before
+                        // it -- a left-to-right wave, not five stars blinking
+                        // on at once -- matching the fill animation Swiggy and
+                        // Zomato both use.
+                        className={`h-8 w-8 ${displayedRating && n <= displayedRating ? "badge-bounce" : ""}`}
                         strokeWidth={2}
                         style={
                           displayedRating && n <= displayedRating
-                            ? { fill: "var(--accent-primary)", color: "var(--accent-primary)" }
+                            ? {
+                                fill: "var(--warning)",
+                                color: "var(--warning)",
+                                animationDelay: `${(n - 1) * 60}ms`,
+                              }
                             : { color: "var(--border-strong)" }
                         }
                       />
                     </button>
                   ))}
                 </div>
+                {displayedRating && (
+                  <p className="rise text-xs text-[color:var(--text-secondary)]">
+                    {RATING_THANKS[displayedRating]}
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -426,20 +460,16 @@ function Confirmation() {
             it wanted you to order again immediately -- this is just the way
             back to browsing.
 
-            Hidden once delivered: the hero above already has its own,
-            more prominent "Order this again" that does the real thing --
-            replays the exact order -- rather than just opening the home
-            screen. Having both read as two competing paths to the same
-            intent. */}
-        {!isDelivered && (
-          <Link
-            to="/"
-            className="tap-scale flex items-center justify-center gap-1.5 rounded-full border border-[color:var(--border-strong)] py-3 text-center text-sm font-semibold"
-          >
-            <Sparkles className="h-4 w-4" />
-            Ask again
-          </Link>
-        )}
+            Kept even when delivered: "Order this again" in the hero replays
+            THIS order, but there's no other one-tap way off this page to
+            browse something different -- that's still what this is for. */}
+        <Link
+          to="/"
+          className="tap-scale flex items-center justify-center gap-1.5 rounded-full border border-[color:var(--border-strong)] py-3 text-center text-sm font-semibold"
+        >
+          <Sparkles className="h-4 w-4" />
+          Ask again
+        </Link>
       </div>
     </div>
   );
