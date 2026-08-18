@@ -1,13 +1,10 @@
 import { useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { getMyProfile, linkCustomerToMe, updateMyProfile } from "@/lib/auth.functions";
+import { linkCustomerToMe } from "@/lib/auth.functions";
 import { registerDevice } from "@/lib/notifications.functions";
 import { isUserError } from "@/lib/errors";
 import { forgetGuestOrder, pendingGuestOrders } from "@/lib/guest-orders";
-
-/** Written by checkout; the same key its own prefill reads. */
-const GUEST_DETAILS_KEY = "mytown.customer.v1";
 
 /**
  * Runs once per signed-in session, app-wide. Renders nothing.
@@ -16,7 +13,10 @@ const GUEST_DETAILS_KEY = "mytown.customer.v1";
  * on a single screen:
  *
  * 1. Orders placed on this device while signed out get attached to the
- *    account, so nobody has to type an order ID. See lib/guest-orders.
+ *    account, so nobody has to type an order ID. See lib/guest-orders. This is
+ *    safe on a shared device because each order ID is a credential the placing
+ *    device holds; claiming re-points the order, it never copies a name onto
+ *    anyone's profile.
  *
  * 2. This device's push subscription gets re-bound to whoever is now signed
  *    in. A browser keeps one push subscription per site, so when a second
@@ -25,12 +25,19 @@ const GUEST_DETAILS_KEY = "mytown.customer.v1";
  *    updates go to someone else. This used to be healed only by opening the
  *    Orders screen, which most people never did before their first
  *    notification was already missed.
+ *
+ * What this deliberately does NOT do: seed a new account's name/address from
+ * anything stored in the browser. A profile's name is identity, and identity
+ * must only ever be written by the authenticated user it belongs to -- never
+ * carried over from whoever last typed into this browser. On a shared phone
+ * (common in this user base -- the original identity bug came from two people
+ * on one number) that carry-over would show a fresh account someone else's
+ * name. Signed-in checkout and the profile editor are the only writers of an
+ * account's name, and both are scoped to the caller's own user_id.
  */
 export function SessionSync() {
   const claimFn = useServerFn(linkCustomerToMe);
   const registerFn = useServerFn(registerDevice);
-  const profileFn = useServerFn(getMyProfile);
-  const saveProfileFn = useServerFn(updateMyProfile);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,45 +88,8 @@ export function SessionSync() {
       }
     }
 
-    /**
-     * Seed a brand-new account from the details this device already has.
-     *
-     * Someone who ordered as a guest has typed their name and address once
-     * already; making them type it again after signing up is the kind of
-     * friction that makes an account feel like a downgrade. Only ever fills
-     * gaps -- an account that already has a name is left alone.
-     */
-    async function seedProfileFromGuestCheckout() {
-      try {
-        const raw = localStorage.getItem(GUEST_DETAILS_KEY);
-        if (!raw) return;
-        const saved = JSON.parse(raw) as {
-          name?: string;
-          phone?: string;
-          address?: string;
-          landmark?: string;
-        };
-        if (!saved?.name?.trim()) return;
-
-        const profile = await profileFn();
-        if (profile?.name?.trim() && profile?.address?.trim()) return; // already set up
-
-        await saveProfileFn({
-          data: {
-            name: profile?.name?.trim() || saved.name.trim(),
-            phone: profile?.phone?.trim() || saved.phone?.trim() || undefined,
-            address: profile?.address?.trim() || saved.address?.trim() || undefined,
-            landmark: profile?.landmark?.trim() || saved.landmark?.trim() || undefined,
-          },
-        });
-      } catch {
-        /* convenience only -- the account still works, they just retype once */
-      }
-    }
-
     async function sync() {
       await claimGuestOrders();
-      await seedProfileFromGuestCheckout();
       await rebindPushDevice();
     }
 
@@ -141,7 +111,7 @@ export function SessionSync() {
       cancelled = true;
       unsubscribe?.();
     };
-  }, [claimFn, registerFn, profileFn, saveProfileFn]);
+  }, [claimFn, registerFn]);
 
   return null;
 }
