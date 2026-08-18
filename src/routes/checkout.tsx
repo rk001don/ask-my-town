@@ -126,18 +126,28 @@ function Checkout() {
         if (!profile || cancelled) return;
         setForm((f) => {
           const next = { ...f };
-          // Account wins over this device's remembered values, rather than
-          // merely filling gaps. Two reasons: filling gaps leaves the two
-          // "Your details" screens showing different answers, which is the
-          // reported problem; and on a shared phone localStorage holds
-          // whoever checked out last, so prefilling a signed-in customer with
-          // it hands them someone else's name and address.
+          // For a signed-in customer the account is the ONLY source of these
+          // fields -- not just the winner over this device's remembered
+          // values, but the sole source. An untouched field is set to the
+          // profile's value OR EMPTY, never left holding the localStorage
+          // value.
+          //
+          // The "or empty" is the important half. localStorage (RECENT_KEY)
+          // holds whoever checked out last on this browser. On a shared phone
+          // -- common here; the identity bug came from two people on one
+          // number -- a signed-in customer whose own profile is still blank
+          // would otherwise see the previous person's name prefilled, and
+          // submitting would write that name onto their own row. Blank profile
+          // must mean a blank form, so they type their own details fresh.
+          //
+          // Fields edited this session (touchedRef) always win, so this can
+          // never overwrite something being corrected in the moment.
           const t = touchedRef.current;
-          if (!t.has("name") && profile.name) next.name = profile.name;
-          if (!t.has("phone") && profile.phone) next.phone = profile.phone;
-          if (!t.has("address") && profile.address) next.address = profile.address;
+          if (!t.has("name")) next.name = profile.name ?? "";
+          if (!t.has("phone")) next.phone = profile.phone ?? "";
+          if (!t.has("address")) next.address = profile.address ?? "";
           if (!t.has("landmark")) next.landmark = profile.landmark ?? "";
-          if (!t.has("pincode") && profile.pincode) next.pincode = profile.pincode;
+          if (!t.has("pincode")) next.pincode = profile.pincode ?? "";
           return next;
         });
       } catch {
