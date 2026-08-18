@@ -126,6 +126,45 @@ test.describe("checkout", () => {
   });
 });
 
+test.describe("csrf", () => {
+  // Server functions are POST endpoints that run with the caller's session
+  // cookie. These assert the guard from both sides, because a CSRF check that
+  // is too broad is its own outage: the same middleware runs on page loads,
+  // and rejecting cross-site GET would 403 every customer arriving from a
+  // WhatsApp order link.
+  test("a cross-site POST is rejected", async ({ request, baseURL }) => {
+    const res = await request.post(`${baseURL}/`, {
+      headers: { "Sec-Fetch-Site": "cross-site" },
+      failOnStatusCode: false,
+    });
+    expect(res.status()).toBe(403);
+  });
+
+  test("a POST from another origin is rejected", async ({ request, baseURL }) => {
+    const res = await request.post(`${baseURL}/`, {
+      headers: { Origin: "https://evil.example" },
+      failOnStatusCode: false,
+    });
+    expect(res.status()).toBe(403);
+  });
+
+  test("our own POST still goes through", async ({ request, baseURL }) => {
+    const res = await request.post(`${baseURL}/`, {
+      headers: { Origin: baseURL! },
+      failOnStatusCode: false,
+    });
+    expect(res.status()).not.toBe(403);
+  });
+
+  test("arriving from another site by link still works", async ({ request, baseURL }) => {
+    const res = await request.get(`${baseURL}/`, {
+      headers: { "Sec-Fetch-Site": "cross-site" },
+      failOnStatusCode: false,
+    });
+    expect(res.status()).toBe(200);
+  });
+});
+
 test.describe("order tracking", () => {
   test("guests track by order ID, never by phone number", async ({ page }) => {
     await page.goto("/activity");
