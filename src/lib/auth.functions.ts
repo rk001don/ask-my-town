@@ -217,7 +217,7 @@ export const cancelMyOrder = createServerFn({ method: "POST" })
       .eq("id", data.orderId)
       .maybeSingle();
     if (orderErr) failFrom("auth:132", orderErr, "We couldn't load that order. Please try again.");
-    if (!order) throw userError("Order not found");
+    if (!order) throw userError("We couldn't find that order.");
 
     const { data: customer, error: customerErr } = await supabaseAdmin
       .from("customers")
@@ -227,10 +227,12 @@ export const cancelMyOrder = createServerFn({ method: "POST" })
     if (customerErr)
       failFrom("auth:140", customerErr, "We couldn't verify your account. Please try again.");
     if (!customer || customer.user_id !== context.userId) {
-      throw userError("You can only cancel your own order.");
+      throw userError("That order isn't linked to your account, so we can't cancel it here.");
     }
     if (order.status !== "received") {
-      throw userError("Only newly received orders can be cancelled by the customer.");
+      throw userError(
+        "This order's already being prepared, so it can't be cancelled here. Contact us if you need changes.",
+      );
     }
 
     const now = new Date().toISOString();

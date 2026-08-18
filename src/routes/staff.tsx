@@ -55,7 +55,11 @@ const BOARD_STATUSES: OrderStatus[] = [
   "arranging",
   "on_the_way",
   "completed",
+  "cancelled",
 ];
+
+// "Active" means still needs doing -- neither of these is that.
+const INACTIVE_STATUSES: OrderStatus[] = ["completed", "cancelled"];
 
 type StaffOrderRow = {
   id: string;
@@ -696,7 +700,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
             {(["active", ...BOARD_STATUSES] as const).map((f) => {
               const count =
                 f === "active"
-                  ? BOARD_STATUSES.filter((s) => s !== "completed").reduce(
+                  ? BOARD_STATUSES.filter((s) => !INACTIVE_STATUSES.includes(s)).reduce(
                       (n, s) => n + ((grouped[s] as unknown as StaffOrderRow[])?.length ?? 0),
                       0,
                     )
@@ -726,7 +730,7 @@ function StaffBoard({ email, onSignOut }: { email: string | null; onSignOut: () 
               status badge, so nothing is lost by dropping the column headers. */}
           {(() => {
             const filteredOrders = BOARD_STATUSES.filter((s) =>
-              statusFilter === "active" ? s !== "completed" : s === statusFilter,
+              statusFilter === "active" ? !INACTIVE_STATUSES.includes(s) : s === statusFilter,
             ).flatMap((s) =>
               ((grouped[s] as unknown as StaffOrderRow[]) ?? []).map((o) => ({
                 ...o,

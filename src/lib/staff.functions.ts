@@ -48,12 +48,12 @@ async function assertStaff(
     .from("user_roles")
     .select("role")
     .eq("user_id", userId);
-  if (error) throw userError("Failed to verify staff role");
+  if (error) throw userError("Couldn't confirm your staff access. Please try again.");
   const roles = (data ?? []).map((r) => r.role);
   const staff = roles.some((r) => r === "admin" || r === "ops" || r === "warden_viewer");
-  if (!staff) throw userError("Forbidden: staff role required");
+  if (!staff) throw userError("You need staff access for this.");
   if (requireOps && !roles.some((r) => r === "admin" || r === "ops")) {
-    throw userError("Forbidden: admin or ops required");
+    throw userError("You need admin or ops access for this.");
   }
   return roles;
 }
@@ -167,7 +167,7 @@ export const updateStaffOrderStatus = createServerFn({ method: "POST" })
         .maybeSingle();
       if (fetchErr)
         failFrom("staff:149", fetchErr, "Couldn't read the order's current status. Please retry.");
-      if (!current) throw userError("Order not found");
+      if (!current) throw userError("We couldn't find that order.");
       const expected = ORDER_NEXT_STATUS[current.status];
       if (expected !== data.status) {
         throw userError(
@@ -248,7 +248,7 @@ export const cancelStaffOrder = createServerFn({ method: "POST" })
       .eq("id", data.orderId)
       .maybeSingle();
     if (orderErr) failFrom("staff:230", orderErr, "Couldn't load that order. Please retry.");
-    if (!order) throw userError("Order not found");
+    if (!order) throw userError("We couldn't find that order.");
 
     const now = new Date().toISOString();
     const { error } = await supabaseAdmin

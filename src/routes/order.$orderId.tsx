@@ -39,6 +39,10 @@ export const Route = createFileRoute("/order/$orderId")({
   // after a successful order. Every other way in -- the Orders list, a shared
   // link -- wants the natural immediate-previous, which is what an undefined
   // backTo gives (AppHeader falls through to history.back()).
+  //
+  // The placed case doesn't go Home either: right after ordering, "back" is
+  // expected to land on the Orders list -- the order you just placed, in its
+  // natural context -- not the front door of the app.
   validateSearch: (search: Record<string, unknown>): { placed?: boolean } =>
     search.placed === true || search.placed === "true" ? { placed: true } : {},
   loader: ({ context, params }) => context.queryClient.ensureQueryData(opts(params.orderId)),
@@ -52,8 +56,8 @@ export const Route = createFileRoute("/order/$orderId")({
 function Confirmation() {
   const { orderId } = Route.useParams();
   const { placed } = Route.useSearch();
-  // See validateSearch: home only right after placing; otherwise natural back.
-  const backTo = placed ? "/" : undefined;
+  // See validateSearch: the Orders list right after placing; otherwise natural back.
+  const backTo = placed ? "/activity" : undefined;
   const { data } = useSuspenseQuery(opts(orderId));
   // Hooks must run unconditionally: the "order not found" branch below returns
   // early, so anything hook-based has to be called before it.
