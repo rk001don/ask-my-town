@@ -38,6 +38,7 @@ import {
   Gift,
   GlassWater,
   Grape,
+  Hamburger,
   Hammer,
   HeartHandshake,
   HeartPulse,
@@ -53,9 +54,11 @@ import {
   PaintRoller,
   PartyPopper,
   Pill,
+  Pizza,
   Popcorn,
   Printer,
   Salad,
+  Sandwich,
   Scissors,
   Shirt,
   ShoppingBag,
@@ -115,6 +118,12 @@ const NAME_ICONS: [string[], LucideIcon][] = [
   [["dosa", "uttapam"], Utensils],
   [["idli", "vada", "sambar"], Soup],
   [["french fries", "fries"], Popcorn],
+  // Ahead of the "chicken"/"paneer" protein rules below, same reason as
+  // noodles/dosa above: "Chicken Peri Peri Pizza" and "Paneer Sandwich" are a
+  // pizza and a sandwich first, not a protein.
+  [["pizza"], Pizza],
+  [["burger"], Hamburger],
+  [["sandwich"], Sandwich],
   // --- proteins, once no dish form matched ---
   [["chicken", "mutton", "drumstick", "kebab", "tandoori"], Drumstick],
   [["fish", "prawn", "seafood"], Fish],
